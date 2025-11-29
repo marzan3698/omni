@@ -317,7 +317,141 @@ export const socialService = {
         throw new AppError('Chatwoot integration not found or not configured', 400);
       }
 
-      // Save agent message locally first
+      // Extract Chatwoot conversation ID from externalUserId
+      // New format: chatwoot_contactId_conversationId
+      // Old format: chatwoot_contactId (need to find conversation ID from Chatwoot API)
+      let chatwootConversationId: number | null = null;
+      const conversationIdMatch = conversation.externalUserId.match(/chatwoot_\d+_(\d+)/);
+      
+      if (conversationIdMatch) {
+        // New format - extract conversation ID directly
+        chatwootConversationId = parseInt(conversationIdMatch[1], 10);
+      } else {
+        // Old format - need to find conversation ID from Chatwoot API
+        const contactIdMatch = conversation.externalUserId.match(/chatwoot_(\d+)/);
+        if (contactIdMatch) {
+          const contactId = contactIdMatch[1];
+          console.log(`Old format detected. Finding conversation for contact ${contactId}...`);
+          
+          // Import chatwootService
+          const { chatwootService } = await import('./chatwoot.service.js');
+          
+          // Get inbox ID from integration (pageId stores inboxId for Chatwoot)
+          const inboxId = integration.pageId;
+          if (!inboxId) {
+            throw new AppError('Chatwoot inbox ID not configured', 400);
+          }
+          
+          // Fetch conversations from Chatwoot to find the one for this contact
+          try {
+            const chatwootConversations = await chatwootService.getChatwootConversations(
+              integration.accountId,
+              inboxId,
+              integration.accessToken,
+              integration.baseUrl
+            );
+            
+            // Find conversation for this contact
+            console.log(`Searching ${chatwootConversations.length} conversations for contact ${contactId}`);
+            const chatwootConv = chatwootConversations.find(
+              conv => conv.contact.id.toString() === contactId
+            );
+            
+            if (chatwootConv) {
+              chatwootConversationId = chatwootConv.id;
+              console.log(`✅ Found Chatwoot conversation ID: ${chatwootConversationId} for contact ${contactId}`);
+              
+              // Update conversation to new format for future use
+              await prisma.socialConversation.update({
+                where: { id: conversation.id },
+                data: {
+                  externalUserId: `chatwoot_${contactId}_${chatwootConversationId}`,
+                },
+              });
+            } else {
+              console.log(`❌ Conversation not found for contact ${contactId}. Available contacts:`, 
+                chatwootConversations.map(c => `${c.contact.id} (${c.contact.name})`).join(', '));
+              
+              // Fallback: Try to get conversation ID from Chatwoot API directly by contact ID
+              // This might work if the conversation exists but wasn't returned in the list
+              try {
+                const axios = (await import('axios')).default;
+                const getChatwootApiUrl = (baseUrl?: string | null): string => {
+                  const defaultUrl = 'https://app.chatwoot.com';
+                  if (!baseUrl) return defaultUrl;
+                  const url = baseUrl.trim().replace(/\/$/, '');
+                  return url || defaultUrl;
+                };
+                
+                const apiUrl = getChatwootApiUrl(integration.baseUrl);
+                // Try to get conversations directly with contact_id filter
+                const convUrl = `${apiUrl}/api/v1/accounts/${integration.accountId}/conversations`;
+                const convResponse = await axios.get(convUrl, {
+                  headers: {
+                    'api_access_token': integration.accessToken,
+                    'Content-Type': 'application/json',
+                  },
+                  params: {
+                    inbox_id: integration.pageId,
+                    contact_id: contactId,
+                  },
+                });
+                
+                if (convResponse.data?.payload && convResponse.data.payload.length > 0) {
+                  const conv = convResponse.data.payload[0];
+                  chatwootConversationId = conv.id;
+                  console.log(`✅ Found Chatwoot conversation ID via direct API call: ${chatwootConversationId}`);
+                  
+                  // Update conversation to new format
+                  await prisma.socialConversation.update({
+                    where: { id: conversation.id },
+                    data: {
+                      externalUserId: `chatwoot_${contactId}_${chatwootConversationId}`,
+                    },
+                  });
+                }
+              } catch (fallbackError: any) {
+                console.error('Fallback API call failed:', fallbackError.message);
+              }
+              
+              if (!chatwootConversationId) {
+                // Last resort: Try to get conversation ID from webhook payload stored in logs
+                // Or check if we can create a new conversation
+                console.log(`⚠️ Could not find Chatwoot conversation ID for contact ${contactId}. The conversation may need to be updated via webhook.`);
+                throw new AppError(`Chatwoot conversation not found for contact ${contactId}. Please send a new message from Chatwoot to this contact to update the conversation format, or wait for the next webhook.`, 404);
+              }
+            }
+          } catch (error: any) {
+            console.error('Error fetching Chatwoot conversations:', error);
+            throw new AppError(`Failed to find Chatwoot conversation: ${error.message}`, 500);
+          }
+        }
+      }
+      
+      if (!chatwootConversationId || isNaN(chatwootConversationId)) {
+        throw new AppError('Chatwoot conversation ID not found. Please sync conversations first.', 400);
+      }
+
+      // Import chatwootService
+      const { chatwootService } = await import('./chatwoot.service.js');
+
+      // Send message via Chatwoot API first
+      let chatwootMessage;
+      try {
+        chatwootMessage = await chatwootService.sendChatwootMessage(
+          integration.accountId,
+          chatwootConversationId,
+          content,
+          integration.accessToken,
+          integration.baseUrl
+        );
+        console.log(`✅ Message sent to Chatwoot conversation ${chatwootConversationId}`);
+      } catch (error: any) {
+        console.error('Error sending Chatwoot message via API:', error);
+        throw new AppError(`Failed to send message to Chatwoot: ${error.message}`, error.statusCode || 500);
+      }
+
+      // Save agent message locally after successful API send
       const message = await prisma.socialMessage.create({
         data: {
           conversationId,
@@ -326,22 +460,6 @@ export const socialService = {
           createdAt: new Date(),
         },
       });
-
-      // Try to send via Chatwoot API
-      // Note: We need Chatwoot conversation ID, which we should store in a metadata field
-      // For now, we'll attempt to send if we can determine the conversation ID
-      try {
-        // Extract contact ID from externalUserId
-        const contactIdMatch = conversation.externalUserId.match(/chatwoot_(\d+)/);
-        if (contactIdMatch && integration.accountId && integration.baseUrl) {
-          // We need the actual Chatwoot conversation ID, not contact ID
-          // This requires additional mapping - for MVP, we'll skip API call and sync later
-          console.log('Chatwoot reply saved locally. Sync required to send via API.');
-        }
-      } catch (error: any) {
-        console.error('Error sending Chatwoot message via API:', error);
-        // Continue - message is saved locally
-      }
 
       // Update conversation last message time
       await prisma.socialConversation.update({

@@ -163,14 +163,27 @@ export const chatwootService = {
 
       for (const chatwootConv of chatwootConversations) {
         // Find or create conversation in database
-        const externalUserId = `chatwoot_${chatwootConv.contact.id}`;
+        // Store Chatwoot conversation ID in externalUserId format: chatwoot_contactId_conversationId
+        const externalUserId = `chatwoot_${chatwootConv.contact.id}_${chatwootConv.id}`;
         
+        // First try to find by exact match (new format)
         let conversation = await prisma.socialConversation.findFirst({
           where: {
             platform: SocialPlatform.chatwoot,
             externalUserId: externalUserId,
           },
         });
+        
+        // If not found, try old format (chatwoot_contactId) for backward compatibility
+        if (!conversation) {
+          const oldFormatUserId = `chatwoot_${chatwootConv.contact.id}`;
+          conversation = await prisma.socialConversation.findFirst({
+            where: {
+              platform: SocialPlatform.chatwoot,
+              externalUserId: oldFormatUserId,
+            },
+          });
+        }
 
         const lastMessageAt = chatwootConv.last_activity_at
           ? new Date(chatwootConv.last_activity_at)
@@ -192,11 +205,13 @@ export const chatwootService = {
             },
           });
           createdCount++;
+          console.log(`Created new conversation: ${conversation.id} for contact ${chatwootConv.contact.id}, Chatwoot conversation ${chatwootConv.id}`);
         } else {
-          // Update existing conversation
+          // Update existing conversation - also update externalUserId to include conversation ID
           await prisma.socialConversation.update({
             where: { id: conversation.id },
             data: {
+              externalUserId: externalUserId, // Update to include conversation ID
               externalUserName: chatwootConv.contact.name || chatwootConv.contact.identifier,
               status: status,
               lastMessageAt: lastMessageAt,
@@ -345,13 +360,28 @@ export const chatwootService = {
       }
 
       // Find or create conversation
-      const externalUserId = `chatwoot_${contactId}`;
+      // Store Chatwoot conversation ID in externalUserId format: chatwoot_contactId_conversationId
+      // This allows us to retrieve the Chatwoot conversation ID when sending replies
+      const externalUserId = `chatwoot_${contactId}_${conversationId}`;
+      
+      // First try to find by exact match (new format)
       let conversation = await prisma.socialConversation.findFirst({
         where: {
           platform: SocialPlatform.chatwoot,
           externalUserId: externalUserId,
         },
       });
+      
+      // If not found, try old format (chatwoot_contactId) for backward compatibility
+      if (!conversation) {
+        const oldFormatUserId = `chatwoot_${contactId}`;
+        conversation = await prisma.socialConversation.findFirst({
+          where: {
+            platform: SocialPlatform.chatwoot,
+            externalUserId: oldFormatUserId,
+          },
+        });
+      }
 
       if (!conversation) {
         // Create new conversation
@@ -364,12 +394,13 @@ export const chatwootService = {
             lastMessageAt: createdAt,
           },
         });
-        console.log(`Created new conversation: ${conversation.id} for contact ${contactId}`);
+        console.log(`Created new conversation: ${conversation.id} for contact ${contactId}, Chatwoot conversation ${conversationId}`);
       } else {
-        // Update existing conversation
+        // Update existing conversation - also update externalUserId if conversation ID changed
         await prisma.socialConversation.update({
           where: { id: conversation.id },
           data: {
+            externalUserId: externalUserId, // Update to include conversation ID
             externalUserName: contactName || conversation.externalUserName,
             lastMessageAt: createdAt,
             status: ConversationStatus.Open, // Reopen if closed
