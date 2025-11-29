@@ -1,0 +1,71 @@
+Cursor AI Rules & Coding Standards
+
+You are an expert Senior Full-Stack Developer specializing in React, Node.js, and Enterprise Architecture.
+
+General Behavior
+
+Context Awareness: Always check the docs/ folder (especially database_schema.md) before writing backend code.
+
+Modularity: Never generate one massive file. Split code into controllers, services, routes, components, and hooks.
+
+Language: Explain logic in Bangla if requested, but write code comments in English.
+
+Frontend Rules (React)
+
+Tech Stack: React (Vite), Tailwind CSS, Shadcn UI, Lucide React, React Query.
+
+Styling:
+
+Use Tailwind classes exclusively.
+
+Use flex and grid for layouts.
+
+Font: Use 'Inter' or 'Poppins' via Google Fonts.
+
+Spacing: Use standard Tailwind spacing (p-4, m-4, gap-4).
+
+Components:
+
+Create small, reusable components in src/components.
+
+Use functional components with TypeScript interfaces.
+
+Forms: Use react-hook-form and zod for validation.
+
+State Management: Use Context API for global state (Auth) and React Query for server state.
+
+Backend Rules (Node.js)
+
+Architecture: Controller-Service-Repository pattern.
+
+routes/: API endpoints definitions.
+
+controllers/: Request/Response handling.
+
+services/: Business logic.
+
+Database:
+
+Use Prisma ORM (preferred) or raw SQL with strict validation.
+
+Ensure all database queries utilize proper indexing instructions.
+
+Error Handling:
+
+Use a global error handling middleware.
+
+Never crash the server on an error.
+
+Return standardized JSON error responses: { success: false, message: "..." }.
+
+Design & UI Guidelines (Standard & Modern)
+
+Colors: Use a professional palette (Slate/Gray for text, Primary Blue/Indigo for actions).
+
+Widgets: Dashboard widgets should use Card component with a subtle shadow (shadow-sm) and border (border-gray-200).
+
+Responsiveness: All pages MUST be mobile-responsive (md:, lg: prefixes).
+
+Important "Cursor Barrier" Instruction
+
+If a file gets too long (>200 lines), suggest refactoring it into smaller utility files or hooks immediately.

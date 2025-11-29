@@ -1,0 +1,294 @@
+import { useState, useEffect, useRef } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { socialApi, type SocialConversation, type SocialMessage } from '@/lib/social';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { MessageSquare, Send, User, Bot } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+export function Inbox() {
+  const [selectedConversationId, setSelectedConversationId] = useState<number | null>(null);
+  const [messageText, setMessageText] = useState('');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
+
+  // Fetch conversations with auto-refresh every 10 seconds
+  const { data: conversations = [], isLoading: conversationsLoading } = useQuery({
+    queryKey: ['conversations'],
+    queryFn: () => socialApi.getConversations(),
+    refetchInterval: 10000, // Refresh every 10 seconds
+  });
+
+  // Fetch messages for selected conversation with auto-refresh
+  const { data: selectedConversation, isLoading: messagesLoading } = useQuery({
+    queryKey: ['conversation', selectedConversationId],
+    queryFn: () => socialApi.getConversationMessages(selectedConversationId!),
+    enabled: !!selectedConversationId,
+    refetchInterval: 5000, // Refresh every 5 seconds when conversation is selected
+  });
+
+  // Send reply mutation
+  const sendReplyMutation = useMutation({
+    mutationFn: (content: string) => socialApi.sendReply(selectedConversationId!, content),
+    onSuccess: () => {
+      setMessageText('');
+      // Refetch conversations and messages
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      queryClient.invalidateQueries({ queryKey: ['conversation', selectedConversationId] });
+    },
+  });
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [selectedConversation?.messages]);
+
+  const handleSendMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!messageText.trim() || !selectedConversationId) return;
+
+    sendReplyMutation.mutate(messageText.trim());
+  };
+
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+
+    return date.toLocaleDateString();
+  };
+
+  const getLastMessage = (conversation: SocialConversation) => {
+    if (conversation.messages && conversation.messages.length > 0) {
+      return conversation.messages[conversation.messages.length - 1];
+    }
+    return null;
+  };
+
+  return (
+    <div className="h-[calc(100vh-8rem)] flex flex-col">
+      <div className="mb-4">
+        <h1 className="text-3xl font-bold text-slate-900">Inbox</h1>
+        <p className="text-slate-600 mt-1">Manage your social media conversations</p>
+      </div>
+
+      <div className="flex-1 flex gap-4 overflow-hidden">
+        {/* Left Column: Conversation List */}
+        <Card className="w-80 flex flex-col shadow-sm border-gray-200">
+          <div className="p-4 border-b border-gray-200">
+            <h2 className="font-semibold text-slate-900">Conversations</h2>
+            <p className="text-xs text-slate-500 mt-1">
+              {conversations.length} {conversations.length === 1 ? 'conversation' : 'conversations'}
+            </p>
+          </div>
+
+          <div className="flex-1 overflow-y-auto">
+            {conversationsLoading ? (
+              <div className="p-4 text-center text-slate-500">Loading conversations...</div>
+            ) : conversations.length === 0 ? (
+              <div className="p-4 text-center text-slate-500">
+                <MessageSquare className="w-12 h-12 mx-auto mb-2 text-slate-300" />
+                <p>No conversations yet</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-200">
+                {conversations.map((conversation) => {
+                  const lastMessage = getLastMessage(conversation);
+                  const isSelected = selectedConversationId === conversation.id;
+
+                  return (
+                    <button
+                      key={conversation.id}
+                      onClick={() => setSelectedConversationId(conversation.id)}
+                      className={cn(
+                        'w-full p-4 text-left hover:bg-gray-50 transition-colors',
+                        isSelected && 'bg-indigo-50 border-l-4 border-indigo-600'
+                      )}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
+                          {conversation.externalUserName ? (
+                            <span className="text-white text-sm font-medium">
+                              {conversation.externalUserName.charAt(0).toUpperCase()}
+                            </span>
+                          ) : (
+                            <User className="w-5 h-5 text-white" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <p className="text-sm font-medium text-slate-900 truncate">
+                              {conversation.externalUserName || `User ${conversation.externalUserId.slice(0, 8)}`}
+                            </p>
+                            {conversation.status === 'Open' && (
+                              <span className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></span>
+                            )}
+                          </div>
+                          {lastMessage && (
+                            <p className="text-xs text-slate-500 truncate mb-1">
+                              {lastMessage.content}
+                            </p>
+                          )}
+                          {conversation.lastMessageAt && (
+                            <p className="text-xs text-slate-400">
+                              {formatTime(conversation.lastMessageAt)}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </Card>
+
+        {/* Right Column: Chat Window */}
+        <Card className="flex-1 flex flex-col shadow-sm border-gray-200">
+          {!selectedConversationId ? (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center">
+                <MessageSquare className="w-16 h-16 mx-auto mb-4 text-slate-300" />
+                <p className="text-slate-500">Select a conversation to start chatting</p>
+              </div>
+            </div>
+          ) : messagesLoading ? (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-slate-500">Loading messages...</div>
+            </div>
+          ) : !selectedConversation ? (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-slate-500">Failed to load conversation</div>
+            </div>
+          ) : (
+            <>
+              {/* Chat Header */}
+              <div className="p-4 border-b border-gray-200">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center">
+                    {selectedConversation.externalUserName ? (
+                      <span className="text-white text-sm font-medium">
+                        {selectedConversation.externalUserName.charAt(0).toUpperCase()}
+                      </span>
+                    ) : (
+                      <User className="w-5 h-5 text-white" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-slate-900">
+                      {selectedConversation.externalUserName || `User ${selectedConversation.externalUserId.slice(0, 8)}`}
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      {selectedConversation.platform} • {selectedConversation.status}
+                    </p>
+                  </div>
+                  <span
+                    className={cn(
+                      'px-2 py-1 text-xs font-medium rounded-full',
+                      selectedConversation.status === 'Open'
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-gray-100 text-gray-700'
+                    )}
+                  >
+                    {selectedConversation.status}
+                  </span>
+                </div>
+              </div>
+
+              {/* Messages */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                {selectedConversation.messages && selectedConversation.messages.length > 0 ? (
+                  selectedConversation.messages.map((message) => {
+                    const isAgent = message.senderType === 'agent';
+
+                    return (
+                      <div
+                        key={message.id}
+                        className={cn(
+                          'flex gap-3',
+                          isAgent ? 'justify-end' : 'justify-start'
+                        )}
+                      >
+                        {!isAgent && (
+                          <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
+                            <User className="w-4 h-4 text-white" />
+                          </div>
+                        )}
+                        <div
+                          className={cn(
+                            'max-w-[70%] rounded-lg px-4 py-2',
+                            isAgent
+                              ? 'bg-indigo-600 text-white'
+                              : 'bg-gray-100 text-slate-900'
+                          )}
+                        >
+                          <p className="text-sm">{message.content}</p>
+                          <p
+                            className={cn(
+                              'text-xs mt-1',
+                              isAgent ? 'text-indigo-100' : 'text-slate-500'
+                            )}
+                          >
+                            {formatTime(message.createdAt)}
+                          </p>
+                        </div>
+                        {isAgent && (
+                          <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
+                            <Bot className="w-4 h-4 text-white" />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-center text-slate-500 py-8">
+                    No messages yet. Start the conversation!
+                  </div>
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+
+              {/* Message Input */}
+              <div className="p-4 border-t border-gray-200">
+                <form onSubmit={handleSendMessage} className="flex gap-2">
+                  <Input
+                    type="text"
+                    placeholder="Type a message..."
+                    value={messageText}
+                    onChange={(e) => setMessageText(e.target.value)}
+                    className="flex-1"
+                    disabled={sendReplyMutation.isPending}
+                  />
+                  <Button
+                    type="submit"
+                    disabled={!messageText.trim() || sendReplyMutation.isPending}
+                  >
+                    {sendReplyMutation.isPending ? (
+                      'Sending...'
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4" />
+                        Send
+                      </>
+                    )}
+                  </Button>
+                </form>
+              </div>
+            </>
+          )}
+        </Card>
+      </div>
+    </div>
+  );
+}
+
