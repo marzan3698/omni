@@ -46,6 +46,8 @@ model Company {
   leadInterests      LeadInterest[]
   systemSettings    SystemSetting[]
   campaigns          Campaign[]
+  products           Product[]
+  productCategories  ProductCategory[]
 
   @@index([name])
   @@index([isActive])
@@ -221,6 +223,13 @@ enum CampaignType {
   research
 
   @@map("campaign_type")
+}
+
+enum Currency {
+  BDT
+  USD
+
+  @@map("currency")
 }
 
 model Lead {
@@ -674,6 +683,7 @@ model Campaign {
 
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
   leads   Lead[]
+  products CampaignProduct[]
 
   @@index([companyId])
   @@index([type])
@@ -681,4 +691,69 @@ model Campaign {
   @@index([endDate])
   @@index([isActive])
   @@map("campaigns")
+}
+
+// ============================================
+// 10. Product Management
+// ============================================
+
+model ProductCategory {
+  id          Int       @id @default(autoincrement())
+  companyId   Int       @map("company_id")
+  name        String    @db.VarChar(255)
+  description String?   @db.Text
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  company Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  products Product[]
+
+  @@index([companyId])
+  @@index([name])
+  @@map("product_categories")
+}
+
+model Product {
+  id            Int       @id @default(autoincrement())
+  companyId     Int       @map("company_id")
+  categoryId    Int       @map("category_id")
+  name          String    @db.VarChar(255)
+  description   String?   @db.Text
+  purchasePrice Decimal   @map("purchase_price") @db.Decimal(12, 2)
+  salePrice     Decimal   @map("sale_price") @db.Decimal(12, 2)
+  currency      Currency  @default(BDT)
+  productCompany String?  @map("product_company") @db.VarChar(255)
+  imageUrl      String?   @map("image_url") @db.VarChar(500)
+  quickReplies  Json?     @map("quick_replies")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  company  Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  category ProductCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  campaigns CampaignProduct[]
+
+  @@index([companyId])
+  @@index([categoryId])
+  @@index([name])
+  @@index([currency])
+  @@map("products")
+}
+
+// ============================================
+// 11. Campaign Product Assignment
+// ============================================
+
+model CampaignProduct {
+  id         Int      @id @default(autoincrement())
+  campaignId Int      @map("campaign_id")
+  productId  Int      @map("product_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, productId])
+  @@index([campaignId])
+  @@index([productId])
+  @@map("campaign_products")
 }

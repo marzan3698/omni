@@ -163,6 +163,39 @@ export const campaignApi = {
     apiClientInstance.delete<ApiResponse>(`/campaigns/${id}`, { params: { companyId } }),
   getStatistics: (id: number, companyId: number) => 
     apiClientInstance.get<ApiResponse>(`/campaigns/${id}/statistics`, { params: { companyId } }),
-  getActive: (companyId: number) => 
+  getActive: (companyId: number) =>
     apiClientInstance.get<ApiResponse>('/campaigns/active', { params: { companyId } }),
+  getProducts: (campaignId: number, companyId: number) =>
+    apiClientInstance.get<ApiResponse>(`/campaigns/${campaignId}/products`, { params: { companyId } }),
+};
+
+// Product API
+export const productApi = {
+  getAll: (companyId: number, filters?: { categoryId?: number; search?: string }) =>
+    apiClientInstance.get<ApiResponse>('/products', { params: { companyId, ...filters } }),
+  getById: (id: number, companyId: number) =>
+    apiClientInstance.get<ApiResponse>(`/products/${id}`, { params: { companyId } }),
+  create: (data: any) => apiClientInstance.post<ApiResponse>('/products', data),
+  update: (id: number, data: any, companyId: number) =>
+    apiClientInstance.put<ApiResponse>(`/products/${id}`, data, { params: { companyId } }),
+  delete: (id: number, companyId: number) =>
+    apiClientInstance.delete<ApiResponse>(`/products/${id}`, { params: { companyId } }),
+  uploadImage: (file: File) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    return apiClientInstance.post<ApiResponse>('/products/upload-image', formData);
+  },
+};
+
+// Product Category API
+export const productCategoryApi = {
+  getAll: (companyId: number) =>
+    apiClientInstance.get<ApiResponse>('/product-categories', { params: { companyId } }),
+  getById: (id: number, companyId: number) =>
+    apiClientInstance.get<ApiResponse>(`/product-categories/${id}`, { params: { companyId } }),
+  create: (data: any) => apiClientInstance.post<ApiResponse>('/product-categories', data),
+  update: (id: number, data: any, companyId: number) =>
+    apiClientInstance.put<ApiResponse>(`/product-categories/${id}`, data, { params: { companyId } }),
+  delete: (id: number, companyId: number) =>
+    apiClientInstance.delete<ApiResponse>(`/product-categories/${id}`, { params: { companyId } }),
 };

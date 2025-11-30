@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { socialApi, type SocialConversation, type SocialMessage } from '@/lib/social';
-import { leadApi, leadCategoryApi, leadInterestApi, campaignApi } from '@/lib/api';
+import { leadApi, leadCategoryApi, leadInterestApi, campaignApi, productApi } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { MessageSquare, Send, User, Bot, Target, X, Zap } from 'lucide-react';
+import { MessageSquare, Send, User, Bot, Target, X, Zap, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { PermissionGuard } from '@/components/PermissionGuard';
@@ -29,6 +29,8 @@ export function Inbox() {
   const [messageText, setMessageText] = useState('');
   const [showLeadModal, setShowLeadModal] = useState(false);
   const [showQuickReplies, setShowQuickReplies] = useState(false);
+  const [quickReplyTab, setQuickReplyTab] = useState<'default' | 'campaign' | 'all'>('default');
+  const [selectedCampaignId, setSelectedCampaignId] = useState<number | ''>('');
   const [leadFormData, setLeadFormData] = useState({
     title: '',
     description: '',
@@ -78,7 +80,40 @@ export function Inbox() {
     enabled: !!user?.companyId && showLeadModal,
   });
 
-  // Fetch active campaigns
+  // Fetch active campaigns for quick replies
+  const { data: activeCampaigns = [] } = useQuery({
+    queryKey: ['active-campaigns', user?.companyId],
+    queryFn: async () => {
+      if (!user?.companyId) return [];
+      const response = await campaignApi.getActive(user.companyId);
+      return response.data.data || [];
+    },
+    enabled: !!user?.companyId,
+  });
+
+  // Fetch campaign products when campaign is selected
+  const { data: campaignProducts = [] } = useQuery({
+    queryKey: ['campaign-products', selectedCampaignId, user?.companyId],
+    queryFn: async () => {
+      if (!selectedCampaignId || !user?.companyId) return [];
+      const response = await campaignApi.getProducts(Number(selectedCampaignId), user.companyId);
+      return response.data.data || [];
+    },
+    enabled: !!selectedCampaignId && !!user?.companyId && quickReplyTab === 'campaign',
+  });
+
+  // Fetch all products for "All Products" tab
+  const { data: allProducts = [] } = useQuery({
+    queryKey: ['all-products', user?.companyId],
+    queryFn: async () => {
+      if (!user?.companyId) return [];
+      const response = await productApi.getAll(user.companyId);
+      return response.data.data || [];
+    },
+    enabled: !!user?.companyId && quickReplyTab === 'all',
+  });
+
+  // Fetch active campaigns for lead modal
   const { data: campaignsResponse } = useQuery({
     queryKey: ['campaigns-active', user?.companyId],
     queryFn: async () => {
@@ -468,17 +503,223 @@ export function Inbox() {
                     </Button>
                   </div>
                   {showQuickReplies && (
-                    <div className="flex flex-wrap gap-2 mb-3">
-                      {QUICK_REPLIES.map((reply, index) => (
+                    <div className="space-y-3 mb-3">
+                      {/* Tabs */}
+                      <div className="flex gap-1 border-b border-gray-200">
                         <button
-                          key={index}
                           type="button"
-                          onClick={() => handleQuickReplyClick(reply)}
-                          className="px-3 py-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-md hover:bg-indigo-100 hover:border-indigo-300 transition-colors"
+                          onClick={() => {
+                            setQuickReplyTab('default');
+                            setSelectedCampaignId('');
+                          }}
+                          className={cn(
+                            'px-3 py-2 text-xs font-medium border-b-2 transition-colors',
+                            quickReplyTab === 'default'
+                              ? 'border-indigo-600 text-indigo-600'
+                              : 'border-transparent text-gray-600 hover:text-gray-900'
+                          )}
                         >
-                          {reply}
+                          Default Messages
                         </button>
-                      ))}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setQuickReplyTab('campaign');
+                            setSelectedCampaignId('');
+                          }}
+                          className={cn(
+                            'px-3 py-2 text-xs font-medium border-b-2 transition-colors',
+                            quickReplyTab === 'campaign'
+                              ? 'border-indigo-600 text-indigo-600'
+                              : 'border-transparent text-gray-600 hover:text-gray-900'
+                          )}
+                        >
+                          Campaign Products
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setQuickReplyTab('all');
+                            setSelectedCampaignId('');
+                          }}
+                          className={cn(
+                            'px-3 py-2 text-xs font-medium border-b-2 transition-colors',
+                            quickReplyTab === 'all'
+                              ? 'border-indigo-600 text-indigo-600'
+                              : 'border-transparent text-gray-600 hover:text-gray-900'
+                          )}
+                        >
+                          All Products
+                        </button>
+                      </div>
+
+                      {/* Campaign Dropdown (only for Campaign Products tab) */}
+                      {quickReplyTab === 'campaign' && (
+                        <div>
+                          <select
+                            value={selectedCampaignId}
+                            onChange={(e) => setSelectedCampaignId(e.target.value ? Number(e.target.value) : '')}
+                            className="w-full px-3 py-2 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          >
+                            <option value="">Select Campaign</option>
+                            {activeCampaigns.map((campaign: any) => (
+                              <option key={campaign.id} value={campaign.id}>
+                                {campaign.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+
+                      {/* Default Messages Tab */}
+                      {quickReplyTab === 'default' && (
+                        <div className="flex flex-wrap gap-2">
+                          {QUICK_REPLIES.map((reply, index) => (
+                            <button
+                              key={index}
+                              type="button"
+                              onClick={() => handleQuickReplyClick(reply)}
+                              className="px-3 py-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-md hover:bg-indigo-100 hover:border-indigo-300 transition-colors"
+                            >
+                              {reply}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Campaign Products Tab */}
+                      {quickReplyTab === 'campaign' && (
+                        <div>
+                          {!selectedCampaignId ? (
+                            <div className="text-center py-4 text-xs text-slate-500">
+                              Select a campaign to view product quick replies
+                            </div>
+                          ) : campaignProducts.length === 0 ? (
+                            <div className="text-center py-4 text-xs text-slate-500">
+                              No products assigned to this campaign
+                            </div>
+                          ) : (
+                            <div className="space-y-4 max-h-64 overflow-y-auto">
+                              {campaignProducts.map((product: any) => {
+                                const quickReplies = product.quickReplies || [];
+                                const attributes = quickReplies.filter((qr: any) => qr.type === 'attribute');
+                                const salesMessages = quickReplies.filter((qr: any) => qr.type === 'sales');
+
+                                return (
+                                  <div key={product.id} className="p-3 border border-gray-200 rounded-md bg-white">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <Package className="w-4 h-4 text-indigo-600" />
+                                      <span className="text-sm font-semibold text-slate-900">{product.name}</span>
+                                    </div>
+                                    {attributes.length > 0 && (
+                                      <div className="mb-2">
+                                        <div className="text-xs font-medium text-slate-600 mb-1">Attributes:</div>
+                                        <div className="flex flex-wrap gap-1">
+                                          {attributes.map((attr: any, idx: number) => (
+                                            <button
+                                              key={idx}
+                                              type="button"
+                                              onClick={() => handleQuickReplyClick(`${attr.key || 'Attribute'}: ${attr.value}`)}
+                                              className="px-2 py-1 text-xs font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 rounded hover:bg-indigo-100 transition-colors"
+                                            >
+                                              {attr.key || 'Attribute'}: {attr.value}
+                                            </button>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                    {salesMessages.length > 0 && (
+                                      <div>
+                                        <div className="text-xs font-medium text-slate-600 mb-1">Sales Messages:</div>
+                                        <div className="flex flex-wrap gap-1">
+                                          {salesMessages.map((msg: any, idx: number) => (
+                                            <button
+                                              key={idx}
+                                              type="button"
+                                              onClick={() => handleQuickReplyClick(msg.value)}
+                                              className="px-2 py-1 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded hover:bg-green-100 transition-colors"
+                                            >
+                                              {msg.value}
+                                            </button>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                    {attributes.length === 0 && salesMessages.length === 0 && (
+                                      <div className="text-xs text-slate-400">No quick replies for this product</div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* All Products Tab */}
+                      {quickReplyTab === 'all' && (
+                        <div>
+                          {allProducts.length === 0 ? (
+                            <div className="text-center py-4 text-xs text-slate-500">
+                              No products available
+                            </div>
+                          ) : (
+                            <div className="space-y-4 max-h-64 overflow-y-auto">
+                              {allProducts.map((product: any) => {
+                                const quickReplies = product.quickReplies || [];
+                                const attributes = quickReplies.filter((qr: any) => qr.type === 'attribute');
+                                const salesMessages = quickReplies.filter((qr: any) => qr.type === 'sales');
+
+                                return (
+                                  <div key={product.id} className="p-3 border border-gray-200 rounded-md bg-white">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <Package className="w-4 h-4 text-indigo-600" />
+                                      <span className="text-sm font-semibold text-slate-900">{product.name}</span>
+                                    </div>
+                                    {attributes.length > 0 && (
+                                      <div className="mb-2">
+                                        <div className="text-xs font-medium text-slate-600 mb-1">Attributes:</div>
+                                        <div className="flex flex-wrap gap-1">
+                                          {attributes.map((attr: any, idx: number) => (
+                                            <button
+                                              key={idx}
+                                              type="button"
+                                              onClick={() => handleQuickReplyClick(`${attr.key || 'Attribute'}: ${attr.value}`)}
+                                              className="px-2 py-1 text-xs font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 rounded hover:bg-indigo-100 transition-colors"
+                                            >
+                                              {attr.key || 'Attribute'}: {attr.value}
+                                            </button>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                    {salesMessages.length > 0 && (
+                                      <div>
+                                        <div className="text-xs font-medium text-slate-600 mb-1">Sales Messages:</div>
+                                        <div className="flex flex-wrap gap-1">
+                                          {salesMessages.map((msg: any, idx: number) => (
+                                            <button
+                                              key={idx}
+                                              type="button"
+                                              onClick={() => handleQuickReplyClick(msg.value)}
+                                              className="px-2 py-1 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded hover:bg-green-100 transition-colors"
+                                            >
+                                              {msg.value}
+                                            </button>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                    {attributes.length === 0 && salesMessages.length === 0 && (
+                                      <div className="text-xs text-slate-400">No quick replies for this product</div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

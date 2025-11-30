@@ -138,6 +138,11 @@ export const verifyPermission = (permission: string) => {
         });
       }
 
+      // SuperAdmin has access to everything
+      if (user.role.name === 'SuperAdmin') {
+        return next();
+      }
+
       const permissions = user.role.permissions as Record<string, boolean>;
 
       // Check if user has the required permission

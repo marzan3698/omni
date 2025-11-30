@@ -10,6 +10,7 @@ interface CreateCampaignData {
   endDate: Date;
   budget: number;
   type: CampaignType;
+  productIds?: number[];
 }
 
 interface UpdateCampaignData {
@@ -19,6 +20,7 @@ interface UpdateCampaignData {
   endDate?: Date;
   budget?: number;
   type?: CampaignType;
+  productIds?: number[];
 }
 
 export const campaignService = {
@@ -72,6 +74,20 @@ export const campaignService = {
         companyId,
       },
       include: {
+        products: {
+          include: {
+            product: {
+              include: {
+                category: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+        },
         leads: {
           include: {
             createdByUser: {
@@ -125,7 +141,8 @@ export const campaignService = {
       throw new AppError('Company not found', 404);
     }
 
-    return await prisma.campaign.create({
+    // Create campaign
+    const campaign = await prisma.campaign.create({
       data: {
         companyId: data.companyId,
         name: data.name,
@@ -135,7 +152,50 @@ export const campaignService = {
         budget: new Prisma.Decimal(data.budget),
         type: data.type,
       },
+    });
+
+    // Assign products if provided
+    if (data.productIds && data.productIds.length > 0) {
+      // Validate products belong to the same company
+      const products = await prisma.product.findMany({
+        where: {
+          id: { in: data.productIds },
+          companyId: data.companyId,
+        },
+      });
+
+      if (products.length !== data.productIds.length) {
+        throw new AppError('Some products not found or do not belong to your company', 400);
+      }
+
+      // Create campaign-product relationships
+      await prisma.campaignProduct.createMany({
+        data: data.productIds.map((productId) => ({
+          campaignId: campaign.id,
+          productId,
+        })),
+        skipDuplicates: true,
+      });
+    }
+
+    // Return campaign with products and leads
+    return await prisma.campaign.findUnique({
+      where: { id: campaign.id },
       include: {
+        products: {
+          include: {
+            product: {
+              include: {
+                category: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+        },
         leads: {
           select: {
             id: true,
@@ -193,10 +253,62 @@ export const campaignService = {
     if (data.budget !== undefined) updateData.budget = new Prisma.Decimal(data.budget);
     if (data.type !== undefined) updateData.type = data.type;
 
-    return await prisma.campaign.update({
+    // Update campaign
+    const updatedCampaign = await prisma.campaign.update({
       where: { id },
       data: updateData,
+    });
+
+    // Update products if provided
+    if (data.productIds !== undefined) {
+      // Delete existing product assignments
+      await prisma.campaignProduct.deleteMany({
+        where: { campaignId: id },
+      });
+
+      // Add new product assignments if any
+      if (data.productIds.length > 0) {
+        // Validate products belong to the same company
+        const products = await prisma.product.findMany({
+          where: {
+            id: { in: data.productIds },
+            companyId,
+          },
+        });
+
+        if (products.length !== data.productIds.length) {
+          throw new AppError('Some products not found or do not belong to your company', 400);
+        }
+
+        // Create campaign-product relationships
+        await prisma.campaignProduct.createMany({
+          data: data.productIds.map((productId) => ({
+            campaignId: id,
+            productId,
+          })),
+          skipDuplicates: true,
+        });
+      }
+    }
+
+    // Return campaign with products and leads
+    return await prisma.campaign.findUnique({
+      where: { id },
       include: {
+        products: {
+          include: {
+            product: {
+              include: {
+                category: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+        },
         leads: {
           select: {
             id: true,
@@ -309,6 +421,20 @@ export const campaignService = {
       },
       orderBy: { createdAt: 'desc' },
       include: {
+        products: {
+          include: {
+            product: {
+              include: {
+                category: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+        },
         leads: {
           select: {
             id: true,
@@ -317,6 +443,44 @@ export const campaignService = {
         },
       },
     });
+  },
+
+  /**
+   * Get campaign products
+   */
+  async getCampaignProducts(campaignId: number, companyId: number) {
+    // Verify campaign exists and belongs to company
+    const campaign = await prisma.campaign.findFirst({
+      where: {
+        id: campaignId,
+        companyId,
+      },
+    });
+
+    if (!campaign) {
+      throw new AppError('Campaign not found', 404);
+    }
+
+    // Get products assigned to this campaign
+    const campaignProducts = await prisma.campaignProduct.findMany({
+      where: {
+        campaignId,
+      },
+      include: {
+        product: {
+          include: {
+            category: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return campaignProducts.map((cp) => cp.product);
   },
 };
 

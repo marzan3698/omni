@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
 import { PermissionGuard } from '@/components/PermissionGuard';
 import { Plus, Edit, Trash2, X, Megaphone } from 'lucide-react';
+import { ProductSearch } from '@/components/ProductSearch';
 
 interface Campaign {
   id: number;
@@ -39,6 +40,7 @@ export default function Campaigns() {
     endDate: '',
     budget: '',
     type: 'sale' as 'reach' | 'sale' | 'research',
+    productIds: [] as number[],
   });
 
   // Fetch campaigns
@@ -57,10 +59,14 @@ export default function Campaigns() {
   // Create/Update mutation
   const saveCampaignMutation = useMutation({
     mutationFn: (data: any) => {
+      const submitData = {
+        ...data,
+        productIds: formData.productIds,
+      };
       if (editingCampaign) {
-        return campaignApi.update(editingCampaign.id, data, user?.companyId || 0);
+        return campaignApi.update(editingCampaign.id, submitData, user?.companyId || 0);
       }
-      return campaignApi.create({ ...data, companyId: user?.companyId });
+      return campaignApi.create({ ...submitData, companyId: user?.companyId });
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['campaigns'] });
@@ -105,6 +111,7 @@ export default function Campaigns() {
       endDate: '',
       budget: '',
       type: 'sale',
+      productIds: [],
     });
     setEditingCampaign(null);
   };
@@ -120,18 +127,58 @@ export default function Campaigns() {
     }
   }, [location.pathname]);
 
-  const handleOpenModal = (campaign?: Campaign) => {
+  const handleOpenModal = async (campaign?: Campaign) => {
     if (campaign) {
-      setEditingCampaign(campaign);
-      setFormData({
-        name: campaign.name,
-        description: campaign.description || '',
-        startDate: campaign.startDate.split('T')[0],
-        endDate: campaign.endDate.split('T')[0],
-        budget: String(campaign.budget),
-        type: campaign.type,
-      });
-      setIsModalOpen(true);
+      try {
+        // Fetch full campaign data with products
+        const response = await campaignApi.getById(campaign.id, user?.companyId || 0);
+        if (!response.data.success) {
+          throw new Error(response.data.message || 'Failed to fetch campaign');
+        }
+        
+        const campaignData = response.data.data as any;
+        console.log('Campaign data fetched:', campaignData); // Debug log
+        
+        // Extract product IDs from the campaign data
+        const productIds: number[] = [];
+        if (campaignData.products && Array.isArray(campaignData.products)) {
+          campaignData.products.forEach((cp: any) => {
+            // Handle both nested product structure and direct productId
+            const productId = cp.product?.id || cp.productId || cp.id;
+            if (productId && typeof productId === 'number') {
+              productIds.push(productId);
+            }
+          });
+        }
+        
+        console.log('Extracted product IDs:', productIds); // Debug log
+        
+        setEditingCampaign(campaign);
+        setFormData({
+          name: campaignData.name || campaign.name,
+          description: campaignData.description || campaign.description || '',
+          startDate: campaignData.startDate ? new Date(campaignData.startDate).toISOString().split('T')[0] : campaign.startDate.split('T')[0],
+          endDate: campaignData.endDate ? new Date(campaignData.endDate).toISOString().split('T')[0] : campaign.endDate.split('T')[0],
+          budget: String(campaignData.budget || campaign.budget),
+          type: campaignData.type || campaign.type,
+          productIds: productIds,
+        });
+        setIsModalOpen(true);
+      } catch (error) {
+        console.error('Error fetching campaign data:', error);
+        // Fallback to basic campaign data if fetch fails
+        setEditingCampaign(campaign);
+        setFormData({
+          name: campaign.name,
+          description: campaign.description || '',
+          startDate: campaign.startDate.split('T')[0],
+          endDate: campaign.endDate.split('T')[0],
+          budget: String(campaign.budget),
+          type: campaign.type,
+          productIds: [],
+        });
+        setIsModalOpen(true);
+      }
     } else {
       navigate('/campaigns/new');
     }
@@ -415,6 +462,27 @@ export default function Campaigns() {
                       <option value="sale">Sale</option>
                       <option value="research">Research</option>
                     </select>
+                  </div>
+
+                  {/* Product Selection Section */}
+                  <div>
+                    <Label>Assign Products</Label>
+                    <div className="mt-2 p-4 border border-gray-200 rounded-md bg-gray-50">
+                      {user?.companyId && (
+                        <ProductSearch
+                          companyId={user.companyId}
+                          selectedProductIds={formData.productIds}
+                          onSelectionChange={(productIds) =>
+                            setFormData({ ...formData, productIds })
+                          }
+                        />
+                      )}
+                    </div>
+                    {formData.productIds.length > 0 && (
+                      <p className="mt-2 text-sm text-slate-600">
+                        {formData.productIds.length} product{formData.productIds.length !== 1 ? 's' : ''} selected
+                      </p>
+                    )}
                   </div>
 
                   <div className="flex justify-end gap-2 pt-4">

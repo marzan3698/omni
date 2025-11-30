@@ -8,7 +8,12 @@ interface PermissionGuardProps {
 }
 
 export function PermissionGuard({ children, permission, fallback }: PermissionGuardProps) {
-  const { hasPermission } = useAuth();
+  const { hasPermission, user } = useAuth();
+
+  // SuperAdmin has access to everything
+  if (user?.roleName === 'SuperAdmin') {
+    return <>{children}</>;
+  }
 
   if (!hasPermission(permission)) {
     return fallback ? <>{fallback}</> : null;

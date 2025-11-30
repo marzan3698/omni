@@ -21,7 +21,8 @@ import {
   ChevronDown,
   ChevronRight,
   Plus,
-  Eye
+  Eye,
+  Package
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -68,6 +69,17 @@ const navItems: NavItem[] = [
     submenu: [
       { label: 'Add New Campaign', path: '/campaigns/new', icon: Plus },
       { label: 'View Campaigns', path: '/campaigns', icon: Eye },
+    ]
+  },
+  { 
+    label: 'Product Management', 
+    icon: Package, 
+    permission: 'can_manage_products',
+    submenu: [
+      { label: 'Add New Product', path: '/products/new', icon: Plus },
+      { label: 'All Products', path: '/products', icon: Eye },
+      { label: 'Add Product Category', path: '/product-categories/new', icon: Plus },
+      { label: 'Product Category List', path: '/product-categories', icon: Eye },
     ]
   },
   // Lead Manager section

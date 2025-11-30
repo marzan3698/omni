@@ -19,6 +19,11 @@ import Roles from './pages/Roles';
 import TaskConfig from './pages/TaskConfig';
 import Integrations from './pages/Integrations';
 import Campaigns from './pages/Campaigns';
+import Products from './pages/Products';
+import ProductForm from './pages/ProductForm';
+import ProductView from './pages/ProductView';
+import ProductCategories from './pages/ProductCategories';
+import ProductCategoryForm from './pages/ProductCategoryForm';
 
 function App() {
   return (
@@ -184,6 +189,66 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <Campaigns />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/products"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Products />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/products/new"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <ProductForm />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/products/:id/edit"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <ProductForm />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/products/:id"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <ProductView />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/product-categories"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <ProductCategories />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/product-categories/new"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <ProductCategoryForm />
                 </Layout>
               </ProtectedRoute>
             }

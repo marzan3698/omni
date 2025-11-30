@@ -27,6 +27,9 @@ app.use((req, res, next) => {
   next();
 });
 
+// Serve static files for uploads
+app.use('/uploads', express.static('uploads'));
+
 // Raw body parser for webhooks (must be before json parser)
 app.use('/api/webhooks/facebook', express.raw({ type: 'application/json' }));
 app.use('/api/chatwoot/webhooks/chatwoot', express.raw({ type: 'application/json' }));
@@ -60,6 +63,8 @@ import userRoutes from './routes/user.routes.js';
 import systemSettingRoutes from './routes/systemSetting.routes.js';
 import roleRoutes from './routes/role.routes.js';
 import campaignRoutes from './routes/campaign.routes.js';
+import productRoutes from './routes/product.routes.js';
+import productCategoryRoutes from './routes/productCategory.routes.js';
 app.use('/api/auth', authRoutes);
 app.use('/api', socialRoutes);
 app.use('/api/integrations', integrationRoutes);
@@ -76,6 +81,8 @@ app.use('/api/users', userRoutes);
 app.use('/api/system-settings', systemSettingRoutes);
 app.use('/api/roles', roleRoutes);
 app.use('/api/campaigns', campaignRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/product-categories', productCategoryRoutes);
 // app.use('/api/users', userRoutes);
 
 // Global error handling middleware
