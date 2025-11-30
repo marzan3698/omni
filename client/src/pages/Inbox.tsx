@@ -1,21 +1,34 @@
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { socialApi, type SocialConversation, type SocialMessage } from '@/lib/social';
-import { leadApi, leadCategoryApi, leadInterestApi } from '@/lib/api';
+import { leadApi, leadCategoryApi, leadInterestApi, campaignApi } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { MessageSquare, Send, User, Bot, Target, X } from 'lucide-react';
+import { MessageSquare, Send, User, Bot, Target, X, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { PermissionGuard } from '@/components/PermissionGuard';
+
+// Predefined quick reply greeting messages
+const QUICK_REPLIES = [
+  'Hello! How can I help you today?',
+  'Hi! Thanks for reaching out.',
+  'Good morning! How may I assist you?',
+  'Good afternoon! What can I do for you?',
+  'Hello! Welcome to our service.',
+  'Hi there! I\'m here to help.',
+  'Thank you for contacting us!',
+  'Hello! How are you doing today?',
+];
 
 export function Inbox() {
   const { user } = useAuth();
   const [selectedConversationId, setSelectedConversationId] = useState<number | null>(null);
   const [messageText, setMessageText] = useState('');
   const [showLeadModal, setShowLeadModal] = useState(false);
+  const [showQuickReplies, setShowQuickReplies] = useState(false);
   const [leadFormData, setLeadFormData] = useState({
     title: '',
     description: '',
@@ -25,6 +38,7 @@ export function Inbox() {
     phone: '',
     categoryId: '',
     interestId: '',
+    campaignId: '',
   });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
@@ -64,8 +78,20 @@ export function Inbox() {
     enabled: !!user?.companyId && showLeadModal,
   });
 
+  // Fetch active campaigns
+  const { data: campaignsResponse } = useQuery({
+    queryKey: ['campaigns-active', user?.companyId],
+    queryFn: async () => {
+      if (!user?.companyId) return [];
+      const response = await campaignApi.getActive(user.companyId);
+      return response.data.data || [];
+    },
+    enabled: !!user?.companyId && showLeadModal,
+  });
+
   const categories = categoriesResponse || [];
   const interests = interestsResponse || [];
+  const campaigns = campaignsResponse || [];
 
   // Send reply mutation
   const sendReplyMutation = useMutation({
@@ -88,7 +114,7 @@ export function Inbox() {
     },
     onSuccess: () => {
       setShowLeadModal(false);
-      setLeadFormData({ title: '', description: '', value: '', assignedTo: '', customerName: '', phone: '', categoryId: '', interestId: '' });
+      setLeadFormData({ title: '', description: '', value: '', assignedTo: '', customerName: '', phone: '', categoryId: '', interestId: '', campaignId: '' });
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       alert('Lead created successfully!');
     },
@@ -114,6 +140,7 @@ export function Inbox() {
       phone: '',
       categoryId: '',
       interestId: '',
+      campaignId: '',
     });
     setShowLeadModal(true);
   };
@@ -159,6 +186,10 @@ export function Inbox() {
       return;
     }
 
+    const campaignIdNum = leadFormData.campaignId && leadFormData.campaignId !== '' 
+      ? parseInt(leadFormData.campaignId, 10) 
+      : undefined;
+
     createLeadMutation.mutate({
       title: leadFormData.title,
       description: leadFormData.description || undefined,
@@ -168,6 +199,7 @@ export function Inbox() {
       phone: leadFormData.phone || undefined,
       categoryId: categoryIdNum,
       interestId: interestIdNum,
+      campaignId: campaignIdNum,
     });
   };
 
@@ -181,6 +213,20 @@ export function Inbox() {
     if (!messageText.trim() || !selectedConversationId) return;
 
     sendReplyMutation.mutate(messageText.trim());
+  };
+
+  const handleQuickReplyClick = (message: string) => {
+    setMessageText(message);
+    setShowQuickReplies(false);
+    // Focus on the input after setting the message
+    setTimeout(() => {
+      const input = document.querySelector('input[placeholder="Type a message..."]') as HTMLInputElement;
+      if (input) {
+        input.focus();
+        // Move cursor to end of text
+        input.setSelectionRange(message.length, message.length);
+      }
+    }, 0);
   };
 
   const formatTime = (dateString: string) => {
@@ -403,6 +449,41 @@ export function Inbox() {
                 <div ref={messagesEndRef} />
               </div>
 
+              {/* Quick Replies */}
+              {selectedConversationId && (
+                <div className="px-4 pt-3 border-t border-gray-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Zap className="w-4 h-4 text-indigo-600" />
+                      <span className="text-xs font-medium text-slate-700">Quick Replies</span>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowQuickReplies(!showQuickReplies)}
+                      className="h-6 px-2 text-xs"
+                    >
+                      {showQuickReplies ? 'Hide' : 'Show'}
+                    </Button>
+                  </div>
+                  {showQuickReplies && (
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {QUICK_REPLIES.map((reply, index) => (
+                        <button
+                          key={index}
+                          type="button"
+                          onClick={() => handleQuickReplyClick(reply)}
+                          className="px-3 py-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-md hover:bg-indigo-100 hover:border-indigo-300 transition-colors"
+                        >
+                          {reply}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Message Input */}
               <div className="p-4 border-t border-gray-200">
                 <form onSubmit={handleSendMessage} className="flex gap-2">
@@ -513,6 +594,22 @@ export function Inbox() {
                     {interests.map((int: any) => (
                       <option key={int.id} value={int.id}>
                         {int.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <Label htmlFor="lead-campaign">Select Campaign</Label>
+                  <select
+                    id="lead-campaign"
+                    value={leadFormData.campaignId}
+                    onChange={(e) => setLeadFormData({ ...leadFormData, campaignId: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="">No campaign (optional)</option>
+                    {campaigns.map((campaign: any) => (
+                      <option key={campaign.id} value={campaign.id}>
+                        {campaign.name} - {campaign.type.charAt(0).toUpperCase() + campaign.type.slice(1)}
                       </option>
                     ))}
                   </select>

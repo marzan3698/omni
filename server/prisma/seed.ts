@@ -56,6 +56,7 @@ async function main() {
                 can_manage_lead_config: true,
                 can_view_all_tasks: true,
                 can_assign_tasks_to_anyone: true,
+                can_manage_campaigns: true,
             },
         },
         create: {
@@ -89,6 +90,7 @@ async function main() {
                 can_manage_lead_config: true,
                 can_view_all_tasks: true,
                 can_assign_tasks_to_anyone: true,
+                can_manage_campaigns: true,
             },
         },
     });

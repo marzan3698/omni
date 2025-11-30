@@ -45,6 +45,7 @@ const allPermissions = [
   { key: 'can_manage_lead_config', label: 'Manage Lead Config' },
   { key: 'can_view_all_tasks', label: 'View All Tasks' },
   { key: 'can_assign_tasks_to_anyone', label: 'Assign Tasks to Anyone' },
+  { key: 'can_manage_campaigns', label: 'Manage Campaigns' },
 ];
 
 export default function Roles() {
@@ -105,7 +106,7 @@ export default function Roles() {
   const permissionGroups = {
     'User Management': allPermissions.filter((p) => p.key.includes('user') || p.key.includes('User')),
     'Content Management': allPermissions.filter(
-      (p) => p.key.includes('company') || p.key.includes('employee') || p.key.includes('lead') || p.key.includes('task')
+      (p) => p.key.includes('company') || p.key.includes('employee') || p.key.includes('lead') || p.key.includes('task') || p.key.includes('campaign')
     ),
     'System Management': allPermissions.filter(
       (p) => p.key.includes('role') || p.key.includes('integration') || p.key.includes('root') || p.key.includes('config')

@@ -16,6 +16,7 @@ const createLeadSchema = z.object({
   assignedTo: z.number().int().positive().optional(),
   value: z.number().positive().optional(),
   conversationId: z.number().int().positive().optional(),
+  campaignId: z.number().int().positive().optional(),
 });
 
 const createLeadFromInboxSchema = z.object({
@@ -27,6 +28,7 @@ const createLeadFromInboxSchema = z.object({
   phone: z.string().min(1, 'Phone is required'),
   categoryId: z.number().int().positive('Category is required'),
   interestId: z.number().int().positive('Interest is required'),
+  campaignId: z.number().int().positive().optional(),
 });
 
 const convertLeadSchema = z.object({
@@ -182,8 +184,12 @@ export const leadController = {
    */
   createLead: async (req: Request, res: Response) => {
     try {
+      const userId = (req as AuthRequest).user?.id;
+      if (!userId) {
+        return sendError(res, 'User ID not found', 400);
+      }
       const validatedData = createLeadSchema.parse(req.body);
-      const lead = await leadService.createLead(validatedData);
+      const lead = await leadService.createLead({ ...validatedData, createdBy: userId });
       return sendSuccess(res, lead, 'Lead created successfully', 201);
     } catch (error) {
       if (error instanceof z.ZodError) {

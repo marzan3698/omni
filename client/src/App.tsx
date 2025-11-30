@@ -18,6 +18,7 @@ import SystemSettings from './pages/SystemSettings';
 import Roles from './pages/Roles';
 import TaskConfig from './pages/TaskConfig';
 import Integrations from './pages/Integrations';
+import Campaigns from './pages/Campaigns';
 
 function App() {
   return (
@@ -163,6 +164,26 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <Integrations />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/campaigns"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Campaigns />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/campaigns/new"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Campaigns />
                 </Layout>
               </ProtectedRoute>
             }

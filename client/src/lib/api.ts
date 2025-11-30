@@ -149,3 +149,20 @@ export const roleApi = {
   updatePermissions: (id: number, permissions: Record<string, boolean>) => 
     apiClientInstance.put<ApiResponse>(`/roles/${id}/permissions`, { permissions }),
 };
+
+// Campaign API (SuperAdmin only)
+export const campaignApi = {
+  getAll: (companyId: number, filters?: { type?: string; active?: boolean }) => 
+    apiClientInstance.get<ApiResponse>('/campaigns', { params: { companyId, ...filters } }),
+  getById: (id: number, companyId: number) => 
+    apiClientInstance.get<ApiResponse>(`/campaigns/${id}`, { params: { companyId } }),
+  create: (data: any) => apiClientInstance.post<ApiResponse>('/campaigns', data),
+  update: (id: number, data: any, companyId: number) => 
+    apiClientInstance.put<ApiResponse>(`/campaigns/${id}`, data, { params: { companyId } }),
+  delete: (id: number, companyId: number) => 
+    apiClientInstance.delete<ApiResponse>(`/campaigns/${id}`, { params: { companyId } }),
+  getStatistics: (id: number, companyId: number) => 
+    apiClientInstance.get<ApiResponse>(`/campaigns/${id}/statistics`, { params: { companyId } }),
+  getActive: (companyId: number) => 
+    apiClientInstance.get<ApiResponse>('/campaigns/active', { params: { companyId } }),
+};

@@ -4,6 +4,7 @@ import { LeadSource, LeadStatus, Prisma } from '@prisma/client';
 
 interface CreateLeadData {
   companyId: number;
+  createdBy: string;
   title: string;
   description?: string;
   source: LeadSource;
@@ -15,6 +16,7 @@ interface CreateLeadData {
   phone?: string;
   categoryId?: number;
   interestId?: number;
+  campaignId?: number;
 }
 
 interface UpdateLeadData {
@@ -28,6 +30,7 @@ interface UpdateLeadData {
   phone?: string;
   categoryId?: number;
   interestId?: number;
+  campaignId?: number;
 }
 
 export const leadService = {
@@ -115,6 +118,13 @@ export const leadService = {
             name: true,
           },
         },
+        campaign: {
+          select: {
+            id: true,
+            name: true,
+            type: true,
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -189,6 +199,7 @@ export const leadService = {
     phone?: string;
     categoryId: number;
     interestId: number;
+    campaignId?: number;
   }) {
     // Verify conversation exists
     const conversation = await prisma.socialConversation.findFirst({
@@ -257,6 +268,30 @@ export const leadService = {
       throw new AppError('Lead interest not found', 404);
     }
 
+    // Verify campaign if provided
+    if (data.campaignId) {
+      const campaign = await prisma.campaign.findFirst({
+        where: {
+          id: data.campaignId,
+        },
+        include: {
+          company: {
+            select: {
+              id: true,
+            },
+          },
+        },
+      });
+      if (!campaign) {
+        throw new AppError('Campaign not found', 404);
+      }
+      // Verify campaign is active (startDate <= now <= endDate)
+      const now = new Date();
+      if (campaign.startDate > now || campaign.endDate < now) {
+        throw new AppError('Campaign is not active', 400);
+      }
+    }
+
     // Create lead
     return await prisma.lead.create({
       data: {
@@ -272,6 +307,7 @@ export const leadService = {
         phone: data.phone || null,
         categoryId: data.categoryId,
         interestId: data.interestId,
+        campaignId: data.campaignId || null,
       },
       include: {
         createdByUser: {
@@ -309,6 +345,13 @@ export const leadService = {
           select: {
             id: true,
             name: true,
+          },
+        },
+        campaign: {
+          select: {
+            id: true,
+            name: true,
+            type: true,
           },
         },
       },
@@ -373,9 +416,27 @@ export const leadService = {
       }
     }
 
+    // Verify campaign if provided
+    if (data.campaignId) {
+      const campaign = await prisma.campaign.findFirst({
+        where: {
+          id: data.campaignId,
+          companyId: data.companyId,
+        },
+      });
+      if (!campaign) {
+        throw new AppError('Campaign not found', 404);
+      }
+      // Verify campaign is active (startDate <= now <= endDate)
+      const now = new Date();
+      if (campaign.startDate > now || campaign.endDate < now) {
+        throw new AppError('Campaign is not active', 400);
+      }
+    }
+
     return await prisma.lead.create({
       data: {
-        companyId: data.companyId,
+        createdBy: data.createdBy,
         title: data.title,
         description: data.description,
         source: data.source,
@@ -387,6 +448,7 @@ export const leadService = {
         phone: data.phone,
         categoryId: data.categoryId,
         interestId: data.interestId,
+        campaignId: data.campaignId || null,
       },
       include: {
         assignedEmployee: {
@@ -417,6 +479,13 @@ export const leadService = {
           select: {
             id: true,
             name: true,
+          },
+        },
+        campaign: {
+          select: {
+            id: true,
+            name: true,
+            type: true,
           },
         },
       },
@@ -478,6 +547,24 @@ export const leadService = {
       }
     }
 
+    // Verify campaign if provided
+    if (data.campaignId) {
+      const campaign = await prisma.campaign.findFirst({
+        where: {
+          id: data.campaignId,
+          companyId,
+        },
+      });
+      if (!campaign) {
+        throw new AppError('Campaign not found', 404);
+      }
+      // Verify campaign is active (startDate <= now <= endDate)
+      const now = new Date();
+      if (campaign.startDate > now || campaign.endDate < now) {
+        throw new AppError('Campaign is not active', 400);
+      }
+    }
+
     return await prisma.lead.update({
       where: { id },
       data,
@@ -510,6 +597,13 @@ export const leadService = {
           select: {
             id: true,
             name: true,
+          },
+        },
+        campaign: {
+          select: {
+            id: true,
+            name: true,
+            type: true,
           },
         },
       },
@@ -563,6 +657,13 @@ export const leadService = {
           select: {
             id: true,
             name: true,
+          },
+        },
+        campaign: {
+          select: {
+            id: true,
+            name: true,
+            type: true,
           },
         },
       },

@@ -59,6 +59,7 @@ import leadInterestRoutes from './routes/leadInterest.routes.js';
 import userRoutes from './routes/user.routes.js';
 import systemSettingRoutes from './routes/systemSetting.routes.js';
 import roleRoutes from './routes/role.routes.js';
+import campaignRoutes from './routes/campaign.routes.js';
 app.use('/api/auth', authRoutes);
 app.use('/api', socialRoutes);
 app.use('/api/integrations', integrationRoutes);
@@ -74,6 +75,7 @@ app.use('/api/lead-interests', leadInterestRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/system-settings', systemSettingRoutes);
 app.use('/api/roles', roleRoutes);
+app.use('/api/campaigns', campaignRoutes);
 // app.use('/api/users', userRoutes);
 
 // Global error handling middleware

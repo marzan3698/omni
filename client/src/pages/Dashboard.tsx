@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { taskApi, leadApi } from '@/lib/api';
+import { taskApi, leadApi, campaignApi } from '@/lib/api';
 import { integrationApi } from '@/lib/integration';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { LayoutDashboard, Users, Briefcase, DollarSign, Target, CheckSquare, Building2, MessageSquare, Copy, Check, MessageSquare as ChatwootIcon } from 'lucide-react';
+import { CircularProgress } from '@/components/ui/circular-progress';
+import { LayoutDashboard, Users, Briefcase, DollarSign, Target, CheckSquare, Building2, MessageSquare, Copy, Check, MessageSquare as ChatwootIcon, Megaphone, Plus } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { PermissionGuard } from '@/components/PermissionGuard';
 import { Link } from 'react-router-dom';
@@ -66,6 +67,47 @@ export function Dashboard() {
   const leads = leadsResponse || [];
   const activeLeads = leads.filter((l: any) => l.status !== 'Won' && l.status !== 'Lost').length;
 
+  // Fetch active campaigns for Lead Manager / Sales Manager
+  const { data: campaignsResponse } = useQuery({
+    queryKey: ['campaigns-active', user?.companyId],
+    queryFn: async () => {
+      if (!user?.companyId) return [];
+      const response = await campaignApi.getActive(user.companyId);
+      return response.data.data || [];
+    },
+    enabled: !!user?.companyId && (hasPermission('can_manage_leads') || hasPermission('can_view_leads')),
+  });
+
+  // Fetch all campaigns for SuperAdmin
+  const { data: allCampaignsResponse, isLoading: campaignsLoading } = useQuery({
+    queryKey: ['campaigns-all', user?.companyId],
+    queryFn: async () => {
+      if (!user?.companyId) return [];
+      const response = await campaignApi.getAll(user.companyId);
+      return response.data.data || [];
+    },
+    enabled: !!user?.companyId && (hasPermission('can_manage_campaigns') || user?.roleName === 'SuperAdmin'),
+  });
+
+  // Fetch campaign statistics for each active campaign
+  const campaigns = campaignsResponse || [];
+  const { data: campaignStats = [] } = useQuery({
+    queryKey: ['campaign-stats', campaigns.map((c: any) => c.id)],
+    queryFn: async () => {
+      if (!user?.companyId || campaigns.length === 0) return [];
+      const statsPromises = campaigns.map((campaign: any) =>
+        campaignApi.getStatistics(campaign.id, user.companyId!)
+          .then((res: any) => ({
+            campaignId: campaign.id,
+            ...res.data.data,
+          }))
+          .catch(() => null)
+      );
+      return (await Promise.all(statsPromises)).filter(Boolean);
+    },
+    enabled: !!user?.companyId && campaigns.length > 0 && (hasPermission('can_manage_leads') || hasPermission('can_view_leads')),
+  });
+
   const handleCopyWebhookUrl = async () => {
     if (!webhookUrl) return;
     try {
@@ -76,6 +118,8 @@ export function Dashboard() {
       console.error('Failed to copy:', error);
     }
   };
+
+  const allCampaigns = allCampaignsResponse || [];
 
   // Role-based stats based on permissions
   const getStats = () => {
@@ -144,6 +188,17 @@ export function Dashboard() {
         icon: MessageSquare,
         color: 'text-pink-600',
         link: '/inbox',
+      });
+    }
+
+    if (hasPermission('can_manage_campaigns') || user?.roleName === 'SuperAdmin') {
+      stats.push({
+        title: 'Total Campaigns',
+        value: String(allCampaigns.length),
+        change: 'Manage campaigns',
+        icon: Megaphone,
+        color: 'text-indigo-600',
+        link: '/campaigns',
       });
     }
 
@@ -286,6 +341,186 @@ export function Dashboard() {
           </CardContent>
         </Card>
       </PermissionGuard>
+
+      {/* Campaign Management Widget - Show for SuperAdmin */}
+      {(hasPermission('can_manage_campaigns') || user?.roleName === 'SuperAdmin') && (
+        <Card className="shadow-sm border-gray-200">
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Megaphone className="w-5 h-5 text-indigo-600" />
+                  Campaign Management
+                </CardTitle>
+                <CardDescription>
+                  Manage and monitor all marketing campaigns
+                </CardDescription>
+              </div>
+              <Link to="/campaigns">
+                <Button variant="outline" size="sm">
+                  Manage Campaigns
+                </Button>
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {campaignsLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-slate-500">Loading campaigns...</div>
+              </div>
+            ) : allCampaigns && allCampaigns.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {allCampaigns.slice(0, 4).map((campaign: any) => {
+                  const now = new Date();
+                  const startDate = new Date(campaign.startDate);
+                  const endDate = new Date(campaign.endDate);
+                  const isActive = startDate <= now && endDate >= now;
+                  const totalLeads = campaign.leads?.length || 0;
+                  const totalValue = campaign.leads?.reduce((sum: number, lead: any) => {
+                    return sum + (lead.value ? Number(lead.value) : 0);
+                  }, 0) || 0;
+                  const progressPercentage = Number(campaign.budget) > 0
+                    ? (totalValue / Number(campaign.budget)) * 100
+                    : 0;
+
+                  return (
+                    <Card key={campaign.id} className="shadow-sm border-gray-200">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-start justify-between">
+                          <CardTitle className="text-sm font-semibold">{campaign.name}</CardTitle>
+                          <span className={`px-2 py-1 text-xs rounded-full ${
+                            isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                          }`}>
+                            {isActive ? 'Active' : 'Inactive'}
+                          </span>
+                        </div>
+                        <CardDescription className="text-xs">
+                          {campaign.type.charAt(0).toUpperCase() + campaign.type.slice(1)}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2">
+                          <CircularProgress
+                            value={Math.min(100, Math.max(0, progressPercentage))}
+                            size={60}
+                            strokeWidth={5}
+                          />
+                          <div className="text-xs space-y-1">
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Budget:</span>
+                              <span className="font-medium">${Number(campaign.budget).toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Value:</span>
+                              <span className="font-medium text-green-600">${totalValue.toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Leads:</span>
+                              <span className="font-medium">{totalLeads}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-slate-500">
+                <Megaphone className="w-12 h-12 mx-auto mb-2 text-slate-300" />
+                <p>No campaigns found. Create your first campaign to get started.</p>
+                <Link to="/campaigns">
+                  <Button className="mt-4">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create Campaign
+                  </Button>
+                </Link>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Campaign Progress Widgets - Show for Lead Manager / Sales Manager */}
+      {(hasPermission('can_manage_leads') || hasPermission('can_view_leads')) && campaigns.length > 0 && (
+        <Card className="shadow-sm border-gray-200">
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Megaphone className="w-5 h-5 text-indigo-600" />
+                  Campaign Progress
+                </CardTitle>
+                <CardDescription>
+                  Track your active marketing campaigns
+                </CardDescription>
+              </div>
+              <Link to="/campaigns">
+                <Button variant="outline" size="sm">
+                  View All
+                </Button>
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {campaigns.map((campaign: any) => {
+                const stats = campaignStats.find((s: any) => s.campaignId === campaign.id)?.statistics;
+                if (!stats) return null;
+
+                const totalEstimatedValue = stats.totalEstimatedValue || 0;
+                const budget = stats.budget || Number(campaign.budget);
+                const progressPercentage = budget > 0 ? (totalEstimatedValue / budget) * 100 : 0;
+
+                return (
+                  <Card key={campaign.id} className="shadow-sm border-gray-200">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base">{campaign.name}</CardTitle>
+                      <CardDescription className="text-xs">
+                        {campaign.type.charAt(0).toUpperCase() + campaign.type.slice(1)} Campaign
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center gap-4">
+                        <CircularProgress
+                          value={Math.min(100, Math.max(0, progressPercentage))}
+                          size={80}
+                          strokeWidth={6}
+                        />
+                        <div className="flex-1 space-y-1">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-slate-600">Budget:</span>
+                            <span className="font-medium text-slate-900">
+                              ${budget.toLocaleString()}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-slate-600">Estimated Value:</span>
+                            <span className="font-medium text-green-600">
+                              ${totalEstimatedValue.toLocaleString()}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-slate-600">Leads:</span>
+                            <span className="font-medium text-slate-900">
+                              {stats.totalLeads || 0}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+            {campaigns.length === 0 && (
+              <div className="text-center py-8 text-slate-500">
+                No active campaigns. Create a campaign to get started.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Tasks Widget - Show for all users */}
       {tasks.length > 0 && (
