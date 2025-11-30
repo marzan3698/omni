@@ -4,6 +4,7 @@ import { sendSuccess, sendError } from '../utils/response.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { z } from 'zod';
 import { LeadSource, LeadStatus } from '@prisma/client';
+import { AuthRequest } from '../types/index.js';
 
 // Validation schemas
 const createLeadSchema = z.object({
@@ -22,6 +23,10 @@ const createLeadFromInboxSchema = z.object({
   description: z.string().optional(),
   assignedTo: z.number().int().positive().optional(),
   value: z.number().positive().optional(),
+  customerName: z.string().min(1, 'Customer name is required'),
+  phone: z.string().min(1, 'Phone is required'),
+  categoryId: z.number().int().positive('Category is required'),
+  interestId: z.number().int().positive('Interest is required'),
 });
 
 const convertLeadSchema = z.object({
@@ -37,17 +42,29 @@ export const leadController = {
    */
   getAllLeads: async (req: Request, res: Response) => {
     try {
-      const companyId = parseInt(req.query.companyId as string);
-      if (isNaN(companyId)) {
-        return sendError(res, 'Company ID is required', 400);
-      }
+      const userId = (req as AuthRequest).user?.id;
+      const userRole = (req as AuthRequest).user?.roleName;
 
       const filters: any = {};
+      
+      // If not Lead Manager or SuperAdmin, only show leads created by this user
+      if (userRole !== 'Lead Manager' && userRole !== 'SuperAdmin') {
+        if (!userId) {
+          return sendError(res, 'User ID not found', 400);
+        }
+        filters.createdBy = userId;
+      }
+      
+      // Apply filters
       if (req.query.status) filters.status = req.query.status as LeadStatus;
       if (req.query.source) filters.source = req.query.source as LeadSource;
       if (req.query.assignedTo) filters.assignedTo = parseInt(req.query.assignedTo as string);
+      if (req.query.categoryId) filters.categoryId = parseInt(req.query.categoryId as string);
+      if (req.query.interestId) filters.interestId = parseInt(req.query.interestId as string);
+      if (req.query.search) filters.search = req.query.search as string;
+      if (req.query.createdBy) filters.createdBy = req.query.createdBy as string;
 
-      const leads = await leadService.getAllLeads(companyId, filters);
+      const leads = await leadService.getAllLeads(filters);
       return sendSuccess(res, leads, 'Leads retrieved successfully');
     } catch (error) {
       if (error instanceof AppError) {
@@ -87,21 +104,73 @@ export const leadController = {
   createLeadFromInbox: async (req: Request, res: Response) => {
     try {
       const conversationId = parseInt(req.params.conversationId);
-      const companyId = parseInt(req.query.companyId as string || req.body.companyId);
+      const userId = (req as AuthRequest).user?.id;
       
-      if (isNaN(conversationId) || isNaN(companyId)) {
-        return sendError(res, 'Invalid ID', 400);
+      if (isNaN(conversationId)) {
+        return sendError(res, 'Invalid conversation ID', 400);
       }
 
-      const validatedData = createLeadFromInboxSchema.parse(req.body);
-      const lead = await leadService.createLeadFromInbox(conversationId, companyId, validatedData);
+      if (!userId) {
+        return sendError(res, 'User ID not found', 400);
+      }
+
+      // Convert string numbers to actual numbers, handle empty strings
+      const body: any = { ...req.body };
+      
+      if (body.categoryId !== undefined && body.categoryId !== null && body.categoryId !== '') {
+        body.categoryId = typeof body.categoryId === 'string' ? parseInt(body.categoryId, 10) : body.categoryId;
+        if (isNaN(body.categoryId) || body.categoryId <= 0) {
+          return sendError(res, 'Category is required', 400);
+        }
+      } else {
+        return sendError(res, 'Category is required', 400);
+      }
+      
+      if (body.interestId !== undefined && body.interestId !== null && body.interestId !== '') {
+        body.interestId = typeof body.interestId === 'string' ? parseInt(body.interestId, 10) : body.interestId;
+        if (isNaN(body.interestId) || body.interestId <= 0) {
+          return sendError(res, 'Interest is required', 400);
+        }
+      } else {
+        return sendError(res, 'Interest is required', 400);
+      }
+      
+      if (body.assignedTo !== undefined && body.assignedTo !== null && body.assignedTo !== '') {
+        body.assignedTo = typeof body.assignedTo === 'string' ? parseInt(body.assignedTo, 10) : body.assignedTo;
+        if (isNaN(body.assignedTo) || body.assignedTo <= 0) {
+          body.assignedTo = undefined;
+        }
+      } else {
+        body.assignedTo = undefined;
+      }
+      
+      if (body.value !== undefined && body.value !== null && body.value !== '') {
+        body.value = typeof body.value === 'string' ? parseFloat(body.value) : body.value;
+        if (isNaN(body.value) || body.value <= 0) {
+          body.value = undefined;
+        }
+      } else {
+        body.value = undefined;
+      }
+
+      const validatedData = createLeadFromInboxSchema.parse(body);
+      console.log('Validated data:', JSON.stringify(validatedData, null, 2));
+
+      const lead = await leadService.createLeadFromInbox(conversationId, userId, validatedData);
       return sendSuccess(res, lead, 'Lead created from inbox successfully', 201);
     } catch (error) {
       if (error instanceof z.ZodError) {
+        console.error('Validation error:', JSON.stringify(error.errors, null, 2));
         return sendError(res, error.errors[0].message, 400);
       }
       if (error instanceof AppError) {
+        console.error('AppError:', error.message, error.statusCode);
         return sendError(res, error.message, error.statusCode);
+      }
+      console.error('Error creating lead from inbox:', error);
+      if (error instanceof Error) {
+        console.error('Error stack:', error.stack);
+        return sendError(res, `Failed to create lead: ${error.message}`, 500);
       }
       return sendError(res, 'Failed to create lead from inbox', 500);
     }

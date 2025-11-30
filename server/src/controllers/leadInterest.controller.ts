@@ -28,8 +28,8 @@ export const leadInterestController = {
 
   getInterests: async (req: AuthRequest, res: Response) => {
     try {
-      const companyId = req.user!.companyId;
-      const interests = await leadInterestService.getInterests(companyId);
+      // Get all interests (no company filtering needed)
+      const interests = await leadInterestService.getAllInterests();
       return sendSuccess(res, interests, 'Lead interests retrieved successfully');
     } catch (error: any) {
       return sendError(res, error.message || 'Failed to retrieve lead interests', 500);

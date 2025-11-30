@@ -21,6 +21,14 @@ export const leadCategoryService = {
     return categories;
   },
 
+  async getAllCategories() {
+    const categories = await prisma.leadCategory.findMany({
+      where: { isActive: true },
+      orderBy: { name: 'asc' },
+    });
+    return categories;
+  },
+
   async getCategoryById(id: number, companyId: number) {
     const category = await prisma.leadCategory.findFirst({
       where: { id, companyId },

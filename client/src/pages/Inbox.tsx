@@ -81,10 +81,10 @@ export function Inbox() {
   // Create lead from conversation mutation
   const createLeadMutation = useMutation({
     mutationFn: (data: any) => {
-      if (!selectedConversationId || !user?.companyId) {
-        throw new Error('Conversation ID and Company ID are required');
+      if (!selectedConversationId) {
+        throw new Error('Conversation ID is required');
       }
-      return leadApi.createFromInbox(selectedConversationId, user.companyId, data);
+      return leadApi.createFromInbox(selectedConversationId, data);
     },
     onSuccess: () => {
       setShowLeadModal(false);
@@ -124,16 +124,50 @@ export function Inbox() {
       alert('Lead title is required');
       return;
     }
+    if (!leadFormData.customerName?.trim()) {
+      alert('Customer name is required');
+      return;
+    }
+    if (!leadFormData.phone?.trim()) {
+      alert('Phone is required');
+      return;
+    }
+    if (!leadFormData.categoryId || leadFormData.categoryId === '') {
+      alert('Category is required');
+      return;
+    }
+    if (!leadFormData.interestId || leadFormData.interestId === '') {
+      alert('Interest is required');
+      return;
+    }
+
+    // Ensure categoryId and interestId are numbers, not undefined
+    const categoryIdNum = leadFormData.categoryId && leadFormData.categoryId !== '' 
+      ? parseInt(leadFormData.categoryId, 10) 
+      : null;
+    const interestIdNum = leadFormData.interestId && leadFormData.interestId !== '' 
+      ? parseInt(leadFormData.interestId, 10) 
+      : null;
+
+    if (!categoryIdNum || isNaN(categoryIdNum)) {
+      alert('Please select a category');
+      return;
+    }
+
+    if (!interestIdNum || isNaN(interestIdNum)) {
+      alert('Please select an interest');
+      return;
+    }
 
     createLeadMutation.mutate({
       title: leadFormData.title,
       description: leadFormData.description || undefined,
       value: leadFormData.value ? parseFloat(leadFormData.value) : undefined,
-      assignedTo: leadFormData.assignedTo ? parseInt(leadFormData.assignedTo) : undefined,
+      assignedTo: leadFormData.assignedTo ? parseInt(leadFormData.assignedTo, 10) : undefined,
       customerName: leadFormData.customerName || undefined,
       phone: leadFormData.phone || undefined,
-      categoryId: leadFormData.categoryId ? parseInt(leadFormData.categoryId) : undefined,
-      interestId: leadFormData.interestId ? parseInt(leadFormData.interestId) : undefined,
+      categoryId: categoryIdNum,
+      interestId: interestIdNum,
     });
   };
 

@@ -28,8 +28,8 @@ export const leadCategoryController = {
 
   getCategories: async (req: AuthRequest, res: Response) => {
     try {
-      const companyId = req.user!.companyId;
-      const categories = await leadCategoryService.getCategories(companyId);
+      // Get all categories (no company filtering needed)
+      const categories = await leadCategoryService.getAllCategories();
       return sendSuccess(res, categories, 'Lead categories retrieved successfully');
     } catch (error: any) {
       return sendError(res, error.message || 'Failed to retrieve lead categories', 500);

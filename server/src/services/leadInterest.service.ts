@@ -21,6 +21,14 @@ export const leadInterestService = {
     return interests;
   },
 
+  async getAllInterests() {
+    const interests = await prisma.leadInterest.findMany({
+      where: { isActive: true },
+      orderBy: { name: 'asc' },
+    });
+    return interests;
+  },
+
   async getInterestById(id: number, companyId: number) {
     const interest = await prisma.leadInterest.findFirst({
       where: { id, companyId },

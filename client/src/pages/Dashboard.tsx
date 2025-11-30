@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { taskApi } from '@/lib/api';
+import { taskApi, leadApi } from '@/lib/api';
 import { integrationApi } from '@/lib/integration';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { LayoutDashboard, Users, Briefcase, DollarSign, Target, CheckSquare, Building2, MessageSquare, Copy, Check, MessageSquare as ChatwootIcon } from 'lucide-react';
@@ -53,6 +53,19 @@ export function Dashboard() {
   const pendingTasks = tasks.filter((t: any) => t.status === 'Todo' || t.status === 'InProgress');
   const recentTasks = tasks.slice(0, 5);
 
+  // Fetch leads count for Lead Manager
+  const { data: leadsResponse } = useQuery({
+    queryKey: ['leads-count'],
+    queryFn: async () => {
+      const response = await leadApi.getAll();
+      return response.data.data || [];
+    },
+    enabled: hasPermission('can_manage_leads') || hasPermission('can_view_leads'),
+  });
+
+  const leads = leadsResponse || [];
+  const activeLeads = leads.filter((l: any) => l.status !== 'Won' && l.status !== 'Lost').length;
+
   const handleCopyWebhookUrl = async () => {
     if (!webhookUrl) return;
     try {
@@ -68,10 +81,10 @@ export function Dashboard() {
   const getStats = () => {
     const stats: any[] = [];
 
-    if (hasPermission('can_manage_leads') || hasPermission('can_manage_companies')) {
+    if (hasPermission('can_manage_leads') || hasPermission('can_view_leads')) {
       stats.push({
         title: 'Active Leads',
-        value: '0',
+        value: activeLeads.toString(),
         change: 'View all leads',
         icon: Target,
         color: 'text-blue-600',

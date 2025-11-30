@@ -31,7 +31,6 @@ model Company {
   employees          Employee[]
   departments        Department[]
   clients            Client[]
-  leads              Lead[]
   tasks              Task[]
   invoices           Invoice[]
   transactions       Transaction[]
@@ -82,6 +81,7 @@ model User {
   company  Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
   employee Employee?
   taskComments TaskComment[]
+  createdLeads Lead[] @relation("LeadCreator")
 
   @@unique([email, companyId])
   @@index([email])
@@ -216,7 +216,7 @@ enum LeadStatus {
 
 model Lead {
   id             Int        @id @default(autoincrement())
-  companyId      Int        @map("company_id")
+  createdBy      String     @map("created_by") // User ID who created the lead
   title          String     @db.VarChar(255)
   description    String?    @db.Text
   source         LeadSource @default(Website)
@@ -231,13 +231,13 @@ model Lead {
   createdAt      DateTime   @default(now()) @map("created_at")
   updatedAt      DateTime   @updatedAt @map("updated_at")
 
-  company          Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdByUser  User            @relation("LeadCreator", fields: [createdBy], references: [id], onDelete: Cascade)
   assignedEmployee Employee?      @relation(fields: [assignedTo], references: [id], onDelete: SetNull)
   conversation     SocialConversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
   category         LeadCategory?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   interest         LeadInterest?  @relation(fields: [interestId], references: [id], onDelete: SetNull)
 
-  @@index([companyId])
+  @@index([createdBy])
   @@index([assignedTo])
   @@index([status])
   @@index([conversationId])

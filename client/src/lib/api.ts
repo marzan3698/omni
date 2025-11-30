@@ -78,13 +78,13 @@ export const financeApi = {
 
 // Lead API
 export const leadApi = {
-  getAll: (companyId: number, filters?: any) => 
-    apiClientInstance.get<ApiResponse>('/leads', { params: { companyId, ...filters } }),
+  getAll: (filters?: any) => 
+    apiClientInstance.get<ApiResponse>('/leads', { params: filters }),
   getById: (id: number, companyId: number) => 
     apiClientInstance.get<ApiResponse>(`/leads/${id}`, { params: { companyId } }),
   create: (data: any) => apiClientInstance.post<ApiResponse>('/leads', data),
-  createFromInbox: (conversationId: number, companyId: number, data: any) => 
-    apiClientInstance.post<ApiResponse>(`/leads/from-inbox/${conversationId}`, data, { params: { companyId } }),
+  createFromInbox: (conversationId: number, data: any) => 
+    apiClientInstance.post<ApiResponse>(`/leads/from-inbox/${conversationId}`, data),
   update: (id: number, data: any) => apiClientInstance.put<ApiResponse>(`/leads/${id}`, data),
   updateStatus: (id: number, status: string, companyId: number) => 
     apiClientInstance.put<ApiResponse>(`/leads/${id}/status`, { status }, { params: { companyId } }),
@@ -96,8 +96,8 @@ export const leadApi = {
 
 // Lead Category API
 export const leadCategoryApi = {
-  getAll: (companyId: number) => 
-    apiClientInstance.get<ApiResponse>('/lead-categories', { params: { companyId } }),
+  getAll: () => 
+    apiClientInstance.get<ApiResponse>('/lead-categories'),
   getById: (id: number, companyId: number) => 
     apiClientInstance.get<ApiResponse>(`/lead-categories/${id}`, { params: { companyId } }),
   create: (data: any) => apiClientInstance.post<ApiResponse>('/lead-categories', data),
@@ -108,8 +108,8 @@ export const leadCategoryApi = {
 
 // Lead Interest API
 export const leadInterestApi = {
-  getAll: (companyId: number) => 
-    apiClientInstance.get<ApiResponse>('/lead-interests', { params: { companyId } }),
+  getAll: () => 
+    apiClientInstance.get<ApiResponse>('/lead-interests'),
   getById: (id: number, companyId: number) => 
     apiClientInstance.get<ApiResponse>(`/lead-interests/${id}`, { params: { companyId } }),
   create: (data: any) => apiClientInstance.post<ApiResponse>('/lead-interests', data),

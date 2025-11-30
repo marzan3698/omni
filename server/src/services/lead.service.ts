@@ -1,6 +1,6 @@
 import { prisma } from '../lib/prisma.js';
 import { AppError } from '../middleware/errorHandler.js';
-import { LeadSource, LeadStatus } from '@prisma/client';
+import { LeadSource, LeadStatus, Prisma } from '@prisma/client';
 
 interface CreateLeadData {
   companyId: number;
@@ -32,21 +32,58 @@ interface UpdateLeadData {
 
 export const leadService = {
   /**
-   * Get all leads for a company
+   * Get all leads (optionally filtered by user who created them)
    */
-  async getAllLeads(companyId: number, filters?: {
+  async getAllLeads(filters?: {
+    createdBy?: string;
     status?: LeadStatus;
     source?: LeadSource;
     assignedTo?: number;
+    categoryId?: number;
+    interestId?: number;
+    search?: string;
   }) {
+    const where: any = {};
+    
+    if (filters?.createdBy) {
+      where.createdBy = filters.createdBy;
+    }
+    if (filters?.status) {
+      where.status = filters.status;
+    }
+    if (filters?.source) {
+      where.source = filters.source;
+    }
+    if (filters?.assignedTo) {
+      where.assignedTo = filters.assignedTo;
+    }
+    if (filters?.categoryId) {
+      where.categoryId = filters.categoryId;
+    }
+    if (filters?.interestId) {
+      where.interestId = filters.interestId;
+    }
+    if (filters?.search) {
+      const searchTerm = filters.search.toLowerCase();
+      where.OR = [
+        { title: { contains: filters.search } },
+        { customerName: { contains: filters.search } },
+        { phone: { contains: filters.search } },
+        { description: { contains: filters.search } },
+      ];
+    }
+
     return await prisma.lead.findMany({
-      where: {
-        companyId,
-        ...(filters?.status && { status: filters.status }),
-        ...(filters?.source && { source: filters.source }),
-        ...(filters?.assignedTo && { assignedTo: filters.assignedTo }),
-      },
+      where,
+      orderBy: { createdAt: 'desc' },
       include: {
+        createdByUser: {
+          select: {
+            id: true,
+            email: true,
+            profileImage: true,
+          },
+        },
         assignedEmployee: {
           include: {
             user: {
@@ -143,21 +180,20 @@ export const leadService = {
   /**
    * Create lead from inbox conversation
    */
-  async createLeadFromInbox(conversationId: number, companyId: number, data: {
+  async createLeadFromInbox(conversationId: number, userId: string, data: {
     title: string;
     description?: string;
     assignedTo?: number;
     value?: number;
     customerName?: string;
     phone?: string;
-    categoryId?: number;
-    interestId?: number;
+    categoryId: number;
+    interestId: number;
   }) {
     // Verify conversation exists
     const conversation = await prisma.socialConversation.findFirst({
       where: {
         id: conversationId,
-        companyId,
       },
       include: {
         messages: {
@@ -175,7 +211,6 @@ export const leadService = {
     const existingLead = await prisma.lead.findFirst({
       where: {
         conversationId,
-        companyId,
       },
     });
 
@@ -188,7 +223,6 @@ export const leadService = {
       const employee = await prisma.employee.findFirst({
         where: {
           id: data.assignedTo,
-          companyId,
         },
       });
 
@@ -197,49 +231,56 @@ export const leadService = {
       }
     }
 
-    // Verify category if provided
-    if (data.categoryId) {
-      const category = await prisma.leadCategory.findFirst({
-        where: {
-          id: data.categoryId,
-          companyId,
-        },
-      });
-      if (!category) {
-        throw new AppError('Lead category not found', 404);
-      }
+    // Verify category (required)
+    if (!data.categoryId || data.categoryId <= 0) {
+      throw new AppError('Lead category is required', 400);
+    }
+    const category = await prisma.leadCategory.findFirst({
+      where: {
+        id: data.categoryId,
+      },
+    });
+    if (!category) {
+      throw new AppError('Lead category not found', 404);
     }
 
-    // Verify interest if provided
-    if (data.interestId) {
-      const interest = await prisma.leadInterest.findFirst({
-        where: {
-          id: data.interestId,
-          companyId,
-        },
-      });
-      if (!interest) {
-        throw new AppError('Lead interest not found', 404);
-      }
+    // Verify interest (required)
+    if (!data.interestId || data.interestId <= 0) {
+      throw new AppError('Lead interest is required', 400);
+    }
+    const interest = await prisma.leadInterest.findFirst({
+      where: {
+        id: data.interestId,
+      },
+    });
+    if (!interest) {
+      throw new AppError('Lead interest not found', 404);
     }
 
     // Create lead
     return await prisma.lead.create({
       data: {
-        companyId,
+        createdBy: userId,
         title: data.title,
-        description: data.description,
+        description: data.description || null,
         source: 'Inbox',
         status: 'New',
-        assignedTo: data.assignedTo,
-        value: data.value,
+        assignedTo: data.assignedTo || null,
+        value: data.value !== undefined && data.value !== null ? new Prisma.Decimal(data.value) : null,
         conversationId,
-        customerName: data.customerName,
-        phone: data.phone,
+        customerName: data.customerName || null,
+        phone: data.phone || null,
         categoryId: data.categoryId,
         interestId: data.interestId,
       },
       include: {
+        createdByUser: {
+          select: {
+            id: true,
+            email: true,
+            profileImage: true,
+          },
+        },
         assignedEmployee: {
           include: {
             user: {
@@ -256,6 +297,18 @@ export const leadService = {
             id: true,
             externalUserName: true,
             platform: true,
+          },
+        },
+        category: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        interest: {
+          select: {
+            id: true,
+            name: true,
           },
         },
       },
