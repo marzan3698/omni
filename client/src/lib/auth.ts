@@ -1,4 +1,4 @@
-import apiClient from './api';
+import apiClient from './apiClient';
 import type { ApiResponse, AuthResponse, LoginCredentials, RegisterData } from '@/types';
 
 export const authApi = {
@@ -7,7 +7,7 @@ export const authApi = {
    */
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     const response = await apiClient.post<ApiResponse<AuthResponse>>(
-      '/api/auth/login',
+      '/auth/login',
       credentials
     );
     
@@ -27,7 +27,7 @@ export const authApi = {
     const { confirmPassword, ...registerData } = data;
     
     const response = await apiClient.post<ApiResponse<AuthResponse>>(
-      '/api/auth/register',
+      '/auth/register',
       registerData
     );
     
@@ -44,7 +44,7 @@ export const authApi = {
    * Get current user profile
    */
   async getProfile(): Promise<any> {
-    const response = await apiClient.get<ApiResponse<any>>('/api/auth/me');
+    const response = await apiClient.get<ApiResponse<any>>('/auth/me');
     
     if (response.data.success && response.data.data) {
       return response.data.data;

@@ -3,13 +3,15 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { integrationApi, type CreateIntegrationData } from '@/lib/integration';
 import { Facebook, Copy, Check, Loader2, RefreshCw, AlertCircle, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { apiClient } from '@/lib/api';
+import apiClient from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
 
 const integrationSchema = z.object({
   provider: z.enum(['facebook', 'whatsapp', 'chatwoot']),
@@ -442,12 +444,21 @@ function ChatwootIntegrationForm({
 }
 
 export function Settings() {
+  const { hasPermission } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'integrations' | 'general'>('integrations');
   const [copied, setCopied] = useState(false);
   const [webhookUrl, setWebhookUrl] = useState('');
   const [ngrokStatus, setNgrokStatus] = useState<'checking' | 'available' | 'unavailable'>('checking');
   const [subscriptionStatus, setSubscriptionStatus] = useState<'checking' | 'subscribed' | 'not_subscribed' | 'error'>('checking');
+
+  // Redirect if user doesn't have permission
+  useEffect(() => {
+    if (!hasPermission('can_manage_integrations')) {
+      navigate('/dashboard');
+    }
+  }, [hasPermission, navigate]);
 
   // Fetch existing integrations
   const { data: integrations = [] } = useQuery({
@@ -496,7 +507,7 @@ export function Settings() {
 
     setSubscriptionStatus('checking');
     try {
-      const response = await apiClient.get('/api/utils/check-subscription', {
+      const response = await apiClient.get('/utils/check-subscription', {
         params: {
           pageId: facebookIntegration.pageId,
           accessToken: facebookIntegration.accessToken,
@@ -520,7 +531,7 @@ export function Settings() {
       if (!facebookIntegration?.pageId || !facebookIntegration?.accessToken) {
         throw new Error('Page ID and Access Token are required');
       }
-      const response = await apiClient.post('/api/utils/subscribe-page', {
+      const response = await apiClient.post('/utils/subscribe-page', {
         pageId: facebookIntegration.pageId,
         accessToken: facebookIntegration.accessToken,
       });
@@ -547,8 +558,8 @@ export function Settings() {
     const generateWebhookUrl = async () => {
       // First, try to fetch ngrok URL from our server (which proxies ngrok API)
       try {
-        const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
-        const response = await fetch(`${apiBaseUrl}/api/utils/ngrok-url`);
+        const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+        const response = await fetch(`${apiBaseUrl}/utils/ngrok-url`);
 
         if (response.ok) {
           const data = await response.json();
@@ -578,6 +589,11 @@ export function Settings() {
           // For now, use same origin (you can configure this in .env)
           apiBaseUrl = window.location.origin.replace(window.location.port, '5001');
         }
+      }
+
+      // Remove /api suffix if present since we're adding it back
+      if (apiBaseUrl.endsWith('/api')) {
+        apiBaseUrl = apiBaseUrl.slice(0, -4);
       }
 
       const url = `${apiBaseUrl}/api/webhooks/facebook`;

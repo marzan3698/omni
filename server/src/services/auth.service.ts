@@ -7,6 +7,7 @@ interface RegisterData {
   email: string;
   password: string;
   roleId?: number;
+  companyId: number;
 }
 
 interface LoginData {
@@ -18,6 +19,7 @@ interface TokenPayload {
   id: string;
   email: string;
   roleId: number;
+  companyId: number;
 }
 
 export const authService = {
@@ -25,15 +27,29 @@ export const authService = {
    * Register a new user
    */
   async register(data: RegisterData) {
-    const { email, password, roleId = 2 } = data; // Default roleId 2 (assuming Employee role)
+    const { email, password, roleId = 2, companyId } = data; // Default roleId 2 (assuming Employee role)
 
-    // Check if user already exists
+    // Verify company exists
+    const company = await prisma.company.findUnique({
+      where: { id: companyId },
+    });
+
+    if (!company) {
+      throw new AppError('Company not found', 404);
+    }
+
+    // Check if user already exists in this company
     const existingUser = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
+      where: {
+        email_companyId: {
+          email: email.toLowerCase(),
+          companyId,
+        },
+      },
     });
 
     if (existingUser) {
-      throw new AppError('User with this email already exists', 400);
+      throw new AppError('User with this email already exists in this company', 400);
     }
 
     // Verify role exists
@@ -55,6 +71,7 @@ export const authService = {
         email: email.toLowerCase(),
         passwordHash,
         roleId,
+        companyId,
       },
       include: {
         role: true,
@@ -66,6 +83,7 @@ export const authService = {
       id: user.id,
       email: user.email,
       roleId: user.roleId,
+      companyId: user.companyId,
     });
 
     return {
@@ -87,16 +105,27 @@ export const authService = {
   async login(data: LoginData) {
     const { email, password } = data;
 
-    // Find user by email
-    const user = await prisma.user.findUnique({
+    // Find user by email (need to search across companies)
+    const user = await prisma.user.findFirst({
       where: { email: email.toLowerCase() },
       include: {
         role: true,
+        company: {
+          select: {
+            id: true,
+            name: true,
+            isActive: true,
+          },
+        },
       },
     });
 
     if (!user) {
       throw new AppError('Invalid email or password', 401);
+    }
+
+    if (!user.company.isActive) {
+      throw new AppError('Company account is inactive', 403);
     }
 
     // Verify password
@@ -111,6 +140,7 @@ export const authService = {
       id: user.id,
       email: user.email,
       roleId: user.roleId,
+      companyId: user.companyId,
     });
 
     return {
@@ -118,7 +148,9 @@ export const authService = {
         id: user.id,
         email: user.email,
         roleId: user.roleId,
+        companyId: user.companyId,
         roleName: user.role.name,
+        permissions: user.role.permissions,
         profileImage: user.profileImage,
         createdAt: user.createdAt,
       },
@@ -134,11 +166,6 @@ export const authService = {
       where: { id: userId },
       include: {
         role: true,
-        employee: {
-          include: {
-            departmentRelation: true,
-          },
-        },
       },
     });
 
@@ -146,14 +173,30 @@ export const authService = {
       throw new AppError('User not found', 404);
     }
 
+    // Optionally fetch employee if it exists
+    let employee = null;
+    try {
+      const employeeData = await prisma.employee.findUnique({
+        where: { userId: user.id },
+        include: {
+          departmentRelation: true,
+        },
+      });
+      employee = employeeData;
+    } catch (error) {
+      // Employee doesn't exist, which is fine
+      employee = null;
+    }
+
     return {
       id: user.id,
       email: user.email,
       roleId: user.roleId,
+      companyId: user.companyId,
       roleName: user.role.name,
-      permissions: user.role.permissions,
+      permissions: (user.role.permissions as Record<string, boolean>) || {},
       profileImage: user.profileImage,
-      employee: user.employee,
+      employee: employee,
       createdAt: user.createdAt,
     };
   },

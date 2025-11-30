@@ -1,41 +1,151 @@
-import axios from 'axios';
+import apiClientInstance from './apiClient';
+import type { ApiResponse } from '@/types';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+// Re-export apiClient for use in other files
+export const apiClient = apiClientInstance;
+export default apiClientInstance;
 
-export const apiClient = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
+// Company API
+export const companyApi = {
+  getAll: (companyId?: number) => 
+    apiClientInstance.get<ApiResponse>('/companies', { params: { companyId } }),
+  getById: (id: number, companyId: number) => 
+    apiClientInstance.get<ApiResponse>(`/companies/${id}`, { params: { companyId } }),
+  create: (data: any) => apiClientInstance.post<ApiResponse>('/companies', data),
+  update: (id: number, data: any) => apiClientInstance.put<ApiResponse>(`/companies/${id}`, data),
+  delete: (id: number) => apiClientInstance.delete<ApiResponse>(`/companies/${id}`),
+  getContacts: (id: number, companyId: number) => 
+    apiClientInstance.get<ApiResponse>(`/companies/${id}/contacts`, { params: { companyId } }),
+  getContracts: (id: number, companyId: number) => 
+    apiClientInstance.get<ApiResponse>(`/companies/${id}/contracts`, { params: { companyId } }),
+};
+
+// Employee API
+export const employeeApi = {
+  getAll: (companyId: number) => 
+    apiClientInstance.get<ApiResponse>('/employees', { params: { companyId } }),
+  getById: (id: number, companyId: number) => 
+    apiClientInstance.get<ApiResponse>(`/employees/${id}`, { params: { companyId } }),
+  create: (data: any) => apiClientInstance.post<ApiResponse>('/employees', data),
+  update: (id: number, data: any) => apiClientInstance.put<ApiResponse>(`/employees/${id}`, data),
+  delete: (id: number, companyId: number) => 
+    apiClientInstance.delete<ApiResponse>(`/employees/${id}`, { params: { companyId } }),
+  getTasks: (id: number, companyId: number) => 
+    apiClientInstance.get<ApiResponse>(`/employees/${id}/tasks`, { params: { companyId } }),
+};
+
+// Task API
+export const taskApi = {
+  getAll: (companyId: number, filters?: any) => 
+    apiClientInstance.get<ApiResponse>('/tasks', { params: { companyId, ...filters } }),
+  getById: (id: number, companyId: number) => 
+    apiClientInstance.get<ApiResponse>(`/tasks/${id}`, { params: { companyId } }),
+  create: (data: any) => apiClientInstance.post<ApiResponse>('/tasks', data),
+  update: (id: number, data: any) => apiClientInstance.put<ApiResponse>(`/tasks/${id}`, data),
+  delete: (id: number, companyId: number) => 
+    apiClientInstance.delete<ApiResponse>(`/tasks/${id}`, { params: { companyId } }),
+  updateStatus: (id: number, status: string, companyId: number) => 
+    apiClientInstance.put<ApiResponse>(`/tasks/${id}/status`, { status }, { params: { companyId } }),
+  getUserTasks: (userId: string, companyId: number) => 
+    apiClientInstance.get<ApiResponse>(`/tasks/user/${userId}`, { params: { companyId } }),
+  assignToUser: (taskId: number, employeeId: number, companyId: number) => 
+    apiClientInstance.put<ApiResponse>(`/tasks/${taskId}/assign`, { employeeId }, { params: { companyId } }),
+};
+
+// Finance API
+export const financeApi = {
+  invoices: {
+    getAll: (companyId: number, filters?: any) => 
+      apiClientInstance.get<ApiResponse>('/finance/invoices', { params: { companyId, ...filters } }),
+    getById: (id: number, companyId: number) => 
+      apiClientInstance.get<ApiResponse>(`/finance/invoices/${id}`, { params: { companyId } }),
+    create: (data: any) => apiClientInstance.post<ApiResponse>('/finance/invoices', data),
+    update: (id: number, data: any) => apiClientInstance.put<ApiResponse>(`/finance/invoices/${id}`, data),
   },
-  withCredentials: true,
-});
-
-// Request interceptor to add auth token
-apiClient.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
+  transactions: {
+    getAll: (companyId: number, filters?: any) => 
+      apiClientInstance.get<ApiResponse>('/finance/transactions', { params: { companyId, ...filters } }),
+    create: (data: any) => apiClientInstance.post<ApiResponse>('/finance/transactions', data),
   },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
+  budgets: {
+    getAll: (companyId: number) => 
+      apiClientInstance.get<ApiResponse>('/finance/budgets', { params: { companyId } }),
+    create: (data: any) => apiClientInstance.post<ApiResponse>('/finance/budgets', data),
+  },
+  summary: (companyId: number, startDate?: string, endDate?: string) => 
+    apiClientInstance.get<ApiResponse>('/finance/transactions/summary', { params: { companyId, startDate, endDate } }),
+};
 
-// Response interceptor for error handling
-apiClient.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // Handle unauthorized - clear token and redirect to login
-      localStorage.removeItem('token');
-      window.location.href = '/login';
-    }
-    return Promise.reject(error);
-  }
-);
+// Lead API
+export const leadApi = {
+  getAll: (companyId: number, filters?: any) => 
+    apiClientInstance.get<ApiResponse>('/leads', { params: { companyId, ...filters } }),
+  getById: (id: number, companyId: number) => 
+    apiClientInstance.get<ApiResponse>(`/leads/${id}`, { params: { companyId } }),
+  create: (data: any) => apiClientInstance.post<ApiResponse>('/leads', data),
+  createFromInbox: (conversationId: number, companyId: number, data: any) => 
+    apiClientInstance.post<ApiResponse>(`/leads/from-inbox/${conversationId}`, data, { params: { companyId } }),
+  update: (id: number, data: any) => apiClientInstance.put<ApiResponse>(`/leads/${id}`, data),
+  updateStatus: (id: number, status: string, companyId: number) => 
+    apiClientInstance.put<ApiResponse>(`/leads/${id}/status`, { status }, { params: { companyId } }),
+  convert: (id: number, companyId: number, data?: any) => 
+    apiClientInstance.post<ApiResponse>(`/leads/${id}/convert`, data, { params: { companyId } }),
+  getPipeline: (companyId: number) => 
+    apiClientInstance.get<ApiResponse>('/leads/pipeline', { params: { companyId } }),
+};
 
-export default apiClient;
+// Lead Category API
+export const leadCategoryApi = {
+  getAll: (companyId: number) => 
+    apiClientInstance.get<ApiResponse>('/lead-categories', { params: { companyId } }),
+  getById: (id: number, companyId: number) => 
+    apiClientInstance.get<ApiResponse>(`/lead-categories/${id}`, { params: { companyId } }),
+  create: (data: any) => apiClientInstance.post<ApiResponse>('/lead-categories', data),
+  update: (id: number, data: any) => apiClientInstance.put<ApiResponse>(`/lead-categories/${id}`, data),
+  delete: (id: number, companyId: number) => 
+    apiClientInstance.delete<ApiResponse>(`/lead-categories/${id}`, { params: { companyId } }),
+};
 
+// Lead Interest API
+export const leadInterestApi = {
+  getAll: (companyId: number) => 
+    apiClientInstance.get<ApiResponse>('/lead-interests', { params: { companyId } }),
+  getById: (id: number, companyId: number) => 
+    apiClientInstance.get<ApiResponse>(`/lead-interests/${id}`, { params: { companyId } }),
+  create: (data: any) => apiClientInstance.post<ApiResponse>('/lead-interests', data),
+  update: (id: number, data: any) => apiClientInstance.put<ApiResponse>(`/lead-interests/${id}`, data),
+  delete: (id: number, companyId: number) => 
+    apiClientInstance.delete<ApiResponse>(`/lead-interests/${id}`, { params: { companyId } }),
+};
+
+// User API (SuperAdmin only)
+export const userApi = {
+  getAll: (companyId?: number) => 
+    apiClientInstance.get<ApiResponse>('/users', { params: companyId ? { companyId } : {} }),
+  getById: (id: string, companyId?: number) => 
+    apiClientInstance.get<ApiResponse>(`/users/${id}`, { params: companyId ? { companyId } : {} }),
+  create: (data: any) => apiClientInstance.post<ApiResponse>('/users', data),
+  update: (id: string, data: any) => apiClientInstance.put<ApiResponse>(`/users/${id}`, data),
+  delete: (id: string, companyId?: number) => 
+    apiClientInstance.delete<ApiResponse>(`/users/${id}`, { params: companyId ? { companyId } : {} }),
+};
+
+// System Settings API (SuperAdmin only)
+export const systemSettingApi = {
+  getAll: (companyId: number) => 
+    apiClientInstance.get<ApiResponse>('/system-settings', { params: { companyId } }),
+  getByKey: (key: string, companyId: number) => 
+    apiClientInstance.get<ApiResponse>(`/system-settings/${key}`, { params: { companyId } }),
+  upsert: (data: any) => apiClientInstance.post<ApiResponse>('/system-settings', data),
+  update: (key: string, data: any) => apiClientInstance.put<ApiResponse>(`/system-settings/${key}`, data),
+  delete: (key: string, companyId: number) => 
+    apiClientInstance.delete<ApiResponse>(`/system-settings/${key}`, { params: { companyId } }),
+};
+
+// Role API (SuperAdmin only)
+export const roleApi = {
+  getAll: () => apiClientInstance.get<ApiResponse>('/roles'),
+  getById: (id: number) => apiClientInstance.get<ApiResponse>(`/roles/${id}`),
+  updatePermissions: (id: number, permissions: Record<string, boolean>) => 
+    apiClientInstance.put<ApiResponse>(`/roles/${id}/permissions`, { permissions }),
+};

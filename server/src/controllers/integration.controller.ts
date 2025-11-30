@@ -34,7 +34,14 @@ export const integrationController = {
   upsertIntegration: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const validatedData = createIntegrationSchema.parse(req.body);
-      const integration = await integrationService.upsertIntegration(validatedData);
+      const companyId = (req as any).user?.companyId;
+      if (!companyId) {
+        return sendError(res, 'User company ID not found', 400);
+      }
+      const integration = await integrationService.upsertIntegration({
+        ...validatedData,
+        companyId,
+      } as any);
       sendSuccess(res, integration, 'Integration saved successfully', 201);
     } catch (error) {
       if (error instanceof z.ZodError) {

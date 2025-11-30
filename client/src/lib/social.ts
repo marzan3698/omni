@@ -30,7 +30,7 @@ export const socialApi = {
   async getConversations(status?: 'Open' | 'Closed'): Promise<SocialConversation[]> {
     const params = status ? `?status=${status}` : '';
     const response = await apiClient.get<ApiResponse<SocialConversation[]>>(
-      `/api/conversations${params}`
+      `/conversations${params}`
     );
 
     if (response.data.success && response.data.data) {
@@ -45,7 +45,7 @@ export const socialApi = {
    */
   async getConversationMessages(conversationId: number): Promise<SocialConversation> {
     const response = await apiClient.get<ApiResponse<SocialConversation>>(
-      `/api/conversations/${conversationId}/messages`
+      `/conversations/${conversationId}/messages`
     );
 
     if (response.data.success && response.data.data) {
@@ -60,7 +60,7 @@ export const socialApi = {
    */
   async sendReply(conversationId: number, content: string): Promise<SocialMessage> {
     const response = await apiClient.post<ApiResponse<SocialMessage>>(
-      `/api/conversations/${conversationId}/reply`,
+      `/conversations/${conversationId}/reply`,
       { content }
     );
 

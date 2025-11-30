@@ -35,11 +35,26 @@ export async function getChatwootWebhookUrl(
     }
   }
 
+  // Check for explicit Chatwoot webhook URL first (highest priority)
+  const explicitWebhookUrl = process.env.CHATWOOT_WEBHOOK_URL;
+  if (explicitWebhookUrl) {
+    // If URL already includes the full path, return as is
+    if (explicitWebhookUrl.includes('/api/chatwoot/webhooks/chatwoot')) {
+      return explicitWebhookUrl;
+    }
+    // Otherwise append the path
+    return `${explicitWebhookUrl}/api/chatwoot/webhooks/chatwoot`;
+  }
+
   // Get base URL from environment or use defaults
   if (mode === WebhookMode.live) {
     // Live/production mode - use configured domain
     const liveUrl = process.env.LIVE_WEBHOOK_URL || process.env.WEBHOOK_LIVE_URL;
     if (liveUrl) {
+      // If URL already includes the full path, return as is
+      if (liveUrl.includes('/api/chatwoot/webhooks/chatwoot')) {
+        return liveUrl;
+      }
       return `${liveUrl}/api/chatwoot/webhooks/chatwoot`;
     }
     // Fallback: try to construct from CLIENT_URL or API_URL
@@ -53,6 +68,10 @@ export async function getChatwootWebhookUrl(
     // Local mode - use ngrok or localhost
     const localUrl = process.env.LOCAL_WEBHOOK_URL || process.env.WEBHOOK_LOCAL_URL;
     if (localUrl) {
+      // If URL already includes the full path, return as is
+      if (localUrl.includes('/api/chatwoot/webhooks/chatwoot')) {
+        return localUrl;
+      }
       return `${localUrl}/api/chatwoot/webhooks/chatwoot`;
     }
     // Try to get ngrok URL from utils endpoint

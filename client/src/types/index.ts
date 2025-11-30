@@ -13,6 +13,8 @@ export interface User {
   roleId: number;
   roleName?: string;
   profileImage?: string;
+  permissions?: Record<string, boolean>;
+  companyId?: number;
   createdAt: string;
 }
 
@@ -27,6 +29,7 @@ export interface RegisterData {
   password: string;
   confirmPassword: string;
   roleId?: number;
+  companyId: number;
 }
 
 export interface AuthResponse {

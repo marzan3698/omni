@@ -1,7 +1,8 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { authService } from '../services/auth.service.js';
 import { sendSuccess, sendError } from '../utils/response.js';
 import { AppError } from '../middleware/errorHandler.js';
+import { AuthRequest } from '../types/index.js';
 import { z } from 'zod';
 
 // Validation schemas
@@ -9,6 +10,7 @@ const registerSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
   roleId: z.number().int().positive().optional(),
+  companyId: z.number().int().positive('Company ID is required'),
 });
 
 const loginSchema = z.object({
@@ -71,9 +73,9 @@ export const authController = {
    * Get current user profile
    * GET /api/auth/me
    */
-  getProfile: async (req: Request, res: Response) => {
+  getProfile: async (req: AuthRequest, res: Response) => {
     try {
-      const userId = (req as any).user?.id;
+      const userId = req.user?.id;
 
       if (!userId) {
         return sendError(res, 'User not authenticated', 401);

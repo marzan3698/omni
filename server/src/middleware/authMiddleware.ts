@@ -25,11 +25,25 @@ export const authMiddleware = async (
     // Verify token
     const payload = authService.verifyToken(token);
 
+    // Get user with role for additional info
+    const user = await prisma.user.findUnique({
+      where: { id: payload.id },
+      include: { role: true },
+    });
+
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+
     // Attach user info to request
     (req as AuthRequest).user = {
       id: payload.id,
       email: payload.email,
       roleId: payload.roleId,
+      companyId: payload.companyId,
+      role: {
+        name: user.role.name,
+      },
     };
 
     next();

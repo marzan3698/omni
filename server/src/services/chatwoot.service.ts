@@ -194,9 +194,25 @@ export const chatwootService = {
           : ConversationStatus.Closed;
 
         if (!conversation) {
+          // Get companyId from integration - we need to find the integration first
+          const integration = await prisma.integration.findFirst({
+            where: {
+              provider: 'chatwoot',
+              accountId: accountId.toString(),
+              pageId: inboxId,
+              isActive: true,
+            },
+          });
+          
+          if (!integration) {
+            console.error(`No active Chatwoot integration found for account ${accountId}, inbox ${inboxId}`);
+            continue;
+          }
+          
           // Create new conversation
           conversation = await prisma.socialConversation.create({
             data: {
+              companyId: integration.companyId,
               platform: SocialPlatform.chatwoot,
               externalUserId: externalUserId,
               externalUserName: chatwootConv.contact.name || chatwootConv.contact.identifier,
@@ -387,6 +403,7 @@ export const chatwootService = {
         // Create new conversation
         conversation = await prisma.socialConversation.create({
           data: {
+            companyId: integration.companyId,
             platform: SocialPlatform.chatwoot,
             externalUserId: externalUserId,
             externalUserName: contactName || `Contact ${contactId}`,

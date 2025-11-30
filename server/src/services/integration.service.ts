@@ -10,6 +10,7 @@ interface CreateIntegrationData {
   isActive?: boolean;
   webhookMode?: 'local' | 'live'; // For Chatwoot: webhook mode
   isWebhookActive?: boolean; // Enable/disable webhook
+  companyId?: number; // Company ID (required for multi-tenant)
 }
 
 interface UpdateIntegrationData {
@@ -27,7 +28,11 @@ export const integrationService = {
    * Create or update an integration
    */
   async upsertIntegration(data: CreateIntegrationData) {
-    const { provider, pageId, accessToken, accountId, baseUrl, isActive = true, webhookMode, isWebhookActive = false } = data;
+    const { provider, pageId, accessToken, accountId, baseUrl, isActive = true, webhookMode, isWebhookActive = false, companyId } = data;
+    
+    if (!companyId) {
+      throw new AppError('Company ID is required', 400);
+    }
 
     // Validate provider
     if (!['facebook', 'whatsapp', 'chatwoot'].includes(provider)) {
@@ -42,12 +47,11 @@ export const integrationService = {
     }
 
     // Check if integration exists
-    const existing = await prisma.integration.findUnique({
+    const existing = await prisma.integration.findFirst({
       where: {
-        provider_pageId: {
-          provider: provider as 'facebook' | 'whatsapp' | 'chatwoot',
-          pageId,
-        },
+        companyId,
+        provider: provider as 'facebook' | 'whatsapp' | 'chatwoot',
+        pageId,
       },
     });
 
@@ -62,7 +66,10 @@ export const integrationService = {
       }
       
       await prisma.integration.updateMany({
-        where: whereClause,
+        where: {
+          ...whereClause,
+          companyId,
+        },
         data: {
           isActive: false,
           updatedAt: new Date(),
@@ -96,6 +103,7 @@ export const integrationService = {
           data: {
             provider: provider as 'facebook' | 'whatsapp' | 'chatwoot',
             pageId,
+            companyId,
             ...integrationData,
           },
         });

@@ -11,10 +11,16 @@ import {
   MessageSquare,
   Settings,
   X,
-  LogOut
+  LogOut,
+  Shield,
+  Cog,
+  ListChecks,
+  Target,
+  Plug
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
+import { PermissionGuard } from './PermissionGuard';
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -26,18 +32,26 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
   path: string;
   badge?: number;
+  permission?: string;
 }
 
 const navItems: NavItem[] = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-  { label: 'Companies', icon: Building2, path: '/companies' },
-  { label: 'Employees', icon: Users, path: '/employees' },
-  { label: 'CRM', icon: Briefcase, path: '/crm' },
-  { label: 'Tasks', icon: CheckSquare, path: '/tasks' },
-  { label: 'Finance', icon: DollarSign, path: '/finance' },
-  { label: 'Reports', icon: BarChart3, path: '/reports' },
-  { label: 'Inbox', icon: MessageSquare, path: '/inbox', badge: 3 },
-  { label: 'Settings', icon: Settings, path: '/settings' },
+  { label: 'Companies', icon: Building2, path: '/companies', permission: 'can_view_companies' },
+  { label: 'Employees', icon: Users, path: '/employees', permission: 'can_view_employees' },
+  { label: 'Leads', icon: Target, path: '/leads', permission: 'can_view_leads' },
+  { label: 'Tasks', icon: CheckSquare, path: '/tasks', permission: 'can_view_tasks' },
+  { label: 'Finance', icon: DollarSign, path: '/finance', permission: 'can_view_finance' },
+  { label: 'Inbox', icon: MessageSquare, path: '/inbox', permission: 'can_manage_inbox' },
+  // SuperAdmin section
+  { label: 'Users', icon: Shield, path: '/users', permission: 'can_view_all_users' },
+  { label: 'Roles', icon: Shield, path: '/roles', permission: 'can_manage_roles' },
+  { label: 'System Settings', icon: Cog, path: '/system-settings', permission: 'can_manage_root_items' },
+  { label: 'Integrations', icon: Plug, path: '/integrations', permission: 'can_view_integrations' },
+  { label: 'Task Config', icon: ListChecks, path: '/task-config', permission: 'can_manage_task_config' },
+  // Lead Manager section
+  { label: 'Lead Config', icon: ListChecks, path: '/lead-config', permission: 'can_manage_lead_config' },
+  { label: 'Settings', icon: Settings, path: '/settings', permission: 'can_manage_integrations' },
 ];
 
 export function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
@@ -85,6 +99,9 @@ export function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.path;
+              const hasPermission = !item.permission || user?.permissions?.[item.permission];
+
+              if (!hasPermission) return null;
 
               return (
                 <li key={item.path}>

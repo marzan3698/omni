@@ -39,7 +39,7 @@ export const integrationApi = {
    * Get all integrations
    */
   async getIntegrations(): Promise<Integration[]> {
-    const response = await apiClient.get<ApiResponse<Integration[]>>('/api/integrations');
+    const response = await apiClient.get<ApiResponse<Integration[]>>('/integrations');
 
     if (response.data.success && response.data.data) {
       return response.data.data;
@@ -52,7 +52,7 @@ export const integrationApi = {
    * Get integration by ID
    */
   async getIntegrationById(id: number): Promise<Integration> {
-    const response = await apiClient.get<ApiResponse<Integration>>(`/api/integrations/${id}`);
+    const response = await apiClient.get<ApiResponse<Integration>>(`/integrations/${id}`);
 
     if (response.data.success && response.data.data) {
       return response.data.data;
@@ -65,7 +65,7 @@ export const integrationApi = {
    * Create or update integration
    */
   async upsertIntegration(data: CreateIntegrationData): Promise<Integration> {
-    const response = await apiClient.post<ApiResponse<Integration>>('/api/integrations', data);
+    const response = await apiClient.post<ApiResponse<Integration>>('/integrations', data);
 
     if (response.data.success && response.data.data) {
       return response.data.data;
@@ -78,7 +78,7 @@ export const integrationApi = {
    * Update integration
    */
   async updateIntegration(id: number, data: UpdateIntegrationData): Promise<Integration> {
-    const response = await apiClient.put<ApiResponse<Integration>>(`/api/integrations/${id}`, data);
+    const response = await apiClient.put<ApiResponse<Integration>>(`/integrations/${id}`, data);
 
     if (response.data.success && response.data.data) {
       return response.data.data;
@@ -91,7 +91,7 @@ export const integrationApi = {
    * Delete integration
    */
   async deleteIntegration(id: number): Promise<void> {
-    const response = await apiClient.delete<ApiResponse<void>>(`/api/integrations/${id}`);
+    const response = await apiClient.delete<ApiResponse<void>>(`/integrations/${id}`);
 
     if (!response.data.success) {
       throw new Error(response.data.message || 'Failed to delete integration');
@@ -102,7 +102,7 @@ export const integrationApi = {
    * Sync Chatwoot conversations
    */
   async syncChatwootConversations(integrationId?: number): Promise<any> {
-    const response = await apiClient.post<ApiResponse<any>>('/api/chatwoot/sync', {
+    const response = await apiClient.post<ApiResponse<any>>('/chatwoot/sync', {
       integrationId,
     });
 
@@ -119,7 +119,7 @@ export const integrationApi = {
   async getChatwootWebhookUrl(integrationId?: number): Promise<string> {
     const params = integrationId ? `?integrationId=${integrationId}` : '';
     const response = await apiClient.get<ApiResponse<{ webhookUrl: string }>>(
-      `/api/utils/chatwoot-webhook-url${params}`
+      `/utils/chatwoot-webhook-url${params}`
     );
 
     if (response.data.success && response.data.data) {

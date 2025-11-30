@@ -242,8 +242,14 @@ export const socialService = {
   /**
    * Get all conversations
    */
-  async getConversations(status?: 'Open' | 'Closed') {
-    const where = status ? { status } : {};
+  async getConversations(status?: 'Open' | 'Closed', companyId?: number) {
+    const where: any = {};
+    if (status) {
+      where.status = status;
+    }
+    if (companyId) {
+      where.companyId = companyId;
+    }
 
     const conversations = await prisma.socialConversation.findMany({
       where,

@@ -1,15 +1,31 @@
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { socialApi, type SocialConversation, type SocialMessage } from '@/lib/social';
-import { Card } from '@/components/ui/card';
+import { leadApi, leadCategoryApi, leadInterestApi } from '@/lib/api';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { MessageSquare, Send, User, Bot } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { MessageSquare, Send, User, Bot, Target, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
+import { PermissionGuard } from '@/components/PermissionGuard';
 
 export function Inbox() {
+  const { user } = useAuth();
   const [selectedConversationId, setSelectedConversationId] = useState<number | null>(null);
   const [messageText, setMessageText] = useState('');
+  const [showLeadModal, setShowLeadModal] = useState(false);
+  const [leadFormData, setLeadFormData] = useState({
+    title: '',
+    description: '',
+    value: '',
+    assignedTo: '',
+    customerName: '',
+    phone: '',
+    categoryId: '',
+    interestId: '',
+  });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
 
@@ -28,6 +44,29 @@ export function Inbox() {
     refetchInterval: 5000, // Refresh every 5 seconds when conversation is selected
   });
 
+  // Fetch lead categories
+  const { data: categoriesResponse } = useQuery({
+    queryKey: ['lead-categories'],
+    queryFn: async () => {
+      const response = await leadCategoryApi.getAll(user?.companyId || 0);
+      return response.data.data || [];
+    },
+    enabled: !!user?.companyId && showLeadModal,
+  });
+
+  // Fetch lead interests
+  const { data: interestsResponse } = useQuery({
+    queryKey: ['lead-interests'],
+    queryFn: async () => {
+      const response = await leadInterestApi.getAll(user?.companyId || 0);
+      return response.data.data || [];
+    },
+    enabled: !!user?.companyId && showLeadModal,
+  });
+
+  const categories = categoriesResponse || [];
+  const interests = interestsResponse || [];
+
   // Send reply mutation
   const sendReplyMutation = useMutation({
     mutationFn: (content: string) => socialApi.sendReply(selectedConversationId!, content),
@@ -38,6 +77,65 @@ export function Inbox() {
       queryClient.invalidateQueries({ queryKey: ['conversation', selectedConversationId] });
     },
   });
+
+  // Create lead from conversation mutation
+  const createLeadMutation = useMutation({
+    mutationFn: (data: any) => {
+      if (!selectedConversationId || !user?.companyId) {
+        throw new Error('Conversation ID and Company ID are required');
+      }
+      return leadApi.createFromInbox(selectedConversationId, user.companyId, data);
+    },
+    onSuccess: () => {
+      setShowLeadModal(false);
+      setLeadFormData({ title: '', description: '', value: '', assignedTo: '', customerName: '', phone: '', categoryId: '', interestId: '' });
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      alert('Lead created successfully!');
+    },
+    onError: (error: any) => {
+      alert(error.response?.data?.message || 'Failed to create lead');
+    },
+  });
+
+  const handleCreateLead = () => {
+    if (!selectedConversation) return;
+    
+    // Pre-fill form with conversation data
+    const defaultTitle = selectedConversation.externalUserName 
+      ? `Lead from ${selectedConversation.externalUserName}`
+      : `Lead from ${selectedConversation.platform}`;
+    
+    setLeadFormData({
+      title: defaultTitle,
+      description: selectedConversation.messages?.[0]?.content || '',
+      value: '',
+      assignedTo: '',
+      customerName: selectedConversation.externalUserName || '',
+      phone: '',
+      categoryId: '',
+      interestId: '',
+    });
+    setShowLeadModal(true);
+  };
+
+  const handleSubmitLead = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!leadFormData.title.trim()) {
+      alert('Lead title is required');
+      return;
+    }
+
+    createLeadMutation.mutate({
+      title: leadFormData.title,
+      description: leadFormData.description || undefined,
+      value: leadFormData.value ? parseFloat(leadFormData.value) : undefined,
+      assignedTo: leadFormData.assignedTo ? parseInt(leadFormData.assignedTo) : undefined,
+      customerName: leadFormData.customerName || undefined,
+      phone: leadFormData.phone || undefined,
+      categoryId: leadFormData.categoryId ? parseInt(leadFormData.categoryId) : undefined,
+      interestId: leadFormData.interestId ? parseInt(leadFormData.interestId) : undefined,
+    });
+  };
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -174,34 +272,47 @@ export function Inbox() {
             <>
               {/* Chat Header */}
               <div className="p-4 border-b border-gray-200">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center">
-                    {selectedConversation.externalUserName ? (
-                      <span className="text-white text-sm font-medium">
-                        {selectedConversation.externalUserName.charAt(0).toUpperCase()}
-                      </span>
-                    ) : (
-                      <User className="w-5 h-5 text-white" />
-                    )}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 flex-1">
+                    <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center">
+                      {selectedConversation.externalUserName ? (
+                        <span className="text-white text-sm font-medium">
+                          {selectedConversation.externalUserName.charAt(0).toUpperCase()}
+                        </span>
+                      ) : (
+                        <User className="w-5 h-5 text-white" />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-slate-900">
+                        {selectedConversation.externalUserName || `User ${selectedConversation.externalUserId.slice(0, 8)}`}
+                      </h3>
+                      <p className="text-xs text-slate-500">
+                        {selectedConversation.platform} • {selectedConversation.status}
+                      </p>
+                    </div>
+                    <span
+                      className={cn(
+                        'px-2 py-1 text-xs font-medium rounded-full',
+                        selectedConversation.status === 'Open'
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-gray-100 text-gray-700'
+                      )}
+                    >
+                      {selectedConversation.status}
+                    </span>
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-slate-900">
-                      {selectedConversation.externalUserName || `User ${selectedConversation.externalUserId.slice(0, 8)}`}
-                    </h3>
-                    <p className="text-xs text-slate-500">
-                      {selectedConversation.platform} • {selectedConversation.status}
-                    </p>
-                  </div>
-                  <span
-                    className={cn(
-                      'px-2 py-1 text-xs font-medium rounded-full',
-                      selectedConversation.status === 'Open'
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-gray-100 text-gray-700'
-                    )}
-                  >
-                    {selectedConversation.status}
-                  </span>
+                  <PermissionGuard permission="can_manage_leads">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCreateLead}
+                      className="ml-4"
+                    >
+                      <Target className="w-4 h-4 mr-2" />
+                      Create Lead
+                    </Button>
+                  </PermissionGuard>
                 </div>
               </div>
 
@@ -288,6 +399,141 @@ export function Inbox() {
           )}
         </Card>
       </div>
+
+      {/* Create Lead Modal */}
+      {showLeadModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <Card className="w-full max-w-md shadow-lg">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Create Lead from Conversation</CardTitle>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowLeadModal(false)}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmitLead} className="space-y-4">
+                <div>
+                  <Label htmlFor="lead-title">Lead Title *</Label>
+                  <Input
+                    id="lead-title"
+                    value={leadFormData.title}
+                    onChange={(e) => setLeadFormData({ ...leadFormData, title: e.target.value })}
+                    placeholder="Enter lead title"
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="lead-customer-name">Customer Name *</Label>
+                  <Input
+                    id="lead-customer-name"
+                    value={leadFormData.customerName}
+                    onChange={(e) => setLeadFormData({ ...leadFormData, customerName: e.target.value })}
+                    placeholder="Enter customer name"
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="lead-phone">Phone *</Label>
+                  <Input
+                    id="lead-phone"
+                    type="tel"
+                    value={leadFormData.phone}
+                    onChange={(e) => setLeadFormData({ ...leadFormData, phone: e.target.value })}
+                    placeholder="Enter phone number"
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="lead-category">Category *</Label>
+                  <select
+                    id="lead-category"
+                    value={leadFormData.categoryId}
+                    onChange={(e) => setLeadFormData({ ...leadFormData, categoryId: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    required
+                  >
+                    <option value="">Select category</option>
+                    {categories.map((cat: any) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <Label htmlFor="lead-interest">Interest *</Label>
+                  <select
+                    id="lead-interest"
+                    value={leadFormData.interestId}
+                    onChange={(e) => setLeadFormData({ ...leadFormData, interestId: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    required
+                  >
+                    <option value="">Select interest</option>
+                    {interests.map((int: any) => (
+                      <option key={int.id} value={int.id}>
+                        {int.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <Label htmlFor="lead-description">Description</Label>
+                  <textarea
+                    id="lead-description"
+                    value={leadFormData.description}
+                    onChange={(e) => setLeadFormData({ ...leadFormData, description: e.target.value })}
+                    placeholder="Enter lead description"
+                    className="w-full min-h-[100px] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="lead-value">Estimated Value</Label>
+                  <Input
+                    id="lead-value"
+                    type="number"
+                    step="0.01"
+                    value={leadFormData.value}
+                    onChange={(e) => setLeadFormData({ ...leadFormData, value: e.target.value })}
+                    placeholder="0.00"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="lead-assigned">Assign To (Employee ID)</Label>
+                  <Input
+                    id="lead-assigned"
+                    type="number"
+                    value={leadFormData.assignedTo}
+                    onChange={(e) => setLeadFormData({ ...leadFormData, assignedTo: e.target.value })}
+                    placeholder="Optional"
+                  />
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowLeadModal(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={createLeadMutation.isPending}
+                  >
+                    {createLeadMutation.isPending ? 'Creating...' : 'Create Lead'}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

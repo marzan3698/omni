@@ -119,12 +119,13 @@ export const socialController = {
 
   /**
    * Get all conversations
-   * GET /api/social/conversations
+   * GET /api/conversations
    */
   getConversations: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const status = req.query.status as 'Open' | 'Closed' | undefined;
-      const conversations = await socialService.getConversations(status);
+      const companyId = (req as any).user?.companyId;
+      const conversations = await socialService.getConversations(status, companyId);
       sendSuccess(res, conversations, 'Conversations retrieved successfully');
     } catch (error) {
       next(error);

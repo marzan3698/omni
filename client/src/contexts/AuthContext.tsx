@@ -7,9 +7,10 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, confirmPassword: string) => Promise<void>;
+  register: (email: string, password: string, confirmPassword: string, companyId: number) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
+  hasPermission: (permission: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -41,8 +42,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(response.user);
   };
 
-  const register = async (email: string, password: string, confirmPassword: string) => {
-    const response = await authApi.register({ email, password, confirmPassword });
+  const register = async (email: string, password: string, confirmPassword: string, companyId: number) => {
+    const response = await authApi.register({ email, password, confirmPassword, companyId });
     setUser(response.user);
   };
 
@@ -50,6 +51,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     authApi.logout();
     setUser(null);
     window.location.href = '/login';
+  };
+
+  const hasPermission = (permission: string): boolean => {
+    if (!user || !user.permissions) {
+      return false;
+    }
+    return user.permissions[permission] === true;
   };
 
   return (
@@ -61,6 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         register,
         logout,
         isAuthenticated: !!user,
+        hasPermission,
       }}
     >
       {children}
