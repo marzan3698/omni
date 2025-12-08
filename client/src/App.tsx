@@ -5,6 +5,14 @@ import { PermissionGuard } from './components/PermissionGuard';
 import { Layout } from './components/Layout';
 import { Dashboard } from './pages/Dashboard';
 import { Login } from './pages/Login';
+import { Landing } from './pages/Landing';
+import { Register } from './pages/Register';
+import { ClientLayout } from './components/ClientLayout';
+import { ClientDashboard } from './pages/ClientDashboard';
+import { ClientProjects } from './pages/ClientProjects';
+import { ClientCampaigns } from './pages/ClientCampaigns';
+import { ClientLeads } from './pages/ClientLeads';
+import { ProjectSign } from './pages/ProjectSign';
 import { Inbox } from './pages/Inbox';
 import { Settings } from './pages/Settings';
 import { Companies } from './pages/Companies';
@@ -24,6 +32,11 @@ import ProductForm from './pages/ProductForm';
 import ProductView from './pages/ProductView';
 import ProductCategories from './pages/ProductCategories';
 import ProductCategoryForm from './pages/ProductCategoryForm';
+import { Services } from './pages/Services';
+import { ServiceForm } from './pages/ServiceForm';
+import { AdminProjectsClients } from './pages/AdminProjectsClients';
+import { ClientInvoices } from './pages/ClientInvoices';
+import { InvoiceView } from './pages/InvoiceView';
 
 function App() {
   return (
@@ -253,7 +266,132 @@ function App() {
               </ProtectedRoute>
             }
           />
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route
+            path="/services"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <PermissionGuard permission="can_manage_products">
+                    <Services />
+                  </PermissionGuard>
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/services/new"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <PermissionGuard permission="can_manage_products">
+                    <ServiceForm />
+                  </PermissionGuard>
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/services/:id/edit"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <PermissionGuard permission="can_manage_products">
+                    <ServiceForm />
+                  </PermissionGuard>
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/projects-clients"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <PermissionGuard permission="can_manage_companies">
+                    <AdminProjectsClients />
+                  </PermissionGuard>
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          {/* Public routes */}
+          <Route path="/" element={<Landing />} />
+          <Route path="/register" element={<Register />} />
+
+          {/* Client routes */}
+          <Route
+            path="/client/dashboard"
+            element={
+              <ProtectedRoute>
+                <ClientLayout>
+                  <ClientDashboard />
+                </ClientLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/client/projects"
+            element={
+              <ProtectedRoute>
+                <ClientLayout>
+                  <ClientProjects />
+                </ClientLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/client/campaigns"
+            element={
+              <ProtectedRoute>
+                <ClientLayout>
+                  <ClientCampaigns />
+                </ClientLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/client/leads"
+            element={
+              <ProtectedRoute>
+                <ClientLayout>
+                  <ClientLeads />
+                </ClientLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/client/projects/:id/sign"
+            element={
+              <ProtectedRoute>
+                <ClientLayout>
+                  <ProjectSign />
+                </ClientLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/client/invoices"
+            element={
+              <ProtectedRoute>
+                <ClientLayout>
+                  <ClientInvoices />
+                </ClientLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/client/invoices/:id"
+            element={
+              <ProtectedRoute>
+                <ClientLayout>
+                  <InvoiceView />
+                </ClientLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Default redirect - will be handled by AuthContext based on role */}
+          <Route path="/home" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

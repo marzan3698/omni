@@ -133,6 +133,46 @@ export const socialController = {
   },
 
   /**
+   * Get conversation analytics
+   * GET /api/conversations/analytics
+   */
+  getConversationAnalytics: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const companyId = (req as any).user?.companyId;
+      const daysParam = req.query.days;
+      const days = daysParam ? parseInt(daysParam as string, 10) : 30;
+
+      const analytics = await socialService.getConversationAnalytics(companyId, days);
+      sendSuccess(res, analytics, 'Conversation analytics retrieved successfully');
+    } catch (error) {
+      if (error instanceof AppError) {
+        return sendError(res, error.message, error.statusCode);
+      }
+      next(error);
+    }
+  },
+
+  /**
+   * Public conversation analytics (no auth)
+   * GET /api/conversations/analytics/public
+   */
+  getPublicConversationAnalytics: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const companyIdParam = req.query.companyId ? parseInt(req.query.companyId as string, 10) : undefined;
+      const daysParam = req.query.days;
+      const days = daysParam ? parseInt(daysParam as string, 10) : 30;
+
+      const analytics = await socialService.getConversationAnalytics(companyIdParam, days);
+      sendSuccess(res, analytics, 'Conversation analytics retrieved successfully');
+    } catch (error) {
+      if (error instanceof AppError) {
+        return sendError(res, error.message, error.statusCode);
+      }
+      next(error);
+    }
+  },
+
+  /**
    * Get messages for a conversation
    * GET /api/social/conversations/:id/messages
    */

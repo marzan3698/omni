@@ -326,5 +326,35 @@ export const leadController = {
       return sendError(res, 'Failed to retrieve lead pipeline', 500);
     }
   },
+
+  /**
+   * Get leads for client from their campaigns
+   * GET /api/leads/client?campaignId=1
+   */
+  getClientLeads: async (req: AuthRequest, res: Response) => {
+    try {
+      const clientId = req.user?.id;
+
+      if (!clientId) {
+        return sendError(res, 'User not authenticated', 401);
+      }
+
+      const filters: any = {};
+      if (req.query.campaignId) {
+        filters.campaignId = parseInt(req.query.campaignId as string);
+        if (isNaN(filters.campaignId)) {
+          return sendError(res, 'Invalid campaign ID', 400);
+        }
+      }
+
+      const leads = await leadService.getClientLeads(clientId, filters);
+      return sendSuccess(res, leads, 'Leads retrieved successfully');
+    } catch (error) {
+      if (error instanceof AppError) {
+        return sendError(res, error.message, error.statusCode);
+      }
+      return sendError(res, 'Failed to retrieve leads', 500);
+    }
+  },
 };
 

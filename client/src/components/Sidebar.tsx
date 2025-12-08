@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Users, 
-  Building2, 
-  Briefcase, 
-  CheckSquare, 
-  DollarSign, 
+import {
+  LayoutDashboard,
+  Users,
+  Building2,
+  Briefcase,
+  CheckSquare,
+  DollarSign,
   BarChart3,
   MessageSquare,
   Settings,
@@ -62,18 +62,18 @@ const navItems: NavItem[] = [
   { label: 'System Settings', icon: Cog, path: '/system-settings', permission: 'can_manage_root_items' },
   { label: 'Integrations', icon: Plug, path: '/integrations', permission: 'can_view_integrations' },
   { label: 'Task Config', icon: ListChecks, path: '/task-config', permission: 'can_manage_task_config' },
-  { 
-    label: 'Campaigns', 
-    icon: Megaphone, 
+  {
+    label: 'Campaigns',
+    icon: Megaphone,
     permission: 'can_manage_campaigns',
     submenu: [
       { label: 'Add New Campaign', path: '/campaigns/new', icon: Plus },
       { label: 'View Campaigns', path: '/campaigns', icon: Eye },
     ]
   },
-  { 
-    label: 'Product Management', 
-    icon: Package, 
+  {
+    label: 'Product Management',
+    icon: Package,
     permission: 'can_manage_products',
     submenu: [
       { label: 'Add New Product', path: '/products/new', icon: Plus },
@@ -82,6 +82,8 @@ const navItems: NavItem[] = [
       { label: 'Product Category List', path: '/product-categories', icon: Eye },
     ]
   },
+  { label: 'Services', icon: Package, path: '/services', permission: 'can_manage_products' },
+  { label: 'Projects & Clients', icon: Users, path: '/admin/projects-clients', permission: 'can_manage_companies' },
   // Lead Manager section
   { label: 'Lead Config', icon: ListChecks, path: '/lead-config', permission: 'can_manage_lead_config' },
   { label: 'Settings', icon: Settings, path: '/settings', permission: 'can_manage_integrations' },
@@ -178,7 +180,7 @@ export function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
                         {item.submenu.map((subItem) => {
                           const SubIcon = subItem.icon || Eye;
                           const isSubActive = location.pathname === subItem.path;
-                          
+
                           return (
                             <li key={subItem.path}>
                               <Link

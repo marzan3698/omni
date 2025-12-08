@@ -545,6 +545,62 @@ async function main() {
         },
     });
 
+    // Create Client role
+    const clientRole = await prisma.role.upsert({
+        where: { name: 'Client' },
+        update: {
+            permissions: {
+                can_view_own_projects: true,
+                can_view_campaign_leads: true,
+                can_create_projects: true,
+                can_delete_users: false,
+                can_edit_users: false,
+                can_view_users: false,
+                can_reply_social: false,
+                can_manage_roles: false,
+                can_view_reports: false,
+                can_manage_finance: false,
+                can_manage_companies: false,
+                can_manage_employees: false,
+                can_manage_tasks: false,
+                can_manage_leads: false,
+                can_manage_inbox: false,
+                can_view_companies: false,
+                can_view_employees: false,
+                can_view_tasks: false,
+                can_view_leads: false,
+                can_view_finance: false,
+                can_create_leads: false,
+            },
+        },
+        create: {
+            name: 'Client',
+            permissions: {
+                can_view_own_projects: true,
+                can_view_campaign_leads: true,
+                can_create_projects: true,
+                can_delete_users: false,
+                can_edit_users: false,
+                can_view_users: false,
+                can_reply_social: false,
+                can_manage_roles: false,
+                can_view_reports: false,
+                can_manage_finance: false,
+                can_manage_companies: false,
+                can_manage_employees: false,
+                can_manage_tasks: false,
+                can_manage_leads: false,
+                can_manage_inbox: false,
+                can_view_companies: false,
+                can_view_employees: false,
+                can_view_tasks: false,
+                can_view_leads: false,
+                can_view_finance: false,
+                can_create_leads: false,
+            },
+        },
+    });
+
     console.log('✅ Roles created');
 
     // Create Super Admin User

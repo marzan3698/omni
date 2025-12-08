@@ -108,6 +108,13 @@ export const invoiceService = {
       include: {
         client: true,
         items: true,
+        project: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+          },
+        },
       },
     });
 
@@ -116,6 +123,45 @@ export const invoiceService = {
     }
 
     return invoice;
+  },
+
+  /**
+   * Get invoices for a client user (by email)
+   */
+  async getClientInvoices(userEmail: string, companyId: number) {
+    // Find client by email in contactInfo using raw query for JSON search
+    const clients = await prisma.$queryRaw<Array<{ id: number }>>`
+      SELECT id FROM clients
+      WHERE company_id = ${companyId}
+      AND JSON_EXTRACT(contact_info, '$.email') = ${userEmail}
+    `;
+
+    if (clients.length === 0) {
+      return [];
+    }
+
+    const clientIds = clients.map(c => c.id);
+
+    return await prisma.invoice.findMany({
+      where: {
+        companyId,
+        clientId: {
+          in: clientIds,
+        },
+      },
+      include: {
+        client: true,
+        items: true,
+        project: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
   },
 
   /**
@@ -292,6 +338,111 @@ export const invoiceService = {
     return await prisma.invoice.delete({
       where: { id },
     });
+  },
+
+  /**
+   * Generate invoice from project
+   * Called when project status changes to "Submitted"
+   */
+  async generateInvoiceFromProject(projectId: number) {
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+      include: {
+        client: {
+          include: {
+            company: true,
+          },
+        },
+        company: true,
+      },
+    });
+
+    if (!project) {
+      throw new AppError('Project not found', 404);
+    }
+
+    // Check if invoice already exists for this project
+    const existingInvoice = await prisma.invoice.findFirst({
+      where: { projectId },
+    });
+
+    if (existingInvoice) {
+      return existingInvoice;
+    }
+
+    // Get or create client record from user
+    let client = await prisma.client.findFirst({
+      where: {
+        companyId: project.companyId,
+        contactInfo: {
+          path: ['email'],
+          equals: project.client.email,
+        },
+      },
+    });
+
+    // If client doesn't exist, create one from user data
+    if (!client) {
+      client = await prisma.client.create({
+        data: {
+          companyId: project.companyId,
+          name: project.client.email.split('@')[0],
+          contactInfo: {
+            email: project.client.email,
+          },
+        },
+      });
+    }
+
+    // Generate invoice number
+    const invoiceNumber = await this.generateInvoiceNumber(project.companyId);
+
+    // Set dates
+    const issueDate = new Date();
+    const dueDate = new Date();
+    dueDate.setDate(dueDate.getDate() + 30); // 30 days from issue date
+
+    // Create invoice with single item (the project)
+    const invoice = await prisma.invoice.create({
+      data: {
+        companyId: project.companyId,
+        clientId: client.id,
+        projectId: project.id,
+        invoiceNumber,
+        issueDate,
+        dueDate,
+        totalAmount: project.budget,
+        status: 'Unpaid',
+        notes: `Invoice for project: ${project.title}`,
+        items: {
+          create: {
+            description: project.title,
+            quantity: 1,
+            unitPrice: project.budget,
+            total: project.budget,
+          },
+        },
+      },
+      include: {
+        client: true,
+        items: true,
+        project: true,
+      },
+    });
+
+    // Create account receivable
+    await prisma.accountReceivable.create({
+      data: {
+        companyId: project.companyId,
+        clientId: client.id,
+        invoiceId: invoice.id,
+        amount: project.budget,
+        dueDate,
+        status: 'Pending',
+      },
+    });
+
+    return invoice;
   },
 };
 

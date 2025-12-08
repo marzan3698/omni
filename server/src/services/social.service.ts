@@ -275,6 +275,92 @@ export const socialService = {
   },
 
   /**
+   * Get conversation analytics (counts + daily trend)
+   */
+  async getConversationAnalytics(companyId?: number, days: number = 30) {
+    const safeDays = Number.isFinite(days) && days > 0 && days <= 90 ? Math.floor(days) : 30;
+    const startDate = new Date();
+    startDate.setHours(0, 0, 0, 0);
+    startDate.setDate(startDate.getDate() - (safeDays - 1));
+
+    const [statusCounts, platformCounts, messageGroups, conversationGroups] = await Promise.all([
+      prisma.socialConversation.groupBy({
+        by: ['status'],
+        where: companyId ? { companyId } : undefined,
+        _count: { _all: true },
+      }),
+      prisma.socialConversation.groupBy({
+        by: ['platform'],
+        where: companyId ? { companyId } : undefined,
+        _count: { _all: true },
+      }),
+      prisma.socialMessage.groupBy({
+        by: ['createdAt'],
+        where: {
+          createdAt: { gte: startDate },
+          conversation: companyId ? { companyId } : undefined,
+        },
+        _count: { _all: true },
+      }),
+      prisma.socialConversation.groupBy({
+        by: ['createdAt'],
+        where: {
+          ...(companyId ? { companyId } : {}),
+          createdAt: { gte: startDate },
+        },
+        _count: { _all: true },
+      }),
+    ]);
+
+    const formatDateKey = (d: Date) => d.toISOString().slice(0, 10);
+
+    const messageDailyMap = messageGroups.reduce<Record<string, number>>((acc, item) => {
+      const key = formatDateKey(item.createdAt);
+      acc[key] = (acc[key] || 0) + item._count._all;
+      return acc;
+    }, {});
+
+    const conversationDailyMap = conversationGroups.reduce<Record<string, number>>((acc, item) => {
+      const key = formatDateKey(item.createdAt);
+      acc[key] = (acc[key] || 0) + item._count._all;
+      return acc;
+    }, {});
+
+    const daily: Array<{ date: string; messages: number; conversations: number }> = [];
+    for (let i = 0; i < safeDays; i++) {
+      const current = new Date(startDate);
+      current.setDate(startDate.getDate() + i);
+      const key = formatDateKey(current);
+      daily.push({
+        date: key,
+        messages: messageDailyMap[key] || 0,
+        conversations: conversationDailyMap[key] || 0,
+      });
+    }
+
+    const totalConversations = statusCounts.reduce((sum, s) => sum + s._count._all, 0);
+    const openConversations = statusCounts.find((s) => s.status === 'Open')?._count._all || 0;
+    const closedConversations = statusCounts.find((s) => s.status === 'Closed')?._count._all || 0;
+
+    const platformBreakdown = {
+      facebook: platformCounts.find((p) => p.platform === 'facebook')?._count._all || 0,
+      chatwoot: platformCounts.find((p) => p.platform === 'chatwoot')?._count._all || 0,
+      other: platformCounts.reduce((sum, p) => {
+        if (p.platform === 'facebook' || p.platform === 'chatwoot') return sum;
+        return sum + p._count._all;
+      }, 0),
+    };
+
+    return {
+      totalConversations,
+      openConversations,
+      closedConversations,
+      platformBreakdown,
+      daily,
+    };
+  },
+
+  /**
    * Get messages for a specific conversation
    */
   async getConversationMessages(conversationId: number) {

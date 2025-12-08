@@ -10,6 +10,11 @@ interface RegisterData {
   companyId: number;
 }
 
+interface RegisterClientData {
+  email: string;
+  password: string;
+}
+
 interface LoginData {
   email: string;
   password: string;
@@ -72,6 +77,110 @@ export const authService = {
         passwordHash,
         roleId,
         companyId,
+      },
+      include: {
+        role: true,
+      },
+    });
+
+    // Generate JWT token
+    const token = this.generateToken({
+      id: user.id,
+      email: user.email,
+      roleId: user.roleId,
+      companyId: user.companyId,
+    });
+
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        roleId: user.roleId,
+        roleName: user.role.name,
+        profileImage: user.profileImage,
+        createdAt: user.createdAt,
+      },
+      token,
+    };
+  },
+
+  /**
+   * Register a new client
+   */
+  async registerClient(data: RegisterClientData) {
+    const { email, password } = data;
+
+    // Get default company (companyId = 1)
+    const defaultCompany = await prisma.company.findUnique({
+      where: { id: 1 },
+    });
+
+    if (!defaultCompany) {
+      throw new AppError('Default company not found', 404);
+    }
+
+    // Get or create Client role
+    let clientRole = await prisma.role.findUnique({
+      where: { name: 'Client' },
+    });
+
+    if (!clientRole) {
+      // Create Client role if it doesn't exist
+      clientRole = await prisma.role.create({
+        data: {
+          name: 'Client',
+          permissions: {
+            can_view_own_projects: true,
+            can_view_campaign_leads: true,
+            can_create_projects: true,
+            can_delete_users: false,
+            can_edit_users: false,
+            can_view_users: false,
+            can_reply_social: false,
+            can_manage_roles: false,
+            can_view_reports: false,
+            can_manage_finance: false,
+            can_manage_companies: false,
+            can_manage_employees: false,
+            can_manage_tasks: false,
+            can_manage_leads: false,
+            can_manage_inbox: false,
+            can_view_companies: false,
+            can_view_employees: false,
+            can_view_tasks: false,
+            can_view_leads: false,
+            can_view_finance: false,
+            can_create_leads: false,
+          },
+        },
+      });
+    }
+
+    // Check if user already exists in this company
+    const existingUser = await prisma.user.findUnique({
+      where: {
+        email_companyId: {
+          email: email.toLowerCase(),
+          companyId: defaultCompany.id,
+        },
+      },
+    });
+
+    if (existingUser) {
+      throw new AppError('User with this email already exists', 400);
+    }
+
+    // Hash password
+    const saltRounds = 10;
+    const passwordHash = await bcrypt.hash(password, saltRounds);
+
+    // Create user with Client role
+    const user = await prisma.user.create({
+      data: {
+        email: email.toLowerCase(),
+        passwordHash,
+        roleId: clientRole.id,
+        companyId: defaultCompany.id,
       },
       include: {
         role: true,

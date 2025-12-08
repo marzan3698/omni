@@ -11,6 +11,7 @@ interface AuthContextType {
   logout: () => void;
   isAuthenticated: boolean;
   hasPermission: (permission: string) => boolean;
+  isClient: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -40,6 +41,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     const response = await authApi.login({ email, password });
     setUser(response.user);
+    // Redirect based on role
+    if (response.user.roleName === 'Client') {
+      window.location.href = '/client/dashboard';
+    } else {
+      window.location.href = '/dashboard';
+    }
   };
 
   const register = async (email: string, password: string, confirmPassword: string, companyId: number) => {
@@ -68,6 +75,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return user.permissions[permission] === true;
   };
 
+  const isClient = user?.roleName === 'Client';
+
   return (
     <AuthContext.Provider
       value={{
@@ -78,6 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logout,
         isAuthenticated: !!user,
         hasPermission,
+        isClient,
       }}
     >
       {children}

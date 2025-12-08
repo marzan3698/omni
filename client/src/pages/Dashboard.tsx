@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { taskApi, leadApi, campaignApi } from '@/lib/api';
+import { taskApi, leadApi, campaignApi, invoiceApi } from '@/lib/api';
 import { integrationApi } from '@/lib/integration';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { CircularProgress } from '@/components/ui/circular-progress';
-import { LayoutDashboard, Users, Briefcase, DollarSign, Target, CheckSquare, Building2, MessageSquare, Copy, Check, MessageSquare as ChatwootIcon, Megaphone, Plus } from 'lucide-react';
+import { LayoutDashboard, Users, Briefcase, DollarSign, Target, CheckSquare, Building2, MessageSquare, Copy, Check, MessageSquare as ChatwootIcon, Megaphone, Plus, FileText } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { PermissionGuard } from '@/components/PermissionGuard';
 import { Link } from 'react-router-dom';
@@ -121,6 +121,40 @@ export function Dashboard() {
 
   const allCampaigns = allCampaignsResponse || [];
 
+  // Fetch invoices for client
+  const { data: clientInvoicesResponse } = useQuery({
+    queryKey: ['client-invoices-dashboard'],
+    queryFn: async () => {
+      try {
+        const response = await invoiceApi.getClientInvoices();
+        return response.data.data || [];
+      } catch (error) {
+        return [];
+      }
+    },
+    enabled: user?.roleName === 'Client',
+  });
+
+  // Fetch all invoices for admin
+  const { data: allInvoicesResponse } = useQuery({
+    queryKey: ['all-invoices-dashboard', user?.companyId],
+    queryFn: async () => {
+      if (!user?.companyId) return [];
+      try {
+        const response = await invoiceApi.getAll({ companyId: user.companyId });
+        return response.data.data || [];
+      } catch (error) {
+        return [];
+      }
+    },
+    enabled: !!user?.companyId && (hasPermission('can_manage_finance') || user?.roleName === 'SuperAdmin'),
+  });
+
+  const clientInvoices = clientInvoicesResponse || [];
+  const allInvoices = allInvoicesResponse || [];
+  const unpaidInvoices = allInvoices.filter((inv: any) => inv.status === 'Unpaid');
+  const totalInvoiceAmount = allInvoices.reduce((sum: number, inv: any) => sum + Number(inv.totalAmount || 0), 0);
+
   // Role-based stats based on permissions
   const getStats = () => {
     const stats: any[] = [];
@@ -136,14 +170,25 @@ export function Dashboard() {
       });
     }
 
-    if (hasPermission('can_manage_finance')) {
+    if (hasPermission('can_manage_finance') || user?.roleName === 'SuperAdmin') {
       stats.push({
-        title: 'Total Revenue',
-        value: '$0',
-        change: 'View finance',
-        icon: DollarSign,
+        title: 'Total Invoices',
+        value: `$${totalInvoiceAmount.toLocaleString()}`,
+        change: `${unpaidInvoices.length} unpaid`,
+        icon: FileText,
         color: 'text-green-600',
         link: '/finance',
+      });
+    }
+
+    if (user?.roleName === 'Client') {
+      stats.push({
+        title: 'My Invoices',
+        value: clientInvoices.length.toString(),
+        change: `${clientInvoices.filter((inv: any) => inv.status === 'Unpaid').length} unpaid`,
+        icon: FileText,
+        color: 'text-indigo-600',
+        link: '/client/invoices',
       });
     }
 
@@ -593,6 +638,119 @@ export function Dashboard() {
               {tasks.length === 0 && (
                 <p className="text-sm text-gray-500 text-center py-4">No tasks assigned</p>
               )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Invoices Widget - Show for SuperAdmin/Admin */}
+      {(hasPermission('can_manage_finance') || user?.roleName === 'SuperAdmin') && allInvoices.length > 0 && (
+        <Card className="shadow-sm border-gray-200">
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-indigo-600" />
+                  Recent Invoices
+                </CardTitle>
+                <CardDescription>
+                  {unpaidInvoices.length} unpaid invoice{unpaidInvoices.length !== 1 ? 's' : ''}
+                </CardDescription>
+              </div>
+              <Link to="/finance">
+                <Button variant="outline" size="sm">
+                  View All
+                </Button>
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {allInvoices.slice(0, 5).map((invoice: any) => (
+                <div
+                  key={invoice.id}
+                  className="flex items-center justify-between p-3 border border-gray-200 rounded-md hover:bg-gray-50"
+                >
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-slate-900">
+                      Invoice #{invoice.invoiceNumber}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${
+                        invoice.status === 'Paid' ? 'bg-green-100 text-green-700' :
+                        invoice.status === 'Unpaid' ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-red-100 text-red-700'
+                      }`}>
+                        {invoice.status}
+                      </span>
+                      <span className="text-xs text-slate-500">
+                        ${Number(invoice.totalAmount).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                  <Link to={`/finance/invoices/${invoice.id}`}>
+                    <Button size="sm" variant="ghost">View</Button>
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Client Invoices Widget */}
+      {user?.roleName === 'Client' && clientInvoices.length > 0 && (
+        <Card className="shadow-sm border-gray-200">
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-indigo-600" />
+                  My Invoices
+                </CardTitle>
+                <CardDescription>
+                  {clientInvoices.filter((inv: any) => inv.status === 'Unpaid').length} unpaid
+                </CardDescription>
+              </div>
+              <Link to="/client/invoices">
+                <Button variant="outline" size="sm">
+                  View All
+                </Button>
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {clientInvoices.slice(0, 5).map((invoice: any) => (
+                <div
+                  key={invoice.id}
+                  className="flex items-center justify-between p-3 border border-gray-200 rounded-md hover:bg-gray-50"
+                >
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-slate-900">
+                      Invoice #{invoice.invoiceNumber}
+                    </p>
+                    {invoice.project && (
+                      <p className="text-xs text-slate-500 mt-1">{invoice.project.title}</p>
+                    )}
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${
+                        invoice.status === 'Paid' ? 'bg-green-100 text-green-700' :
+                        invoice.status === 'Unpaid' ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-red-100 text-red-700'
+                      }`}>
+                        {invoice.status}
+                      </span>
+                      <span className="text-xs text-slate-500">
+                        ${Number(invoice.totalAmount).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                  <Link to={`/client/invoices/${invoice.id}`}>
+                    <Button size="sm" variant="ghost">View</Button>
+                  </Link>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>

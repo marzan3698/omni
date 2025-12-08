@@ -18,6 +18,11 @@ const loginSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 });
 
+const registerClientSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+});
+
 export const authController = {
   /**
    * Register a new user
@@ -66,6 +71,31 @@ export const authController = {
       }
 
       return sendError(res, 'Login failed', 500);
+    }
+  },
+
+  /**
+   * Register a new client
+   * POST /api/auth/register-client
+   */
+  registerClient: async (req: Request, res: Response) => {
+    try {
+      // Validate request body
+      const validatedData = registerClientSchema.parse(req.body);
+
+      const result = await authService.registerClient(validatedData);
+
+      return sendSuccess(res, result, 'Client registered successfully', 201);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return sendError(res, error.errors[0].message, 400);
+      }
+
+      if (error instanceof AppError) {
+        return sendError(res, error.message, error.statusCode);
+      }
+
+      return sendError(res, 'Registration failed', 500);
     }
   },
 

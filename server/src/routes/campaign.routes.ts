@@ -19,6 +19,9 @@ router.get('/:id/statistics', campaignController.getCampaignStatistics);
 // Get campaign products
 router.get('/:id/products', campaignController.getCampaignProducts);
 
+// Get campaign clients
+router.get('/:id/clients', campaignController.getCampaignClients);
+
 // Get campaign by ID
 router.get('/:id', campaignController.getCampaignById);
 

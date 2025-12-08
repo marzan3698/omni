@@ -41,6 +41,36 @@ export const authApi = {
   },
 
   /**
+   * Register new client
+   */
+  async registerClient(email: string, password: string): Promise<AuthResponse> {
+    try {
+      const response = await apiClient.post<ApiResponse<AuthResponse>>(
+        '/auth/register-client',
+        { email, password }
+      );
+      
+      if (response.data.success && response.data.data) {
+        // Store token
+        localStorage.setItem('token', response.data.data.token);
+        return response.data.data;
+      }
+      
+      throw new Error(response.data.message || 'Registration failed');
+    } catch (error: any) {
+      // Handle axios errors
+      if (error.response) {
+        const message = error.response.data?.message || error.response.data?.error || 'Registration failed';
+        throw new Error(message);
+      } else if (error.request) {
+        throw new Error('Unable to connect to server. Please check if the backend is running.');
+      } else {
+        throw new Error(error.message || 'Registration failed');
+      }
+    }
+  },
+
+  /**
    * Get current user profile
    */
   async getProfile(): Promise<any> {

@@ -8,12 +8,15 @@ const router = Router();
 // All routes require authentication
 router.use(authMiddleware);
 
-// All routes require finance management permission
+// Client invoice routes (no permission check - clients can view their own)
+router.get('/invoices/client', financeController.getClientInvoices);
+router.get('/invoices/:id', financeController.getInvoiceById);
+
+// All other routes require finance management permission
 router.use(verifyPermission('can_manage_finance'));
 
-// Invoice routes
+// Invoice routes (admin)
 router.get('/invoices', financeController.getAllInvoices);
-router.get('/invoices/:id', financeController.getInvoiceById);
 router.post('/invoices', financeController.createInvoice);
 router.put('/invoices/:id', financeController.updateInvoice);
 router.delete('/invoices/:id', financeController.deleteInvoice);

@@ -778,5 +778,77 @@ export const leadService = {
       totalValue: Number(lead._sum.value) || 0,
     }));
   },
+
+  /**
+   * Get leads for a client from campaigns they're assigned to
+   * Only accessible if client has at least one completed project
+   */
+  async getClientLeads(clientId: string, filters?: { campaignId?: number }) {
+    // Check if client has at least one completed project
+    const completedProjects = await prisma.project.count({
+      where: {
+        clientId,
+        status: 'Completed',
+      },
+    });
+
+    if (completedProjects === 0) {
+      throw new AppError('You must have at least one completed project to view leads', 403);
+    }
+
+    // Get campaigns where client is assigned
+    const campaignClients = await prisma.campaignClient.findMany({
+      where: { clientId },
+      select: { campaignId: true },
+    });
+
+    const campaignIds = campaignClients.map(cc => cc.campaignId);
+
+    if (campaignIds.length === 0) {
+      return [];
+    }
+
+    // Build where clause
+    const where: any = {
+      campaignId: { in: campaignIds },
+    };
+
+    if (filters?.campaignId) {
+      // Verify client is assigned to this campaign
+      const isAssigned = campaignIds.includes(filters.campaignId);
+      if (!isAssigned) {
+        throw new AppError('You are not assigned to this campaign', 403);
+      }
+      where.campaignId = filters.campaignId;
+    }
+
+    // Get leads from these campaigns
+    const leads = await prisma.lead.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        campaign: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        category: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        interest: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    return leads;
+  },
 };
 

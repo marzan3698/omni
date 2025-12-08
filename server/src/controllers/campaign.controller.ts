@@ -16,6 +16,7 @@ const createCampaignSchema = z.object({
   budget: z.number().positive('Budget must be greater than 0'),
   type: z.enum(['reach', 'sale', 'research']),
   productIds: z.array(z.number().int().positive()).optional(),
+  clientIds: z.array(z.string().uuid()).optional(),
 });
 
 const updateCampaignSchema = z.object({
@@ -26,6 +27,7 @@ const updateCampaignSchema = z.object({
   budget: z.number().positive().optional(),
   type: z.enum(['reach', 'sale', 'research']).optional(),
   productIds: z.array(z.number().int().positive()).optional(),
+  clientIds: z.array(z.string().uuid()).optional(),
 });
 
 export const campaignController = {
@@ -105,6 +107,7 @@ export const campaignController = {
         budget: validatedData.budget,
         type: validatedData.type,
         productIds: validatedData.productIds,
+        clientIds: validatedData.clientIds,
       };
 
       const campaign = await campaignService.createCampaign(campaignData);
@@ -149,6 +152,10 @@ export const campaignController = {
       // Include productIds in updateData if provided
       if (validatedData.productIds !== undefined) {
         updateData.productIds = validatedData.productIds;
+      }
+      // Include clientIds in updateData if provided
+      if (validatedData.clientIds !== undefined) {
+        updateData.clientIds = validatedData.clientIds;
       }
 
       const campaign = await campaignService.updateCampaign(id, companyId, updateData);
@@ -256,6 +263,33 @@ export const campaignController = {
         return sendError(res, error.message, error.statusCode);
       }
       return sendError(res, 'Failed to retrieve campaign products', 500);
+    }
+  },
+
+  /**
+   * Get campaign clients
+   * GET /api/campaigns/:id/clients?companyId=1
+   */
+  getCampaignClients: async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const companyId = parseInt(req.query.companyId as string);
+
+      if (!id || isNaN(id)) {
+        return sendError(res, 'Campaign ID is required', 400);
+      }
+
+      if (!companyId || isNaN(companyId)) {
+        return sendError(res, 'Company ID is required', 400);
+      }
+
+      const clients = await campaignService.getCampaignClients(id, companyId);
+      return sendSuccess(res, clients, 'Campaign clients retrieved successfully');
+    } catch (error) {
+      if (error instanceof AppError) {
+        return sendError(res, error.message, error.statusCode);
+      }
+      return sendError(res, 'Failed to retrieve campaign clients', 500);
     }
   },
 };

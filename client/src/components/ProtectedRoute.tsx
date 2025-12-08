@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Login } from '@/pages/Login';
 
@@ -7,7 +8,7 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, isClient, user } = useAuth();
 
   if (loading) {
     return (
@@ -22,6 +23,16 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   if (!isAuthenticated) {
     return <Login />;
+  }
+
+  // Redirect clients trying to access admin routes
+  if (isClient && !window.location.pathname.startsWith('/client')) {
+    return <Navigate to="/client/dashboard" replace />;
+  }
+
+  // Redirect non-clients trying to access client routes
+  if (!isClient && window.location.pathname.startsWith('/client')) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;

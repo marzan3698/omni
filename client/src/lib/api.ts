@@ -199,3 +199,61 @@ export const productCategoryApi = {
   delete: (id: number, companyId: number) =>
     apiClientInstance.delete<ApiResponse>(`/product-categories/${id}`, { params: { companyId } }),
 };
+
+// Project API
+export const projectApi = {
+  getAll: () => apiClientInstance.get<ApiResponse>('/projects'),
+  getById: (id: number) => apiClientInstance.get<ApiResponse>(`/projects/${id}`),
+  create: (data: any) => apiClientInstance.post<ApiResponse>('/projects', data),
+  update: (id: number, data: any) => apiClientInstance.put<ApiResponse>(`/projects/${id}`, data),
+  sign: (id: number, signature: string) =>
+    apiClientInstance.post<ApiResponse>(`/projects/${id}/sign`, { signature }),
+  getStats: () => apiClientInstance.get<ApiResponse>('/projects/stats'),
+};
+
+// Client Leads API
+export const clientLeadsApi = {
+  getAll: (campaignId?: number) =>
+    apiClientInstance.get<ApiResponse>('/leads/client', {
+      params: campaignId ? { campaignId } : {},
+    }),
+};
+
+// Client Campaigns API
+export const clientCampaignsApi = {
+  getMyCampaigns: () => apiClientInstance.get<ApiResponse>('/campaigns/client'),
+};
+
+// Service API
+export const serviceApi = {
+  getAll: (isActive?: boolean) =>
+    apiClientInstance.get<ApiResponse>('/services', {
+      params: isActive !== undefined ? { isActive } : {},
+    }),
+  getById: (id: number) => apiClientInstance.get<ApiResponse>(`/services/${id}`),
+  create: (data: any) => apiClientInstance.post<ApiResponse>('/services', data),
+  update: (id: number, data: any) => apiClientInstance.put<ApiResponse>(`/services/${id}`, data),
+  delete: (id: number) => apiClientInstance.delete<ApiResponse>(`/services/${id}`),
+};
+
+// Admin API
+export const adminApi = {
+  getAllProjects: (filters?: { companyId?: number; status?: string; search?: string }) =>
+    apiClientInstance.get<ApiResponse>('/admin/projects', { params: filters }),
+  getAllClients: (filters?: { companyId?: number; search?: string }) =>
+    apiClientInstance.get<ApiResponse>('/admin/clients', { params: filters }),
+  updateProject: (id: number, data: any) =>
+    apiClientInstance.put<ApiResponse>(`/admin/projects/${id}`, data),
+  deleteProject: (id: number) => apiClientInstance.delete<ApiResponse>(`/admin/projects/${id}`),
+  updateClient: (id: number, data: any) =>
+    apiClientInstance.put<ApiResponse>(`/admin/clients/${id}`, data),
+  deleteClient: (id: number) => apiClientInstance.delete<ApiResponse>(`/admin/clients/${id}`),
+};
+
+// Invoice API
+export const invoiceApi = {
+  getAll: (filters?: { companyId?: number; status?: string; clientId?: number }) =>
+    apiClientInstance.get<ApiResponse>('/finance/invoices', { params: filters }),
+  getById: (id: number) => apiClientInstance.get<ApiResponse>(`/finance/invoices/${id}`),
+  getClientInvoices: () => apiClientInstance.get<ApiResponse>('/finance/invoices/client'),
+};

@@ -11,6 +11,7 @@ router.use(authMiddleware);
 // Lead routes
 router.get('/', verifyPermission('can_manage_leads'), leadController.getAllLeads);
 router.get('/pipeline', verifyPermission('can_manage_leads'), leadController.getLeadPipeline);
+router.get('/client', leadController.getClientLeads); // Client route - no permission check needed, handled in service
 router.get('/:id', verifyPermission('can_manage_leads'), leadController.getLeadById);
 router.post('/', verifyPermission('can_manage_leads'), leadController.createLead);
 router.post('/from-inbox/:conversationId', verifyPermission('can_manage_leads'), leadController.createLeadFromInbox);

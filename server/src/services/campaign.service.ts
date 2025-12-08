@@ -11,6 +11,7 @@ interface CreateCampaignData {
   budget: number;
   type: CampaignType;
   productIds?: number[];
+  clientIds?: string[];
 }
 
 interface UpdateCampaignData {
@@ -21,6 +22,7 @@ interface UpdateCampaignData {
   budget?: number;
   type?: CampaignType;
   productIds?: number[];
+  clientIds?: string[];
 }
 
 export const campaignService = {
@@ -104,6 +106,16 @@ export const campaignService = {
                     email: true,
                   },
                 },
+              },
+            },
+          },
+        },
+        clients: {
+          include: {
+            client: {
+              select: {
+                id: true,
+                email: true,
               },
             },
           },
@@ -192,6 +204,70 @@ export const campaignService = {
                     name: true,
                   },
                 },
+              },
+            },
+          },
+        },
+        leads: {
+          select: {
+            id: true,
+            value: true,
+          },
+        },
+      },
+    });
+
+    // Assign clients if provided
+    if (data.clientIds && data.clientIds.length > 0) {
+      // Validate clients exist and have Client role
+      const clients = await prisma.user.findMany({
+        where: {
+          id: { in: data.clientIds },
+          companyId: data.companyId,
+          role: {
+            name: 'Client',
+          },
+        },
+      });
+
+      if (clients.length !== data.clientIds.length) {
+        throw new AppError('Some clients not found or are not valid clients', 400);
+      }
+
+      // Create campaign-client relationships
+      await prisma.campaignClient.createMany({
+        data: data.clientIds.map((clientId) => ({
+          campaignId: campaign.id,
+          clientId,
+        })),
+        skipDuplicates: true,
+      });
+    }
+
+    // Return campaign with products, clients, and leads
+    return await prisma.campaign.findUnique({
+      where: { id: campaign.id },
+      include: {
+        products: {
+          include: {
+            product: {
+              include: {
+                category: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        clients: {
+          include: {
+            client: {
+              select: {
+                id: true,
+                email: true,
               },
             },
           },
@@ -441,8 +517,49 @@ export const campaignService = {
             value: true,
           },
         },
+        clients: {
+          include: {
+            client: {
+              select: {
+                id: true,
+                email: true,
+              },
+            },
+          },
+        },
       },
     });
+  },
+
+  /**
+   * Get campaign clients
+   */
+  async getCampaignClients(id: number, companyId: number) {
+    const campaign = await prisma.campaign.findFirst({
+      where: {
+        id,
+        companyId,
+      },
+    });
+
+    if (!campaign) {
+      throw new AppError('Campaign not found', 404);
+    }
+
+    const campaignClients = await prisma.campaignClient.findMany({
+      where: { campaignId: id },
+      include: {
+        client: {
+          select: {
+            id: true,
+            email: true,
+            createdAt: true,
+          },
+        },
+      },
+    });
+
+    return campaignClients.map((cc) => cc.client);
   },
 
   /**

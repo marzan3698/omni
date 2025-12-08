@@ -6,6 +6,7 @@ const router = Router();
 
 // Public routes
 router.post('/register', authController.register);
+router.post('/register-client', authController.registerClient);
 router.post('/login', authController.login);
 
 // Protected routes

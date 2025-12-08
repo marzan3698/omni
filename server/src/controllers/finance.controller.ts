@@ -6,6 +6,7 @@ import { expenseCategoryService } from '../services/expenseCategory.service.js';
 import { accountsService } from '../services/accounts.service.js';
 import { sendSuccess, sendError } from '../utils/response.js';
 import { AppError } from '../middleware/errorHandler.js';
+import { AuthRequest } from '../types/index.js';
 import { z } from 'zod';
 import { InvoiceStatus, TransactionType } from '@prisma/client';
 
@@ -90,22 +91,54 @@ export const financeController = {
     }
   },
 
-  getInvoiceById: async (req: Request, res: Response) => {
+  getInvoiceById: async (req: AuthRequest, res: Response) => {
     try {
       const id = parseInt(req.params.id);
-      const companyId = parseInt(req.query.companyId as string || req.body.companyId);
+      const companyId = req.user?.companyId || parseInt(req.query.companyId as string || req.body.companyId);
       
       if (isNaN(id) || isNaN(companyId)) {
         return sendError(res, 'Invalid ID', 400);
       }
 
       const invoice = await invoiceService.getInvoiceById(id, companyId);
+      
+      // If user is a client, verify they own this invoice
+      if (req.user?.role?.name === 'Client') {
+        const userEmail = req.user.email;
+        const clientEmail = invoice.client?.contactInfo && typeof invoice.client.contactInfo === 'object'
+          ? invoice.client.contactInfo.email
+          : null;
+        
+        if (clientEmail !== userEmail) {
+          return sendError(res, 'Unauthorized', 403);
+        }
+      }
+
       return sendSuccess(res, invoice, 'Invoice retrieved successfully');
     } catch (error) {
       if (error instanceof AppError) {
         return sendError(res, error.message, error.statusCode);
       }
       return sendError(res, 'Failed to retrieve invoice', 500);
+    }
+  },
+
+  getClientInvoices: async (req: AuthRequest, res: Response) => {
+    try {
+      const userEmail = req.user?.email;
+      const companyId = req.user?.companyId;
+
+      if (!userEmail || !companyId) {
+        return sendError(res, 'User not authenticated', 401);
+      }
+
+      const invoices = await invoiceService.getClientInvoices(userEmail, companyId);
+      return sendSuccess(res, invoices, 'Invoices retrieved successfully');
+    } catch (error) {
+      if (error instanceof AppError) {
+        return sendError(res, error.message, error.statusCode);
+      }
+      return sendError(res, 'Failed to retrieve invoices', 500);
     }
   },
 
