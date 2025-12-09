@@ -113,6 +113,14 @@ export const invoiceService = {
             id: true,
             title: true,
             description: true,
+            status: true,
+            service: {
+              select: {
+                id: true,
+                title: true,
+                pricing: true,
+              },
+            },
           },
         },
       },
@@ -129,12 +137,15 @@ export const invoiceService = {
    * Get invoices for a client user (by email)
    */
   async getClientInvoices(userEmail: string, companyId: number) {
-    // Find client by email in contactInfo using raw query for JSON search
-    const clients = await prisma.$queryRaw<Array<{ id: number }>>`
-      SELECT id FROM clients
-      WHERE company_id = ${companyId}
-      AND JSON_EXTRACT(contact_info, '$.email') = ${userEmail}
-    `;
+    // Find client by email in contactInfo using raw query for JSON search (case-insensitive)
+    // JSON_UNQUOTE is needed to convert JSON string to regular string before applying LOWER()
+    const clients = await prisma.$queryRawUnsafe<Array<{ id: number }>>(
+      `SELECT id FROM clients
+       WHERE company_id = ?
+       AND LOWER(JSON_UNQUOTE(JSON_EXTRACT(contact_info, '$.email'))) = LOWER(?)`,
+      companyId,
+      userEmail
+    );
 
     if (clients.length === 0) {
       return [];
@@ -157,6 +168,13 @@ export const invoiceService = {
             id: true,
             title: true,
             description: true,
+            service: {
+              select: {
+                id: true,
+                title: true,
+                pricing: true,
+              },
+            },
           },
         },
       },
@@ -354,6 +372,7 @@ export const invoiceService = {
           },
         },
         company: true,
+        service: true,
       },
     });
 
@@ -370,16 +389,18 @@ export const invoiceService = {
       return existingInvoice;
     }
 
-    // Get or create client record from user
-    let client = await prisma.client.findFirst({
-      where: {
-        companyId: project.companyId,
-        contactInfo: {
-          path: ['email'],
-          equals: project.client.email,
-        },
-      },
-    });
+    // Get or create client record from user email
+    // First, try to find client by email using raw query (most accurate, case-insensitive)
+    let client: any = null;
+    const rawClients = await prisma.$queryRawUnsafe<Array<{ id: number }>>(
+      `SELECT id FROM clients WHERE company_id = ? AND LOWER(JSON_UNQUOTE(JSON_EXTRACT(contact_info, '$.email'))) = LOWER(?) LIMIT 1`,
+      project.companyId,
+      project.client.email
+    );
+    
+    if (rawClients.length > 0) {
+      client = await prisma.client.findUnique({ where: { id: rawClients[0].id } });
+    }
 
     // If client doesn't exist, create one from user data
     if (!client) {
@@ -388,7 +409,7 @@ export const invoiceService = {
           companyId: project.companyId,
           name: project.client.email.split('@')[0],
           contactInfo: {
-            email: project.client.email,
+            email: project.client.email.toLowerCase(),
           },
         },
       });
@@ -402,7 +423,67 @@ export const invoiceService = {
     const dueDate = new Date();
     dueDate.setDate(dueDate.getDate() + 30); // 30 days from issue date
 
-    // Create invoice with single item (the project)
+    // Build invoice items from service attributes
+    const items: Array<{ description: string; quantity: number; unitPrice: number; total: number }> = [];
+    const service = project.service;
+
+    const parseNumber = (val: any) => {
+      const n = Number(val);
+      return Number.isFinite(n) ? n : 0;
+    };
+
+    const breakdown: Array<{ label: string; amount: number }> = [];
+    if (service?.attributes && typeof service.attributes === 'object') {
+      // Support { keyValuePairs: { key: value } } or flat key/value map
+      const kv =
+        (service.attributes as any).keyValuePairs && typeof (service.attributes as any).keyValuePairs === 'object'
+          ? (service.attributes as any).keyValuePairs
+          : service.attributes;
+
+      if (kv && typeof kv === 'object') {
+        for (const [label, value] of Object.entries(kv)) {
+          const amount = parseNumber(value);
+          if (amount > 0) {
+            breakdown.push({ label, amount });
+          }
+        }
+      }
+    }
+
+    if (breakdown.length > 0) {
+      breakdown.forEach((entry) => {
+        items.push({
+          description: entry.label,
+          quantity: 1,
+          unitPrice: entry.amount,
+          total: entry.amount,
+        });
+      });
+
+      const sum = items.reduce((acc, i) => acc + i.total, 0);
+      const budget = Number(project.budget);
+      const diff = budget - sum;
+      if (Math.abs(diff) > 0.01) {
+        items.push({
+          description: 'Adjustment to match project budget',
+          quantity: 1,
+          unitPrice: diff,
+          total: diff,
+        });
+      }
+    } else {
+      const basePrice = Number(project.budget || service?.pricing || 0);
+      items.push({
+        description: service?.title || project.title || 'Project Services',
+        quantity: 1,
+        unitPrice: basePrice,
+        total: basePrice,
+      });
+    }
+
+    const totalAmount = items.reduce((sum, item) => sum + item.total, 0);
+
+    // Create invoice with items
     const invoice = await prisma.invoice.create({
       data: {
         companyId: project.companyId,
@@ -411,22 +492,26 @@ export const invoiceService = {
         invoiceNumber,
         issueDate,
         dueDate,
-        totalAmount: project.budget,
+        totalAmount,
         status: 'Unpaid',
         notes: `Invoice for project: ${project.title}`,
         items: {
-          create: {
-            description: project.title,
-            quantity: 1,
-            unitPrice: project.budget,
-            total: project.budget,
-          },
+          create: items.map((item) => ({
+            description: item.description,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            total: item.total,
+          })),
         },
       },
       include: {
         client: true,
         items: true,
-        project: true,
+        project: {
+          include: {
+            service: true,
+          },
+        },
       },
     });
 
@@ -436,7 +521,7 @@ export const invoiceService = {
         companyId: project.companyId,
         clientId: client.id,
         invoiceId: invoice.id,
-        amount: project.budget,
+        amount: totalAmount,
         dueDate,
         status: 'Pending',
       },

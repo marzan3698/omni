@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { CheckCircle, ArrowRight, Users, Briefcase, Target, BarChart3, MessageSquare, Star, Newspaper, TrendingUp, LineChart } from 'lucide-react';
 import { socialApi } from '@/lib/social';
 import { contentApi } from '@/lib/content';
+import { PublicHeader } from '@/components/PublicHeader';
 
 export function Landing() {
   const { data: analytics } = useQuery({
@@ -32,27 +33,28 @@ export function Landing() {
     { label: 'Other', value: analytics?.platformBreakdown.other || 0, color: 'text-slate-600' },
   ];
 
+  const footerSections = [
+    {
+      title: 'Explore',
+      links: ['Product', 'Pricing', 'Integrations', 'Security', 'Status'],
+    },
+    {
+      title: 'Solutions',
+      links: ['Sales Teams', 'Marketing Teams', 'Service Teams', 'Startups', 'Enterprise'],
+    },
+    {
+      title: 'Resources',
+      links: ['Blog', 'Guides', 'Docs', 'API Reference', 'Community'],
+    },
+    {
+      title: 'Company',
+      links: ['About', 'Careers', 'Contact', 'Legal', 'Privacy'],
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
-      {/* Header */}
-      <header className="border-b border-gray-200 bg-white">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-indigo-600 rounded-md flex items-center justify-center">
-              <span className="text-white font-bold text-xl">O</span>
-            </div>
-            <span className="text-xl font-bold text-slate-900">Omni CRM</span>
-          </div>
-          <div className="flex gap-4">
-            <Link to="/login">
-              <Button variant="ghost">Sign In</Button>
-            </Link>
-            <Link to="/register">
-              <Button className="bg-indigo-600 hover:bg-indigo-700">Get Started</Button>
-            </Link>
-          </div>
-        </div>
-      </header>
+      <PublicHeader />
 
       {/* Hero Section */}
       <section className="container mx-auto px-4 py-20 text-center">
@@ -334,9 +336,39 @@ export function Landing() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-gray-200 bg-white py-8">
-        <div className="container mx-auto px-4 text-center text-slate-600">
-          <p>&copy; 2024 Omni CRM. All rights reserved.</p>
+      <footer className="border-t border-gray-200 bg-white">
+        <div className="container mx-auto px-4 py-12">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            {footerSections.map((section) => (
+              <div key={section.title} className="space-y-3">
+                <h4 className="text-sm font-semibold text-slate-900 tracking-tight">{section.title}</h4>
+                <ul className="space-y-2 text-sm text-slate-600">
+                  {section.links.map((link) => (
+                    <li key={link} className="hover:text-slate-900 transition-colors cursor-pointer">
+                      {link}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+          <div className="border-t border-gray-200 mt-10 pt-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 text-xs text-slate-500">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-indigo-600 rounded-md flex items-center justify-center">
+                <span className="text-white font-bold text-lg">O</span>
+              </div>
+              <span className="text-slate-900 font-semibold">Omni</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-4">
+              <span>&copy; {new Date().getFullYear()} Omni CRM. All rights reserved.</span>
+              <span className="hidden md:inline-block text-slate-300">|</span>
+              <span className="hover:text-slate-900 cursor-pointer">Privacy Policy</span>
+              <span className="hover:text-slate-900 cursor-pointer">Terms of Service</span>
+            </div>
+            <div className="text-slate-500">
+              Bangladesh &middot; United States
+            </div>
+          </div>
         </div>
       </footer>
     </div>

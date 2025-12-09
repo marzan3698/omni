@@ -104,9 +104,9 @@ export const financeController = {
       
       // If user is a client, verify they own this invoice
       if (req.user?.role?.name === 'Client') {
-        const userEmail = req.user.email;
+        const userEmail = req.user.email?.toLowerCase();
         const clientEmail = invoice.client?.contactInfo && typeof invoice.client.contactInfo === 'object'
-          ? invoice.client.contactInfo.email
+          ? (invoice.client.contactInfo as any).email?.toLowerCase()
           : null;
         
         if (clientEmail !== userEmail) {

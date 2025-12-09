@@ -35,6 +35,26 @@ export const projectService = {
       const projects = await prisma.project.findMany({
         where: { clientId },
         orderBy: { createdAt: 'desc' },
+        include: {
+          service: {
+            select: {
+              id: true,
+              title: true,
+              pricing: true,
+            },
+          },
+          invoices: {
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+            select: {
+              id: true,
+              invoiceNumber: true,
+              status: true,
+              totalAmount: true,
+              dueDate: true,
+            },
+          },
+        },
       });
       return projects;
     } catch (error) {
@@ -51,6 +71,26 @@ export const projectService = {
       where: {
         id,
         clientId,
+      },
+      include: {
+        service: {
+          select: {
+            id: true,
+            title: true,
+            pricing: true,
+            attributes: true,
+          },
+        },
+        invoices: {
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            invoiceNumber: true,
+            status: true,
+            totalAmount: true,
+            dueDate: true,
+          },
+        },
       },
     });
 

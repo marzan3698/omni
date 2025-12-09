@@ -37,6 +37,12 @@ import { ServiceForm } from './pages/ServiceForm';
 import { AdminProjectsClients } from './pages/AdminProjectsClients';
 import { ClientInvoices } from './pages/ClientInvoices';
 import { InvoiceView } from './pages/InvoiceView';
+import About from './pages/public/About';
+import Contact from './pages/public/Contact';
+import Terms from './pages/public/Terms';
+import Privacy from './pages/public/Privacy';
+import ServicesPage from './pages/public/ServicesPage';
+import Sitemap from './pages/public/Sitemap';
 
 function App() {
   return (
@@ -317,6 +323,12 @@ function App() {
           {/* Public routes */}
           <Route path="/" element={<Landing />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/terms" element={<Terms />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/services" element={<ServicesPage />} />
+          <Route path="/sitemap" element={<Sitemap />} />
 
           {/* Client routes */}
           <Route

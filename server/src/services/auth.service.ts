@@ -187,6 +187,29 @@ export const authService = {
       },
     });
 
+    // Create corresponding client record
+    // Check if client already exists for this email
+    const existingClient = await prisma.$queryRawUnsafe<Array<{ id: number }>>(
+      `SELECT id FROM clients WHERE company_id = ? AND JSON_EXTRACT(contact_info, '$.email') = ? LIMIT 1`,
+      defaultCompany.id,
+      email.toLowerCase()
+    );
+
+    if (existingClient.length === 0) {
+      // Extract name from email (part before @)
+      const name = email.split('@')[0];
+      
+      await prisma.client.create({
+        data: {
+          companyId: defaultCompany.id,
+          name: name,
+          contactInfo: {
+            email: email.toLowerCase(),
+          },
+        },
+      });
+    }
+
     // Generate JWT token
     const token = this.generateToken({
       id: user.id,

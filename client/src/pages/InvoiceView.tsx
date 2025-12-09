@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { invoiceApi } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Download, DollarSign, Calendar } from 'lucide-react';
+import { ArrowLeft, Download, DollarSign, Calendar, Link as LinkIcon, BadgeCheck } from 'lucide-react';
 
 export function InvoiceView() {
     const { id } = useParams<{ id: string }>();
@@ -20,6 +20,7 @@ export function InvoiceView() {
     });
 
     const invoice = invoiceResponse;
+    const project = invoice?.project;
 
     if (isLoading) {
         return <div className="text-center py-8">Loading...</div>;
@@ -50,109 +51,196 @@ export function InvoiceView() {
             </Button>
 
             <Card className="shadow-sm border-gray-200">
-                <CardHeader>
-                    <div className="flex justify-between items-start">
-                        <div>
-                            <CardTitle>Invoice #{invoice.invoiceNumber}</CardTitle>
-                            <CardDescription>
-                                Issued on {new Date(invoice.issueDate).toLocaleDateString()}
-                            </CardDescription>
+                <CardHeader className="border-b border-gray-100">
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold text-lg">
+                                O
+                            </div>
+                            <div>
+                                <CardTitle className="text-2xl">Invoice #{invoice.invoiceNumber}</CardTitle>
+                                <CardDescription>Issued on {new Date(invoice.issueDate).toLocaleDateString()}</CardDescription>
+                            </div>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap items-center gap-3">
+                            <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
+                                <DollarSign className="w-4 h-4 text-indigo-600" />
+                                <span className="text-lg font-semibold text-slate-900">${Number(invoice.totalAmount).toLocaleString()}</span>
+                            </div>
+                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(invoice.status)}`}>
+                                {invoice.status}
+                            </span>
                             <Button variant="outline" size="sm">
                                 <Download className="w-4 h-4 mr-1" />
                                 Download
                             </Button>
-                            <span className={`px-3 py-1 rounded text-sm font-medium ${getStatusColor(invoice.status)}`}>
-                                {invoice.status}
-                            </span>
                         </div>
                     </div>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                    <div className="grid md:grid-cols-2 gap-6">
-                        <div>
-                            <h3 className="font-semibold mb-2">Bill To</h3>
-                            <p className="text-sm text-slate-600">
-                                {invoice.client?.name || 'N/A'}
-                                <br />
-                                {invoice.client?.contactInfo && typeof invoice.client.contactInfo === 'object' && (
-                                    <>
-                                        {invoice.client.contactInfo.email && (
+                <CardContent className="pt-6">
+                    <div className="grid lg:grid-cols-3 gap-6">
+                        <div className="lg:col-span-2 space-y-6">
+                            <div className="grid md:grid-cols-2 gap-6">
+                                <div className="rounded-lg border border-gray-100 p-4 bg-slate-50">
+                                    <h3 className="font-semibold mb-2 text-slate-900">Bill To</h3>
+                                    <p className="text-sm text-slate-600">
+                                        {invoice.client?.name || 'N/A'}
+                                        <br />
+                                        {invoice.client?.contactInfo && typeof invoice.client.contactInfo === 'object' && (
                                             <>
-                                                {invoice.client.contactInfo.email}
-                                                <br />
+                                                {invoice.client.contactInfo.email && (
+                                                    <>
+                                                        {invoice.client.contactInfo.email}
+                                                        <br />
+                                                    </>
+                                                )}
+                                                {invoice.client.contactInfo.phone && invoice.client.contactInfo.phone}
                                             </>
                                         )}
-                                        {invoice.client.contactInfo.phone && invoice.client.contactInfo.phone}
-                                    </>
-                                )}
-                            </p>
-                        </div>
-                        <div>
-                            <h3 className="font-semibold mb-2">Invoice Details</h3>
-                            <div className="text-sm text-slate-600 space-y-1">
-                                <div className="flex items-center gap-2">
-                                    <Calendar className="w-4 h-4" />
-                                    <span>Due Date: {new Date(invoice.dueDate).toLocaleDateString()}</span>
+                                    </p>
                                 </div>
-                                {invoice.project && (
-                                    <div>
-                                        <span className="font-medium">Project: </span>
-                                        {invoice.project.title}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div>
-                        <h3 className="font-semibold mb-4">Items</h3>
-                        <div className="border rounded-lg overflow-hidden">
-                            <table className="w-full">
-                                <thead className="bg-gray-50">
-                                    <tr>
-                                        <th className="text-left p-3 text-sm font-medium">Description</th>
-                                        <th className="text-right p-3 text-sm font-medium">Quantity</th>
-                                        <th className="text-right p-3 text-sm font-medium">Unit Price</th>
-                                        <th className="text-right p-3 text-sm font-medium">Total</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {invoice.items?.map((item: any, idx: number) => (
-                                        <tr key={idx} className="border-t">
-                                            <td className="p-3">{item.description}</td>
-                                            <td className="p-3 text-right">{Number(item.quantity).toLocaleString()}</td>
-                                            <td className="p-3 text-right">${Number(item.unitPrice).toLocaleString()}</td>
-                                            <td className="p-3 text-right font-medium">
-                                                ${Number(item.total).toLocaleString()}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                                <tfoot className="bg-gray-50">
-                                    <tr>
-                                        <td colSpan={3} className="p-3 text-right font-semibold">
-                                            Total Amount:
-                                        </td>
-                                        <td className="p-3 text-right font-bold text-lg">
-                                            <div className="flex items-center justify-end gap-2">
-                                                <DollarSign className="w-5 h-5" />
-                                                {Number(invoice.totalAmount).toLocaleString()}
+                                <div className="rounded-lg border border-gray-100 p-4 bg-slate-50">
+                                    <h3 className="font-semibold mb-2 text-slate-900">Invoice Details</h3>
+                                    <div className="text-sm text-slate-600 space-y-2">
+                                        <div className="flex items-center gap-2">
+                                            <Calendar className="w-4 h-4" />
+                                            <span>Due Date: {new Date(invoice.dueDate).toLocaleDateString()}</span>
+                                        </div>
+                                        {invoice.project && (
+                                            <div className="flex items-center gap-2">
+                                                <BadgeCheck className="w-4 h-4 text-indigo-600" />
+                                                <span>Project: {invoice.project.title}</span>
                                             </div>
-                                        </td>
-                                    </tr>
-                                </tfoot>
-                            </table>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div className="flex items-center justify-between mb-3">
+                                    <h3 className="font-semibold text-slate-900">Items</h3>
+                                    <span className="text-xs text-slate-500">Service breakdown</span>
+                                </div>
+                                <div className="border rounded-lg overflow-hidden shadow-sm">
+                                    <table className="w-full">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th className="text-left p-3 text-xs font-semibold text-slate-600">Description</th>
+                                                <th className="text-right p-3 text-xs font-semibold text-slate-600">Quantity</th>
+                                                <th className="text-right p-3 text-xs font-semibold text-slate-600">Unit Price</th>
+                                                <th className="text-right p-3 text-xs font-semibold text-slate-600">Total</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {invoice.items?.map((item: any, idx: number) => (
+                                                <tr key={idx} className="border-t">
+                                                    <td className="p-3 text-sm text-slate-800">{item.description}</td>
+                                                    <td className="p-3 text-right text-sm text-slate-700">{Number(item.quantity).toLocaleString()}</td>
+                                                    <td className="p-3 text-right text-sm text-slate-700">${Number(item.unitPrice).toLocaleString()}</td>
+                                                    <td className="p-3 text-right font-medium text-slate-900">
+                                                        ${Number(item.total).toLocaleString()}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                        <tfoot className="bg-gray-50">
+                                            <tr>
+                                                <td colSpan={3} className="p-3 text-right font-semibold text-slate-800">
+                                                    Total Amount:
+                                                </td>
+                                                <td className="p-3 text-right font-bold text-lg text-indigo-700">
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        <DollarSign className="w-5 h-5" />
+                                                        {Number(invoice.totalAmount).toLocaleString()}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </div>
+
+                            {invoice.notes && (
+                                <div className="rounded-lg border border-gray-100 p-4 bg-slate-50">
+                                    <h3 className="font-semibold mb-2 text-slate-900">Notes</h3>
+                                    <p className="text-sm text-slate-600">{invoice.notes}</p>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="space-y-4">
+                            {project && (
+                                <Card className="shadow-sm border-gray-200">
+                                    <CardHeader className="pb-3">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <CardTitle className="text-sm">Linked Project</CardTitle>
+                                                <CardDescription>{project.title}</CardDescription>
+                                            </div>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => navigate('/client/projects')}
+                                            >
+                                                <LinkIcon className="w-4 h-4 mr-1" />
+                                                View Projects
+                                            </Button>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="text-sm text-slate-700 space-y-2">
+                                        {project.description && <p className="text-slate-600 line-clamp-3">{project.description}</p>}
+                                        {project.service && (
+                                            <p>
+                                                <span className="font-semibold text-slate-800">Service:</span>{' '}
+                                                {project.service.title}
+                                            </p>
+                                        )}
+                                        <p className="text-slate-600">
+                                            Budget: ${Number(invoice.totalAmount).toLocaleString()}
+                                        </p>
+                                    </CardContent>
+                                </Card>
+                            )}
+
+                            <Card className="shadow-sm border-gray-200">
+                                <CardHeader>
+                                    <CardTitle className="text-sm text-slate-800">Timeline</CardTitle>
+                                    <CardDescription>Static UI; will be dynamic later</CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-4 text-sm">
+                                    <div className="flex items-start gap-3">
+                                        <div className="mt-1">
+                                            <div className="w-3 h-3 rounded-full bg-indigo-600"></div>
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="font-semibold text-slate-900">Invoice Created</p>
+                                            <p className="text-slate-600">
+                                                {new Date(invoice.issueDate).toLocaleString()}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-start gap-3">
+                                        <div className="mt-1">
+                                            <div className="w-3 h-3 rounded-full bg-amber-500"></div>
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="font-semibold text-slate-900">Accepted</p>
+                                            <p className="text-slate-600">Pending (will update when available)</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-start gap-3">
+                                        <div className="mt-1">
+                                            <div className="w-3 h-3 rounded-full bg-emerald-600"></div>
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="font-semibold text-slate-900">Paid</p>
+                                            <p className="text-slate-600">Pending (will update when available)</p>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
                         </div>
                     </div>
-
-                    {invoice.notes && (
-                        <div>
-                            <h3 className="font-semibold mb-2">Notes</h3>
-                            <p className="text-sm text-slate-600">{invoice.notes}</p>
-                        </div>
-                    )}
                 </CardContent>
             </Card>
         </div>

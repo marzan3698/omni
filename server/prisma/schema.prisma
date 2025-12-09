@@ -50,6 +50,8 @@ model Company {
   productCategories  ProductCategory[]
   services           Service[]
   projects           Project[]
+  reviews            Review[]
+  blogPosts          BlogPost[]
 
   @@index([name])
   @@index([isActive])

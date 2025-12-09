@@ -85,6 +85,7 @@ export function ClientProjects() {
   const createMutation = useMutation({
     mutationFn: (data: any) => projectApi.create(data),
     onSuccess: () => {
+      window.alert('Project created successfully');
       queryClient.invalidateQueries({ queryKey: ['projects'] });
       setIsFormOpen(false);
       setFormStep(1);
@@ -98,6 +99,11 @@ export function ClientProjects() {
         deliveryEndDate: '',
         time: '',
       });
+    },
+    onError: (error: any) => {
+      console.error('Failed to create project:', error);
+      const message = error?.response?.data?.message || 'Failed to create project';
+      window.alert(message);
     },
   });
 
@@ -361,6 +367,7 @@ export function ClientProjects() {
             <div className="space-y-4">
               {projects.map((project: any) => {
                 const isSigning = signingProjectId === project.id;
+                const latestInvoice = project.invoices && project.invoices.length > 0 ? project.invoices[0] : null;
                 return (
                   <div
                     key={project.id}
@@ -391,6 +398,16 @@ export function ClientProjects() {
                         <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(project.status)}`}>
                           {project.status}
                         </span>
+                        {latestInvoice && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => navigate(`/client/invoices/${latestInvoice.id}`)}
+                          >
+                            <FileText className="w-4 h-4 mr-1" />
+                            Invoice {latestInvoice.invoiceNumber}
+                          </Button>
+                        )}
                         {project.status === 'Draft' && !isSigning && (
                           <Button
                             size="sm"
