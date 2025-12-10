@@ -1,13 +1,33 @@
-import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
-import { invoiceApi } from '@/lib/api';
+import { invoiceApi, paymentGatewayApi, paymentApi } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Download, DollarSign, Calendar, Link as LinkIcon, BadgeCheck } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { ArrowLeft, Download, DollarSign, Calendar, Link as LinkIcon, BadgeCheck, CreditCard, CheckCircle2, XCircle, Clock, Loader2 } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useAuth } from '@/contexts/AuthContext';
+
+const paymentSchema = z.object({
+    paymentGatewayId: z.number().int().positive('Payment gateway is required'),
+    amount: z.number().positive('Amount must be greater than 0'),
+    transactionId: z.string().min(1, 'Transaction ID is required').max(100, 'Transaction ID must be less than 100 characters'),
+    paidBy: z.string().regex(/^01[3-9]\d{8}$/, 'Invalid Bangladesh mobile number format (01XXXXXXXXX)').optional().or(z.literal('')),
+    notes: z.string().max(5000).optional(),
+});
+
+type PaymentFormData = z.infer<typeof paymentSchema>;
 
 export function InvoiceView() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const { user } = useAuth();
+    const queryClient = useQueryClient();
+    const [showPaymentForm, setShowPaymentForm] = useState(false);
 
     const { data: invoiceResponse, isLoading } = useQuery({
         queryKey: ['invoice', id],
@@ -19,8 +39,111 @@ export function InvoiceView() {
         enabled: !!id,
     });
 
+    // Fetch active payment gateways
+    const { data: gatewaysResponse } = useQuery({
+        queryKey: ['payment-gateways-active'],
+        queryFn: async () => {
+            const response = await paymentGatewayApi.getActive();
+            return response.data.data || [];
+        },
+    });
+
+    // Fetch payments for this invoice
+    const { data: paymentsResponse } = useQuery({
+        queryKey: ['payments', 'invoice', id],
+        queryFn: async () => {
+            if (!id) return [];
+            const response = await paymentApi.getByInvoice(parseInt(id));
+            return response.data.data || [];
+        },
+        enabled: !!id,
+    });
+
     const invoice = invoiceResponse;
     const project = invoice?.project;
+    const gateways = gatewaysResponse || [];
+    const payments = paymentsResponse || [];
+
+    const {
+        register,
+        handleSubmit,
+        formState: { errors },
+        reset,
+        watch,
+    } = useForm<PaymentFormData>({
+        resolver: zodResolver(paymentSchema),
+        defaultValues: {
+            paymentGatewayId: 0,
+            amount: invoice ? Number(invoice.totalAmount) : 0,
+            transactionId: '',
+            paidBy: '',
+            notes: '',
+        },
+    });
+
+    const selectedGatewayId = watch('paymentGatewayId');
+    const selectedGateway = gateways.find((g: any) => g.id === selectedGatewayId);
+
+    // Calculate total paid amount
+    const totalPaid = payments
+        .filter((p: any) => p.status === 'Approved')
+        .reduce((sum: number, p: any) => sum + Number(p.amount), 0);
+    const remainingAmount = invoice ? Number(invoice.totalAmount) - totalPaid : 0;
+
+    // Payment submission mutation
+    const paymentMutation = useMutation({
+        mutationFn: (data: PaymentFormData) => paymentApi.create(data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['payments', 'invoice', id] });
+            queryClient.invalidateQueries({ queryKey: ['invoice', id] });
+            reset();
+            setShowPaymentForm(false);
+            alert('Payment submitted successfully! Waiting for admin approval.');
+        },
+        onError: (error: any) => {
+            alert(error.response?.data?.message || 'Failed to submit payment');
+        },
+    });
+
+    const onSubmitPayment = (data: PaymentFormData) => {
+        if (!invoice) return;
+        paymentMutation.mutate({
+            invoiceId: invoice.id,
+            paymentGatewayId: data.paymentGatewayId,
+            amount: data.amount,
+            transactionId: data.transactionId,
+            paidBy: data.paidBy || undefined,
+            notes: data.notes || undefined,
+        } as any);
+    };
+
+    const getPaymentStatusColor = (status: string) => {
+        switch (status) {
+            case 'Approved':
+                return 'bg-green-100 text-green-700';
+            case 'Pending':
+                return 'bg-yellow-100 text-yellow-700';
+            case 'Rejected':
+                return 'bg-red-100 text-red-700';
+            case 'Cancelled':
+                return 'bg-gray-100 text-gray-700';
+            default:
+                return 'bg-gray-100 text-gray-700';
+        }
+    };
+
+    const getPaymentStatusIcon = (status: string) => {
+        switch (status) {
+            case 'Approved':
+                return <CheckCircle2 className="w-4 h-4" />;
+            case 'Pending':
+                return <Clock className="w-4 h-4" />;
+            case 'Rejected':
+                return <XCircle className="w-4 h-4" />;
+            default:
+                return null;
+        }
+    };
 
     if (isLoading) {
         return <div className="text-center py-8">Loading...</div>;
@@ -202,6 +325,198 @@ export function InvoiceView() {
                                 </Card>
                             )}
 
+                            {/* Payment Section */}
+                            {user?.roleName === 'Client' && invoice.status !== 'Paid' && (
+                                <Card className="shadow-sm border-gray-200">
+                                    <CardHeader>
+                                        <CardTitle className="text-sm text-slate-800 flex items-center gap-2">
+                                            <CreditCard className="w-4 h-4" />
+                                            Make Payment
+                                        </CardTitle>
+                                        <CardDescription>
+                                            Total: ${Number(invoice.totalAmount).toLocaleString()} |
+                                            Paid: ${totalPaid.toLocaleString()} |
+                                            Remaining: ${remainingAmount.toLocaleString()}
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        {!showPaymentForm ? (
+                                            <div className="space-y-3">
+                                                {gateways.length === 0 ? (
+                                                    <p className="text-sm text-slate-600">No payment gateways available</p>
+                                                ) : (
+                                                    <>
+                                                        <Button
+                                                            onClick={() => setShowPaymentForm(true)}
+                                                            className="w-full"
+                                                            disabled={remainingAmount <= 0}
+                                                        >
+                                                            <CreditCard className="w-4 h-4 mr-2" />
+                                                            Submit Payment
+                                                        </Button>
+                                                        {remainingAmount <= 0 && (
+                                                            <p className="text-xs text-green-600 text-center">Invoice fully paid</p>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <form onSubmit={handleSubmit(onSubmitPayment)} className="space-y-4">
+                                                <div>
+                                                    <Label htmlFor="paymentGatewayId">Payment Gateway *</Label>
+                                                    <select
+                                                        id="paymentGatewayId"
+                                                        {...register('paymentGatewayId', { valueAsNumber: true })}
+                                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                                    >
+                                                        <option value="0">Select gateway</option>
+                                                        {gateways.map((gateway: any) => (
+                                                            <option key={gateway.id} value={gateway.id}>
+                                                                {gateway.name} ({gateway.accountNumber})
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                    {errors.paymentGatewayId && (
+                                                        <p className="text-sm text-red-600 mt-1">{errors.paymentGatewayId.message}</p>
+                                                    )}
+                                                </div>
+
+                                                {selectedGateway && selectedGateway.instructions && (
+                                                    <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+                                                        <p className="text-xs font-semibold text-blue-900 mb-1">Instructions:</p>
+                                                        <p className="text-xs text-blue-800 whitespace-pre-wrap">{selectedGateway.instructions}</p>
+                                                    </div>
+                                                )}
+
+                                                <div>
+                                                    <Label htmlFor="amount">Amount *</Label>
+                                                    <Input
+                                                        id="amount"
+                                                        type="number"
+                                                        step="0.01"
+                                                        {...register('amount', { valueAsNumber: true })}
+                                                        max={remainingAmount}
+                                                    />
+                                                    {errors.amount && (
+                                                        <p className="text-sm text-red-600 mt-1">{errors.amount.message}</p>
+                                                    )}
+                                                    <p className="text-xs text-gray-500 mt-1">Maximum: ${remainingAmount.toLocaleString()}</p>
+                                                </div>
+
+                                                <div>
+                                                    <Label htmlFor="transactionId">Transaction ID *</Label>
+                                                    <Input
+                                                        id="transactionId"
+                                                        {...register('transactionId')}
+                                                        placeholder="Enter transaction ID from payment"
+                                                    />
+                                                    {errors.transactionId && (
+                                                        <p className="text-sm text-red-600 mt-1">{errors.transactionId.message}</p>
+                                                    )}
+                                                </div>
+
+                                                <div>
+                                                    <Label htmlFor="paidBy">Paid From (Optional)</Label>
+                                                    <Input
+                                                        id="paidBy"
+                                                        {...register('paidBy')}
+                                                        placeholder="01XXXXXXXXX"
+                                                        maxLength={11}
+                                                    />
+                                                    {errors.paidBy && (
+                                                        <p className="text-sm text-red-600 mt-1">{errors.paidBy.message}</p>
+                                                    )}
+                                                    <p className="text-xs text-gray-500 mt-1">Your payment account number</p>
+                                                </div>
+
+                                                <div>
+                                                    <Label htmlFor="notes">Notes (Optional)</Label>
+                                                    <textarea
+                                                        id="notes"
+                                                        {...register('notes')}
+                                                        rows={3}
+                                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                                        placeholder="Any additional information"
+                                                    />
+                                                </div>
+
+                                                <div className="flex gap-2">
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        onClick={() => {
+                                                            setShowPaymentForm(false);
+                                                            reset();
+                                                        }}
+                                                        className="flex-1"
+                                                    >
+                                                        Cancel
+                                                    </Button>
+                                                    <Button
+                                                        type="submit"
+                                                        disabled={paymentMutation.isPending}
+                                                        className="flex-1"
+                                                    >
+                                                        {paymentMutation.isPending ? (
+                                                            <>
+                                                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                                Submitting...
+                                                            </>
+                                                        ) : (
+                                                            'Submit Payment'
+                                                        )}
+                                                    </Button>
+                                                </div>
+                                            </form>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            )}
+
+                            {/* Payment History */}
+                            {payments.length > 0 && (
+                                <Card className="shadow-sm border-gray-200">
+                                    <CardHeader>
+                                        <CardTitle className="text-sm text-slate-800">Payment History</CardTitle>
+                                        <CardDescription>{payments.length} payment(s) submitted</CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="space-y-3">
+                                        {payments.map((payment: any) => (
+                                            <div
+                                                key={payment.id}
+                                                className="border border-gray-200 rounded-lg p-3 space-y-2"
+                                            >
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-2">
+                                                        {getPaymentStatusIcon(payment.status)}
+                                                        <span className="font-semibold text-sm">
+                                                            {payment.paymentMethod}
+                                                        </span>
+                                                    </div>
+                                                    <span className={`px-2 py-1 rounded text-xs font-medium ${getPaymentStatusColor(payment.status)}`}>
+                                                        {payment.status}
+                                                    </span>
+                                                </div>
+                                                <div className="text-xs text-slate-600 space-y-1">
+                                                    <p>Amount: ${Number(payment.amount).toLocaleString()}</p>
+                                                    {payment.transactionId && (
+                                                        <p>Transaction ID: {payment.transactionId}</p>
+                                                    )}
+                                                    {payment.paidBy && <p>Paid From: {payment.paidBy}</p>}
+                                                    {payment.notes && <p>Notes: {payment.notes}</p>}
+                                                    {payment.adminNotes && (
+                                                        <p className="text-amber-700">Admin: {payment.adminNotes}</p>
+                                                    )}
+                                                    <p className="text-slate-500">
+                                                        {new Date(payment.createdAt).toLocaleString()}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </CardContent>
+                                </Card>
+                            )}
+
                             <Card className="shadow-sm border-gray-200">
                                 <CardHeader>
                                     <CardTitle className="text-sm text-slate-800">Timeline</CardTitle>
@@ -234,7 +549,9 @@ export function InvoiceView() {
                                         </div>
                                         <div className="flex-1">
                                             <p className="font-semibold text-slate-900">Paid</p>
-                                            <p className="text-slate-600">Pending (will update when available)</p>
+                                            <p className="text-slate-600">
+                                                {invoice.status === 'Paid' ? 'Completed' : 'Pending'}
+                                            </p>
                                         </div>
                                     </div>
                                 </CardContent>

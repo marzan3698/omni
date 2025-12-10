@@ -70,6 +70,8 @@ import serviceRoutes from './routes/service.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import reviewRoutes from './routes/review.routes.js';
 import blogRoutes from './routes/blog.routes.js';
+import paymentGatewayRoutes from './routes/paymentGateway.routes.js';
+import paymentRoutes from './routes/payment.routes.js';
 app.use('/api/auth', authRoutes);
 app.use('/api', socialRoutes);
 app.use('/api/integrations', integrationRoutes);
@@ -93,6 +95,8 @@ app.use('/api/services', serviceRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/blog', blogRoutes);
+app.use('/api/payment-gateways', paymentGatewayRoutes);
+app.use('/api/payments', paymentRoutes);
 // app.use('/api/users', userRoutes);
 
 // Global error handling middleware

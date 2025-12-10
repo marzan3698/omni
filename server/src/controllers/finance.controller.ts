@@ -9,6 +9,7 @@ import { AppError } from '../middleware/errorHandler.js';
 import { AuthRequest } from '../types/index.js';
 import { z } from 'zod';
 import { InvoiceStatus, TransactionType } from '@prisma/client';
+import { prisma } from '../lib/prisma.js';
 
 // Validation schemas
 const createInvoiceSchema = z.object({
@@ -105,11 +106,37 @@ export const financeController = {
       // If user is a client, verify they own this invoice
       if (req.user?.role?.name === 'Client') {
         const userEmail = req.user.email?.toLowerCase();
+        const userId = req.user.id;
+        let isAuthorized = false;
+        
+        // Check 1: Email matches client email
         const clientEmail = invoice.client?.contactInfo && typeof invoice.client.contactInfo === 'object'
           ? (invoice.client.contactInfo as any).email?.toLowerCase()
           : null;
         
-        if (clientEmail !== userEmail) {
+        if (clientEmail && clientEmail === userEmail) {
+          isAuthorized = true;
+          console.log(`[Finance Controller] Client authorized via email match`);
+        }
+        
+        // Check 2: Invoice is linked to a project owned by this user
+        if (!isAuthorized && invoice.projectId && userId) {
+          const project = await prisma.project.findFirst({
+            where: {
+              id: invoice.projectId,
+              clientId: userId,
+              companyId: companyId,
+            },
+          });
+          
+          if (project) {
+            isAuthorized = true;
+            console.log(`[Finance Controller] Client authorized via project ownership`);
+          }
+        }
+        
+        if (!isAuthorized) {
+          console.log(`[Finance Controller] Unauthorized access attempt - userEmail: ${userEmail}, clientEmail: ${clientEmail}, userId: ${userId}`);
           return sendError(res, 'Unauthorized', 403);
         }
       }
@@ -127,14 +154,20 @@ export const financeController = {
     try {
       const userEmail = req.user?.email;
       const companyId = req.user?.companyId;
+      const userId = req.user?.id;
+
+      console.log(`[Finance Controller] getClientInvoices called for email: ${userEmail}, companyId: ${companyId}, userId: ${userId}`);
 
       if (!userEmail || !companyId) {
+        console.error(`[Finance Controller] Missing userEmail or companyId`);
         return sendError(res, 'User not authenticated', 401);
       }
 
-      const invoices = await invoiceService.getClientInvoices(userEmail, companyId);
+      const invoices = await invoiceService.getClientInvoices(userEmail.toLowerCase(), companyId, userId);
+      console.log(`[Finance Controller] Returning ${invoices.length} invoice(s)`);
       return sendSuccess(res, invoices, 'Invoices retrieved successfully');
     } catch (error) {
+      console.error(`[Finance Controller] Error in getClientInvoices:`, error);
       if (error instanceof AppError) {
         return sendError(res, error.message, error.statusCode);
       }

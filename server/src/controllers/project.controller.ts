@@ -177,14 +177,26 @@ export const projectController = {
       let invoice = null;
       if (project.status === 'Submitted') {
         try {
+          console.log(`[Invoice Generation] Starting invoice generation for project ${project.id}`);
           invoice = await invoiceService.generateInvoiceFromProject(project.id);
-        } catch (invoiceError) {
-          console.error('Error generating invoice:', invoiceError);
-          // Don't fail the request if invoice generation fails
+          console.log(`[Invoice Generation] Invoice created successfully: ${invoice?.invoiceNumber || 'N/A'} (ID: ${invoice?.id || 'N/A'})`);
+        } catch (invoiceError: any) {
+          console.error('[Invoice Generation] Error generating invoice:', invoiceError);
+          console.error('[Invoice Generation] Error details:', {
+            message: invoiceError?.message,
+            stack: invoiceError?.stack,
+            projectId: project.id,
+          });
+          // Don't fail the request if invoice generation fails, but log the error
         }
+      } else {
+        console.log(`[Invoice Generation] Project status is ${project.status}, skipping invoice generation`);
       }
 
-      return sendSuccess(res, { project, invoice }, 'Project signed successfully');
+      // Fetch the project with invoice relation to ensure it's included in response
+      const projectWithInvoice = await projectService.getProjectById(project.id, clientId);
+
+      return sendSuccess(res, { project: projectWithInvoice, invoice }, 'Project signed successfully');
     } catch (error) {
       if (error instanceof z.ZodError) {
         return sendError(res, error.errors[0].message, 400);

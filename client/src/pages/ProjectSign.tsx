@@ -25,10 +25,25 @@ export function ProjectSign() {
 
   const signMutation = useMutation({
     mutationFn: (sig: string) => projectApi.sign(Number(id!), sig),
-    onSuccess: () => {
+    onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['project', id] });
+      
+      // Check if invoice was created
+      const invoice = response.data?.data?.invoice;
+      if (invoice) {
+        console.log('Invoice created:', invoice.invoiceNumber);
+      } else {
+        console.warn('No invoice in response after signing project');
+      }
+      
       // Navigate back with signed parameter to show processing animation
       navigate(`/client/projects?signed=${id}`);
+    },
+    onError: (error: any) => {
+      console.error('Error signing project:', error);
+      const message = error?.response?.data?.message || 'Failed to sign project';
+      alert(message);
     },
   });
 

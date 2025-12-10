@@ -134,30 +134,110 @@ export const invoiceService = {
   },
 
   /**
-   * Get invoices for a client user (by email)
+   * Get invoices for a client user (by email and userId)
+   * Uses multiple methods to find invoices:
+   * 1. Find invoices via Client records (matching email)
+   * 2. Find invoices via Projects (matching userId)
    */
-  async getClientInvoices(userEmail: string, companyId: number) {
-    // Find client by email in contactInfo using raw query for JSON search (case-insensitive)
-    // JSON_UNQUOTE is needed to convert JSON string to regular string before applying LOWER()
-    const clients = await prisma.$queryRawUnsafe<Array<{ id: number }>>(
-      `SELECT id FROM clients
-       WHERE company_id = ?
-       AND LOWER(JSON_UNQUOTE(JSON_EXTRACT(contact_info, '$.email'))) = LOWER(?)`,
-      companyId,
-      userEmail
-    );
+  async getClientInvoices(userEmail: string, companyId: number, userId?: string) {
+    console.log(`[Invoice Service] Getting client invoices for email: ${userEmail}, companyId: ${companyId}, userId: ${userId}`);
+    
+    const invoiceIds = new Set<number>();
+    
+    // Method 1: Find invoices via Client records (matching email in contactInfo)
+    let clients: Array<{ id: number }> = [];
+    try {
+      clients = await prisma.$queryRawUnsafe<Array<{ id: number }>>(
+        `SELECT id FROM clients
+         WHERE company_id = ?
+         AND LOWER(JSON_UNQUOTE(JSON_EXTRACT(contact_info, '$.email'))) = LOWER(?)`,
+        companyId,
+        userEmail
+      );
+      console.log(`[Invoice Service] Found ${clients.length} client(s) matching email ${userEmail}`);
+    } catch (error: any) {
+      console.error(`[Invoice Service] Error finding clients by email:`, error.message);
+      // Try alternative approach: get all clients and filter in memory
+      const allClients = await prisma.client.findMany({
+        where: { companyId },
+        select: { id: true, contactInfo: true },
+      });
+      
+      clients = allClients
+        .filter(c => {
+          if (!c.contactInfo || typeof c.contactInfo !== 'object') return false;
+          const email = (c.contactInfo as any).email;
+          return email && email.toLowerCase() === userEmail.toLowerCase();
+        })
+        .map(c => ({ id: c.id }));
+      
+      console.log(`[Invoice Service] Found ${clients.length} client(s) using alternative method`);
+    }
 
-    if (clients.length === 0) {
+    if (clients.length > 0) {
+      const clientIds = clients.map(c => c.id);
+      console.log(`[Invoice Service] Looking for invoices with clientIds: ${clientIds.join(', ')}`);
+      
+      const invoicesByClient = await prisma.invoice.findMany({
+        where: {
+          companyId,
+          clientId: {
+            in: clientIds,
+          },
+        },
+        select: { id: true },
+      });
+      
+      invoicesByClient.forEach(inv => invoiceIds.add(inv.id));
+      console.log(`[Invoice Service] Found ${invoicesByClient.length} invoice(s) via Client records`);
+    }
+
+    // Method 2: Find invoices via Projects (matching userId)
+    if (userId) {
+      try {
+        const projects = await prisma.project.findMany({
+          where: {
+            companyId,
+            clientId: userId,
+          },
+          select: { id: true },
+        });
+        
+        console.log(`[Invoice Service] Found ${projects.length} project(s) for userId ${userId}`);
+        
+        if (projects.length > 0) {
+          const projectIds = projects.map(p => p.id);
+          const invoicesByProject = await prisma.invoice.findMany({
+            where: {
+              companyId,
+              projectId: {
+                in: projectIds,
+              },
+            },
+            select: { id: true },
+          });
+          
+          invoicesByProject.forEach(inv => invoiceIds.add(inv.id));
+          console.log(`[Invoice Service] Found ${invoicesByProject.length} invoice(s) via Projects`);
+        }
+      } catch (error: any) {
+        console.error(`[Invoice Service] Error finding invoices via projects:`, error.message);
+      }
+    }
+
+    if (invoiceIds.size === 0) {
+      console.log(`[Invoice Service] No invoices found, returning empty array`);
       return [];
     }
 
-    const clientIds = clients.map(c => c.id);
+    // Fetch full invoice data
+    const invoiceIdArray = Array.from(invoiceIds);
+    console.log(`[Invoice Service] Fetching ${invoiceIdArray.length} invoice(s) with full details`);
 
-    return await prisma.invoice.findMany({
+    const invoices = await prisma.invoice.findMany({
       where: {
-        companyId,
-        clientId: {
-          in: clientIds,
+        id: {
+          in: invoiceIdArray,
         },
       },
       include: {
@@ -180,6 +260,9 @@ export const invoiceService = {
       },
       orderBy: { createdAt: 'desc' },
     });
+
+    console.log(`[Invoice Service] Returning ${invoices.length} invoice(s) for client`);
+    return invoices;
   },
 
   /**
@@ -363,6 +446,8 @@ export const invoiceService = {
    * Called when project status changes to "Submitted"
    */
   async generateInvoiceFromProject(projectId: number) {
+    console.log(`[Invoice Service] Starting invoice generation for project ${projectId}`);
+    
     const project = await prisma.project.findUnique({
       where: { id: projectId },
       include: {
@@ -377,8 +462,11 @@ export const invoiceService = {
     });
 
     if (!project) {
+      console.error(`[Invoice Service] Project ${projectId} not found`);
       throw new AppError('Project not found', 404);
     }
+
+    console.log(`[Invoice Service] Project found: ${project.title}, Client: ${project.client.email}, Company: ${project.companyId}`);
 
     // Check if invoice already exists for this project
     const existingInvoice = await prisma.invoice.findFirst({
@@ -386,33 +474,45 @@ export const invoiceService = {
     });
 
     if (existingInvoice) {
+      console.log(`[Invoice Service] Invoice already exists for project ${projectId}: ${existingInvoice.invoiceNumber}`);
       return existingInvoice;
     }
 
     // Get or create client record from user email
     // First, try to find client by email using raw query (most accurate, case-insensitive)
     let client: any = null;
-    const rawClients = await prisma.$queryRawUnsafe<Array<{ id: number }>>(
-      `SELECT id FROM clients WHERE company_id = ? AND LOWER(JSON_UNQUOTE(JSON_EXTRACT(contact_info, '$.email'))) = LOWER(?) LIMIT 1`,
-      project.companyId,
-      project.client.email
-    );
-    
-    if (rawClients.length > 0) {
-      client = await prisma.client.findUnique({ where: { id: rawClients[0].id } });
+    try {
+      const rawClients = await prisma.$queryRawUnsafe<Array<{ id: number }>>(
+        `SELECT id FROM clients WHERE company_id = ? AND LOWER(JSON_UNQUOTE(JSON_EXTRACT(contact_info, '$.email'))) = LOWER(?) LIMIT 1`,
+        project.companyId,
+        project.client.email
+      );
+      
+      if (rawClients.length > 0) {
+        client = await prisma.client.findUnique({ where: { id: rawClients[0].id } });
+        console.log(`[Invoice Service] Found existing client: ${client?.id}`);
+      }
+    } catch (error: any) {
+      console.error(`[Invoice Service] Error finding client by email:`, error.message);
     }
 
     // If client doesn't exist, create one from user data
     if (!client) {
-      client = await prisma.client.create({
-        data: {
-          companyId: project.companyId,
-          name: project.client.email.split('@')[0],
-          contactInfo: {
-            email: project.client.email.toLowerCase(),
+      try {
+        client = await prisma.client.create({
+          data: {
+            companyId: project.companyId,
+            name: project.client.email.split('@')[0],
+            contactInfo: {
+              email: project.client.email.toLowerCase(),
+            },
           },
-        },
-      });
+        });
+        console.log(`[Invoice Service] Created new client: ${client.id} for email ${project.client.email}`);
+      } catch (error: any) {
+        console.error(`[Invoice Service] Error creating client:`, error.message);
+        throw new AppError(`Failed to create client: ${error.message}`, 500);
+      }
     }
 
     // Generate invoice number
@@ -483,49 +583,65 @@ export const invoiceService = {
 
     const totalAmount = items.reduce((sum, item) => sum + item.total, 0);
 
+    console.log(`[Invoice Service] Creating invoice with ${items.length} items, total: ${totalAmount}`);
+
     // Create invoice with items
-    const invoice = await prisma.invoice.create({
-      data: {
-        companyId: project.companyId,
-        clientId: client.id,
-        projectId: project.id,
-        invoiceNumber,
-        issueDate,
-        dueDate,
-        totalAmount,
-        status: 'Unpaid',
-        notes: `Invoice for project: ${project.title}`,
-        items: {
-          create: items.map((item) => ({
-            description: item.description,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            total: item.total,
-          })),
-        },
-      },
-      include: {
-        client: true,
-        items: true,
-        project: {
-          include: {
-            service: true,
+    let invoice;
+    try {
+      invoice = await prisma.invoice.create({
+        data: {
+          companyId: project.companyId,
+          clientId: client.id,
+          projectId: project.id,
+          invoiceNumber,
+          issueDate,
+          dueDate,
+          totalAmount,
+          status: 'Unpaid',
+          notes: `Invoice for project: ${project.title}`,
+          items: {
+            create: items.map((item) => ({
+              description: item.description,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              total: item.total,
+            })),
           },
         },
-      },
-    });
+        include: {
+          client: true,
+          items: true,
+          project: {
+            include: {
+              service: true,
+            },
+          },
+        },
+      });
+      console.log(`[Invoice Service] Invoice created successfully: ${invoice.invoiceNumber} (ID: ${invoice.id})`);
+    } catch (error: any) {
+      console.error(`[Invoice Service] Error creating invoice:`, error.message);
+      console.error(`[Invoice Service] Error stack:`, error.stack);
+      throw new AppError(`Failed to create invoice: ${error.message}`, 500);
+    }
 
     // Create account receivable
-    await prisma.accountReceivable.create({
-      data: {
-        companyId: project.companyId,
-        clientId: client.id,
-        invoiceId: invoice.id,
-        amount: totalAmount,
-        dueDate,
-        status: 'Pending',
-      },
-    });
+    try {
+      await prisma.accountReceivable.create({
+        data: {
+          companyId: project.companyId,
+          clientId: client.id,
+          invoiceId: invoice.id,
+          amount: totalAmount,
+          dueDate,
+          status: 'Pending',
+        },
+      });
+      console.log(`[Invoice Service] Account receivable created for invoice ${invoice.id}`);
+    } catch (error: any) {
+      console.error(`[Invoice Service] Error creating account receivable:`, error.message);
+      // Don't fail if account receivable creation fails, invoice is already created
+    }
 
     return invoice;
   },

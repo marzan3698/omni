@@ -46,6 +46,7 @@ const allPermissions = [
   { key: 'can_view_all_tasks', label: 'View All Tasks' },
   { key: 'can_assign_tasks_to_anyone', label: 'Assign Tasks to Anyone' },
   { key: 'can_manage_campaigns', label: 'Manage Campaigns' },
+  { key: 'can_manage_payment_settings', label: 'Manage Payment Settings' },
 ];
 
 export default function Roles() {

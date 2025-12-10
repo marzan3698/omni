@@ -58,6 +58,7 @@ async function main() {
                 can_assign_tasks_to_anyone: true,
                 can_manage_campaigns: true,
                 can_manage_products: true,
+                can_manage_payment_settings: true,
             },
         },
         create: {
@@ -93,6 +94,7 @@ async function main() {
                 can_assign_tasks_to_anyone: true,
                 can_manage_campaigns: true,
                 can_manage_products: true,
+                can_manage_payment_settings: true,
             },
         },
     });

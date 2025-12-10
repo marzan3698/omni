@@ -23,6 +23,8 @@ import { Leads } from './pages/Leads';
 import Users from './pages/Users';
 import LeadConfig from './pages/LeadConfig';
 import SystemSettings from './pages/SystemSettings';
+import PaymentSettings from './pages/PaymentSettings';
+import PaymentManagement from './pages/PaymentManagement';
 import Roles from './pages/Roles';
 import TaskConfig from './pages/TaskConfig';
 import Integrations from './pages/Integrations';
@@ -112,16 +114,26 @@ function App() {
               </ProtectedRoute>
             }
           />
-          <Route
-            path="/finance"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <Finance />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
+                  <Route
+                    path="/finance"
+                    element={
+                      <ProtectedRoute>
+                        <Layout>
+                          <Finance />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/payment-management"
+                    element={
+                      <ProtectedRoute>
+                        <Layout>
+                          <PaymentManagement />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
           <Route
             path="/leads"
             element={
@@ -158,6 +170,16 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <SystemSettings />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/payment-settings"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <PaymentSettings />
                 </Layout>
               </ProtectedRoute>
             }

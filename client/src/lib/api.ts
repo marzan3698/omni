@@ -257,3 +257,27 @@ export const invoiceApi = {
   getById: (id: number) => apiClientInstance.get<ApiResponse>(`/finance/invoices/${id}`),
   getClientInvoices: () => apiClientInstance.get<ApiResponse>('/finance/invoices/client'),
 };
+
+// Payment Gateway API
+export const paymentGatewayApi = {
+  getAll: () => apiClientInstance.get<ApiResponse>('/payment-gateways'),
+  getActive: () => apiClientInstance.get<ApiResponse>('/payment-gateways/active'),
+  getById: (id: number) => apiClientInstance.get<ApiResponse>(`/payment-gateways/${id}`),
+  create: (data: any) => apiClientInstance.post<ApiResponse>('/payment-gateways', data),
+  update: (id: number, data: any) => apiClientInstance.put<ApiResponse>(`/payment-gateways/${id}`, data),
+  delete: (id: number) => apiClientInstance.delete<ApiResponse>(`/payment-gateways/${id}`),
+};
+
+// Payment API
+export const paymentApi = {
+  create: (data: any) => apiClientInstance.post<ApiResponse>('/payments', data),
+  getByInvoice: (invoiceId: number) => apiClientInstance.get<ApiResponse>(`/payments/invoice/${invoiceId}`),
+  getClientPayments: () => apiClientInstance.get<ApiResponse>('/payments/client'),
+  getAll: (filters?: { status?: string; clientId?: number }) =>
+    apiClientInstance.get<ApiResponse>('/payments', { params: filters }),
+  getById: (id: number) => apiClientInstance.get<ApiResponse>(`/payments/${id}`),
+  approve: (id: number, data?: { adminNotes?: string }) =>
+    apiClientInstance.put<ApiResponse>(`/payments/${id}/approve`, data),
+  reject: (id: number, data: { adminNotes: string }) =>
+    apiClientInstance.put<ApiResponse>(`/payments/${id}/reject`, data),
+};

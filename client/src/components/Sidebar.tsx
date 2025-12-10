@@ -22,7 +22,8 @@ import {
   ChevronRight,
   Plus,
   Eye,
-  Package
+  Package,
+  CreditCard
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -54,12 +55,28 @@ const navItems: NavItem[] = [
   { label: 'Employees', icon: Users, path: '/employees', permission: 'can_view_employees' },
   { label: 'Leads', icon: Target, path: '/leads', permission: 'can_view_leads' },
   { label: 'Tasks', icon: CheckSquare, path: '/tasks', permission: 'can_view_tasks' },
-  { label: 'Finance', icon: DollarSign, path: '/finance', permission: 'can_view_finance' },
+  {
+    label: 'Finance',
+    icon: DollarSign,
+    permission: 'can_view_finance',
+    submenu: [
+      { label: 'Finance Overview', path: '/finance', icon: DollarSign },
+      { label: 'Payment Management', path: '/payment-management', icon: DollarSign },
+    ]
+  },
   { label: 'Inbox', icon: MessageSquare, path: '/inbox', permission: 'can_manage_inbox' },
   // SuperAdmin section
   { label: 'Users', icon: Shield, path: '/users', permission: 'can_view_all_users' },
   { label: 'Roles', icon: Shield, path: '/roles', permission: 'can_manage_roles' },
-  { label: 'System Settings', icon: Cog, path: '/system-settings', permission: 'can_manage_root_items' },
+  {
+    label: 'System Settings',
+    icon: Cog,
+    permission: 'can_manage_root_items',
+    submenu: [
+      { label: 'System Settings', path: '/system-settings', icon: Cog },
+    ]
+  },
+  { label: 'Payment Settings', icon: CreditCard, path: '/payment-settings', permission: 'can_manage_payment_settings' },
   { label: 'Integrations', icon: Plug, path: '/integrations', permission: 'can_view_integrations' },
   { label: 'Task Config', icon: ListChecks, path: '/task-config', permission: 'can_manage_task_config' },
   {

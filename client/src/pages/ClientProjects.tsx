@@ -58,12 +58,16 @@ export function ClientProjects() {
     if (signedProjectId) {
       const projectId = parseInt(signedProjectId);
       setSigningProjectId(projectId);
+      // Force refetch projects to get updated invoice data
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
       setTimeout(() => {
         setSigningProjectId(null);
+        // Refetch again after animation completes
+        queryClient.invalidateQueries({ queryKey: ['projects'] });
         navigate(location.pathname, { replace: true });
       }, 3000);
     }
-  }, [location, navigate]);
+  }, [location, navigate, queryClient]);
 
   // When service is selected, auto-fill form data
   useEffect(() => {
