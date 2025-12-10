@@ -12,6 +12,8 @@ interface CreateCampaignData {
   type: CampaignType;
   productIds?: number[];
   clientIds?: string[];
+  employeeIds?: number[];
+  groupIds?: number[];
 }
 
 interface UpdateCampaignData {
@@ -23,6 +25,8 @@ interface UpdateCampaignData {
   type?: CampaignType;
   productIds?: number[];
   clientIds?: string[];
+  employeeIds?: number[];
+  groupIds?: number[];
 }
 
 export const campaignService = {
@@ -120,6 +124,44 @@ export const campaignService = {
             },
           },
         },
+        employees: {
+          include: {
+            employee: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    email: true,
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        groups: {
+          include: {
+            group: {
+              include: {
+                members: {
+                  include: {
+                    employee: {
+                      include: {
+                        user: {
+                          select: {
+                            id: true,
+                            email: true,
+                            name: true,
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     });
 
@@ -190,33 +232,6 @@ export const campaignService = {
       });
     }
 
-    // Return campaign with products and leads
-    return await prisma.campaign.findUnique({
-      where: { id: campaign.id },
-      include: {
-        products: {
-          include: {
-            product: {
-              include: {
-                category: {
-                  select: {
-                    id: true,
-                    name: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-        leads: {
-          select: {
-            id: true,
-            value: true,
-          },
-        },
-      },
-    });
-
     // Assign clients if provided
     if (data.clientIds && data.clientIds.length > 0) {
       // Validate clients exist and have Client role
@@ -244,7 +259,63 @@ export const campaignService = {
       });
     }
 
-    // Return campaign with products, clients, and leads
+    // Assign employees if provided
+    if (data.employeeIds && data.employeeIds.length > 0) {
+      // Validate employees exist
+      // Note: For SuperAdmin, we allow cross-company employee assignment
+      // For regular users, employees should belong to the campaign's company
+      const employees = await prisma.employee.findMany({
+        where: {
+          id: { in: data.employeeIds },
+        },
+        include: {
+          user: {
+            select: {
+              companyId: true,
+            },
+          },
+        },
+      });
+
+      if (employees.length !== data.employeeIds.length) {
+        throw new AppError('Some employees not found', 400);
+      }
+
+      // Create campaign-employee relationships
+      await prisma.campaignEmployee.createMany({
+        data: data.employeeIds.map((employeeId) => ({
+          campaignId: campaign.id,
+          employeeId,
+        })),
+        skipDuplicates: true,
+      });
+    }
+
+    // Assign employee groups if provided
+    if (data.groupIds && data.groupIds.length > 0) {
+      // Validate groups exist and belong to the same company
+      const groups = await prisma.employeeGroup.findMany({
+        where: {
+          id: { in: data.groupIds },
+          companyId: data.companyId,
+        },
+      });
+
+      if (groups.length !== data.groupIds.length) {
+        throw new AppError('Some employee groups not found or do not belong to the company', 400);
+      }
+
+      // Create campaign-group relationships (dynamic linking)
+      await prisma.campaignGroup.createMany({
+        data: data.groupIds.map((groupId) => ({
+          campaignId: campaign.id,
+          groupId,
+        })),
+        skipDuplicates: true,
+      });
+    }
+
+    // Return campaign with products, clients, employees, groups, and leads
     return await prisma.campaign.findUnique({
       where: { id: campaign.id },
       include: {
@@ -268,6 +339,44 @@ export const campaignService = {
               select: {
                 id: true,
                 email: true,
+              },
+            },
+          },
+        },
+        employees: {
+          include: {
+            employee: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    email: true,
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        groups: {
+          include: {
+            group: {
+              include: {
+                members: {
+                  include: {
+                    employee: {
+                      include: {
+                        user: {
+                          select: {
+                            id: true,
+                            email: true,
+                            name: true,
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
               },
             },
           },
@@ -367,7 +476,70 @@ export const campaignService = {
       }
     }
 
-    // Return campaign with products and leads
+    // Update employees if provided
+    if (data.employeeIds !== undefined) {
+      // Delete existing employee assignments
+      await prisma.campaignEmployee.deleteMany({
+        where: { campaignId: id },
+      });
+
+      // Add new employee assignments if any
+      if (data.employeeIds.length > 0) {
+        // Validate employees exist
+        const employees = await prisma.employee.findMany({
+          where: {
+            id: { in: data.employeeIds },
+          },
+        });
+
+        if (employees.length !== data.employeeIds.length) {
+          throw new AppError('Some employees not found', 400);
+        }
+
+        // Create campaign-employee relationships
+        await prisma.campaignEmployee.createMany({
+          data: data.employeeIds.map((employeeId) => ({
+            campaignId: id,
+            employeeId,
+          })),
+          skipDuplicates: true,
+        });
+      }
+    }
+
+    // Update employee groups if provided
+    if (data.groupIds !== undefined) {
+      // Delete existing group assignments
+      await prisma.campaignGroup.deleteMany({
+        where: { campaignId: id },
+      });
+
+      // Add new group assignments if any
+      if (data.groupIds.length > 0) {
+        // Validate groups exist and belong to the same company
+        const groups = await prisma.employeeGroup.findMany({
+          where: {
+            id: { in: data.groupIds },
+            companyId: companyId,
+          },
+        });
+
+        if (groups.length !== data.groupIds.length) {
+          throw new AppError('Some employee groups not found or do not belong to the company', 400);
+        }
+
+        // Create campaign-group relationships (dynamic linking)
+        await prisma.campaignGroup.createMany({
+          data: data.groupIds.map((groupId) => ({
+            campaignId: id,
+            groupId,
+          })),
+          skipDuplicates: true,
+        });
+      }
+    }
+
+    // Return campaign with products, employees, groups, and leads
     return await prisma.campaign.findUnique({
       where: { id },
       include: {
@@ -378,6 +550,21 @@ export const campaignService = {
                 category: {
                   select: {
                     id: true,
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        employees: {
+          include: {
+            employee: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    email: true,
                     name: true,
                   },
                 },
@@ -523,6 +710,21 @@ export const campaignService = {
               select: {
                 id: true,
                 email: true,
+              },
+            },
+          },
+        },
+        employees: {
+          include: {
+            employee: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    email: true,
+                    name: true,
+                  },
+                },
               },
             },
           },

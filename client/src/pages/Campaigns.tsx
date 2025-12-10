@@ -10,6 +10,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { PermissionGuard } from '@/components/PermissionGuard';
 import { Plus, Edit, Trash2, X, Megaphone } from 'lucide-react';
 import { ProductSearch } from '@/components/ProductSearch';
+import { EmployeeSelector } from '@/components/EmployeeSelector';
+import { GroupSelector } from '@/components/GroupSelector';
 
 interface Campaign {
   id: number;
@@ -30,8 +32,10 @@ export default function Campaigns() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation();
+  const isSuperAdmin = user?.roleName === 'SuperAdmin';
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
+  const [employeeError, setEmployeeError] = useState('');
 
   const [formData, setFormData] = useState({
     name: '',
@@ -41,6 +45,8 @@ export default function Campaigns() {
     budget: '',
     type: 'sale' as 'reach' | 'sale' | 'research',
     productIds: [] as number[],
+    employeeIds: [] as number[],
+    groupIds: [] as number[],
   });
 
   // Fetch campaigns
@@ -62,6 +68,8 @@ export default function Campaigns() {
       const submitData = {
         ...data,
         productIds: formData.productIds,
+        employeeIds: isSuperAdmin ? formData.employeeIds : undefined,
+        groupIds: isSuperAdmin ? formData.groupIds : undefined,
       };
       if (editingCampaign) {
         return campaignApi.update(editingCampaign.id, submitData, user?.companyId || 0);
@@ -112,8 +120,11 @@ export default function Campaigns() {
       budget: '',
       type: 'sale',
       productIds: [],
+      employeeIds: [],
+      groupIds: [],
     });
     setEditingCampaign(null);
+    setEmployeeError('');
   };
 
   // Open modal if route is /campaigns/new
@@ -151,7 +162,33 @@ export default function Campaigns() {
           });
         }
         
+        // Extract employee IDs from the campaign data
+        const employeeIds: number[] = [];
+        if (campaignData.employees && Array.isArray(campaignData.employees)) {
+          campaignData.employees.forEach((ce: any) => {
+            // Handle both nested employee structure and direct employeeId
+            const employeeId = ce.employee?.id || ce.employeeId || ce.id;
+            if (employeeId && typeof employeeId === 'number') {
+              employeeIds.push(employeeId);
+            }
+          });
+        }
+        
+        // Extract group IDs from the campaign data
+        const groupIds: number[] = [];
+        if (campaignData.groups && Array.isArray(campaignData.groups)) {
+          campaignData.groups.forEach((cg: any) => {
+            // Handle both nested group structure and direct groupId
+            const groupId = cg.group?.id || cg.groupId || cg.id;
+            if (groupId && typeof groupId === 'number') {
+              groupIds.push(groupId);
+            }
+          });
+        }
+        
         console.log('Extracted product IDs:', productIds); // Debug log
+        console.log('Extracted employee IDs:', employeeIds); // Debug log
+        console.log('Extracted group IDs:', groupIds); // Debug log
         
         setEditingCampaign(campaign);
         setFormData({
@@ -162,6 +199,8 @@ export default function Campaigns() {
           budget: String(campaignData.budget || campaign.budget),
           type: campaignData.type || campaign.type,
           productIds: productIds,
+          employeeIds: employeeIds,
+          groupIds: groupIds,
         });
         setIsModalOpen(true);
       } catch (error) {
@@ -176,6 +215,8 @@ export default function Campaigns() {
           budget: String(campaign.budget),
           type: campaign.type,
           productIds: [],
+          employeeIds: [],
+          groupIds: [],
         });
         setIsModalOpen(true);
       }
@@ -223,6 +264,13 @@ export default function Campaigns() {
       alert('End date must be after start date');
       return;
     }
+
+    // Validate employee assignment for SuperAdmin
+    if (isSuperAdmin && (!formData.employeeIds || formData.employeeIds.length === 0)) {
+      setEmployeeError('At least one employee must be assigned to the campaign');
+      return;
+    }
+    setEmployeeError('');
 
     if (!user?.companyId) {
       alert('Company ID not found. Please refresh and try again.');
@@ -484,6 +532,59 @@ export default function Campaigns() {
                       </p>
                     )}
                   </div>
+
+                  {/* Employee Selection Section - SuperAdmin only */}
+                  {isSuperAdmin && (
+                    <div>
+                      <Label>Assign Employees *</Label>
+                      <div className={`mt-2 p-4 border rounded-md bg-gray-50 ${employeeError ? 'border-red-300' : 'border-gray-200'}`}>
+                        {user?.companyId && (
+                          <EmployeeSelector
+                            companyId={user.companyId}
+                            selectedEmployeeIds={formData.employeeIds}
+                            onSelectionChange={(employeeIds) => {
+                              setFormData({ ...formData, employeeIds });
+                              if (employeeIds.length > 0) {
+                                setEmployeeError('');
+                              }
+                            }}
+                            isSuperAdmin={isSuperAdmin}
+                          />
+                        )}
+                      </div>
+                      {employeeError && (
+                        <p className="mt-2 text-sm text-red-600">{employeeError}</p>
+                      )}
+                      {formData.employeeIds.length > 0 && !employeeError && (
+                        <p className="mt-2 text-sm text-slate-600">
+                          {formData.employeeIds.length} employee{formData.employeeIds.length !== 1 ? 's' : ''} selected
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Employee Group Selection Section - SuperAdmin only, Optional */}
+                  {isSuperAdmin && (
+                    <div>
+                      <Label>Assign Employee Groups (Optional)</Label>
+                      <div className="mt-2 p-4 border border-gray-200 rounded-md bg-gray-50">
+                        {user?.companyId && (
+                          <GroupSelector
+                            companyId={user.companyId}
+                            selectedGroupIds={formData.groupIds}
+                            onSelectionChange={(groupIds) =>
+                              setFormData({ ...formData, groupIds })
+                            }
+                          />
+                        )}
+                      </div>
+                      {formData.groupIds.length > 0 && (
+                        <p className="mt-2 text-sm text-slate-600">
+                          {formData.groupIds.length} group{formData.groupIds.length !== 1 ? 's' : ''} selected
+                        </p>
+                      )}
+                    </div>
+                  )}
 
                   <div className="flex justify-end gap-2 pt-4">
                     <Button type="button" variant="outline" onClick={handleCloseModal}>

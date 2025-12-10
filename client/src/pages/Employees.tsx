@@ -87,9 +87,16 @@ export function Employees() {
     queryFn: async () => {
       if (isSuperAdmin) {
         const response = await userApi.getAll();
-        // Filter out users with role "Client"
+        if (!response.data.success) {
+          throw new Error(response.data.message || 'Failed to fetch users');
+        }
+        // Filter out users with role "Client" and only include users with employee records
         const allUsers = (response.data.data || []) as UserWithRole[];
-        return allUsers.filter((u) => u.role.name !== 'Client');
+        // Only show users that are not clients and have employee records
+        return allUsers.filter((u) => {
+          const roleName = u.role?.name || '';
+          return roleName !== 'Client' && u.employee && u.employee.id;
+        });
       }
       return [];
     },

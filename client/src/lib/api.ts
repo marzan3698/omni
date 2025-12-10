@@ -167,6 +167,23 @@ export const campaignApi = {
     apiClientInstance.get<ApiResponse>('/campaigns/active', { params: { companyId } }),
   getProducts: (campaignId: number, companyId: number) =>
     apiClientInstance.get<ApiResponse>(`/campaigns/${campaignId}/products`, { params: { companyId } }),
+  getEmployees: (campaignId: number, companyId: number) =>
+    apiClientInstance.get<ApiResponse>(`/campaigns/${campaignId}/employees`, { params: { companyId } }),
+};
+
+// Employee Group API
+export const employeeGroupApi = {
+  getAll: (companyId: number) =>
+    apiClientInstance.get<ApiResponse>('/employee-groups', { params: { companyId } }),
+  getById: (id: number, companyId: number) =>
+    apiClientInstance.get<ApiResponse>(`/employee-groups/${id}`, { params: { companyId } }),
+  create: (data: any) => apiClientInstance.post<ApiResponse>('/employee-groups', data),
+  update: (id: number, data: any, companyId: number) =>
+    apiClientInstance.put<ApiResponse>(`/employee-groups/${id}`, data, { params: { companyId } }),
+  delete: (id: number, companyId: number) =>
+    apiClientInstance.delete<ApiResponse>(`/employee-groups/${id}`, { params: { companyId } }),
+  getMembers: (id: number, companyId: number) =>
+    apiClientInstance.get<ApiResponse>(`/employee-groups/${id}/members`, { params: { companyId } }),
 };
 
 // Product API

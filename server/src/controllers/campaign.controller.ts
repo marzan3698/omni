@@ -17,6 +17,8 @@ const createCampaignSchema = z.object({
   type: z.enum(['reach', 'sale', 'research']),
   productIds: z.array(z.number().int().positive()).optional(),
   clientIds: z.array(z.string().uuid()).optional(),
+  employeeIds: z.array(z.number().int().positive()).optional(),
+  groupIds: z.array(z.number().int().positive()).optional(),
 });
 
 const updateCampaignSchema = z.object({
@@ -28,6 +30,8 @@ const updateCampaignSchema = z.object({
   type: z.enum(['reach', 'sale', 'research']).optional(),
   productIds: z.array(z.number().int().positive()).optional(),
   clientIds: z.array(z.string().uuid()).optional(),
+  employeeIds: z.array(z.number().int().positive()).optional(),
+  groupIds: z.array(z.number().int().positive()).optional(),
 });
 
 export const campaignController = {
@@ -108,6 +112,8 @@ export const campaignController = {
         type: validatedData.type,
         productIds: validatedData.productIds,
         clientIds: validatedData.clientIds,
+        employeeIds: validatedData.employeeIds,
+        groupIds: validatedData.groupIds,
       };
 
       const campaign = await campaignService.createCampaign(campaignData);
@@ -156,6 +162,14 @@ export const campaignController = {
       // Include clientIds in updateData if provided
       if (validatedData.clientIds !== undefined) {
         updateData.clientIds = validatedData.clientIds;
+      }
+      // Include employeeIds in updateData if provided
+      if (validatedData.employeeIds !== undefined) {
+        updateData.employeeIds = validatedData.employeeIds;
+      }
+      // Include groupIds in updateData if provided
+      if (validatedData.groupIds !== undefined) {
+        updateData.groupIds = validatedData.groupIds;
       }
 
       const campaign = await campaignService.updateCampaign(id, companyId, updateData);
@@ -236,6 +250,33 @@ export const campaignController = {
         return sendError(res, error.message, error.statusCode);
       }
       return sendError(res, 'Failed to retrieve active campaigns', 500);
+    }
+  },
+
+  /**
+   * Get campaign employees
+   * GET /api/campaigns/:id/employees?companyId=1
+   */
+  getCampaignEmployees: async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const companyId = parseInt(req.query.companyId as string);
+
+      if (!id || isNaN(id)) {
+        return sendError(res, 'Campaign ID is required', 400);
+      }
+
+      if (!companyId || isNaN(companyId)) {
+        return sendError(res, 'Company ID is required', 400);
+      }
+
+      const employees = await campaignService.getCampaignEmployees(id, companyId);
+      return sendSuccess(res, employees, 'Campaign employees retrieved successfully');
+    } catch (error) {
+      if (error instanceof AppError) {
+        return sendError(res, error.message, error.statusCode);
+      }
+      return sendError(res, 'Failed to retrieve campaign employees', 500);
     }
   },
 

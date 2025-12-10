@@ -17,6 +17,7 @@ import { Inbox } from './pages/Inbox';
 import { Settings } from './pages/Settings';
 import { Companies } from './pages/Companies';
 import { Employees } from './pages/Employees';
+import EmployeeGroups from './pages/EmployeeGroups';
 import { UserDetail } from './pages/UserDetail';
 import { Tasks } from './pages/Tasks';
 import { Finance } from './pages/Finance';
@@ -111,6 +112,26 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <UserDetail />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/employee-groups"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <EmployeeGroups />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/employee-groups/:id"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <EmployeeGroups />
                 </Layout>
               </ProtectedRoute>
             }

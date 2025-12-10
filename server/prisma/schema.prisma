@@ -54,6 +54,7 @@ model Company {
   blogPosts          BlogPost[]
   paymentGateways    PaymentGateway[]
   payments           Payment[]
+  employeeGroups     EmployeeGroup[]
 
   @@index([name])
   @@index([isActive])
@@ -98,6 +99,7 @@ model User {
   createdLeads Lead[] @relation("LeadCreator")
   projects Project[]
   campaignClients CampaignClient[]
+  createdEmployeeGroups EmployeeGroup[]
 
   @@unique([email, companyId])
   @@index([email])
@@ -151,6 +153,8 @@ model Employee {
   // Relations
   assignedLeads Lead[]
   assignedTasks Task[]
+  campaigns CampaignEmployee[]
+  groups EmployeeGroupMember[]
 
   @@index([userId])
   @@index([companyId])
@@ -823,6 +827,8 @@ model Campaign {
   leads   Lead[]
   products CampaignProduct[]
   clients CampaignClient[]
+  employees CampaignEmployee[]
+  groups CampaignGroup[]
 
   @@index([companyId])
   @@index([type])
@@ -985,4 +991,76 @@ model CampaignClient {
   @@index([campaignId])
   @@index([clientId])
   @@map("campaign_clients")
+}
+
+// ============================================
+// 15. Campaign Employee Assignment
+// ============================================
+
+model CampaignEmployee {
+  id         Int      @id @default(autoincrement())
+  campaignId Int      @map("campaign_id")
+  employeeId Int      @map("employee_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, employeeId])
+  @@index([campaignId])
+  @@index([employeeId])
+  @@map("campaign_employees")
+}
+
+// ============================================
+// 16. Employee Groups
+// ============================================
+
+model EmployeeGroup {
+  id          Int       @id @default(autoincrement())
+  name        String    @db.VarChar(255)
+  description String    @db.Text
+  companyId   Int       @map("company_id")
+  createdById String    @map("created_by_id") @db.VarChar(36)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  company     Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  creator     User      @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  members     EmployeeGroupMember[]
+  campaigns   CampaignGroup[]
+
+  @@index([companyId])
+  @@index([createdById])
+  @@map("employee_groups")
+}
+
+model EmployeeGroupMember {
+  id         Int      @id @default(autoincrement())
+  groupId    Int      @map("group_id")
+  employeeId Int      @map("employee_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  group    EmployeeGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  employee Employee      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, employeeId])
+  @@index([groupId])
+  @@index([employeeId])
+  @@map("employee_group_members")
+}
+
+model CampaignGroup {
+  id         Int      @id @default(autoincrement())
+  campaignId Int      @map("campaign_id")
+  groupId    Int      @map("group_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  campaign Campaign     @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  group    EmployeeGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, groupId])
+  @@index([campaignId])
+  @@index([groupId])
+  @@map("campaign_groups")
 }

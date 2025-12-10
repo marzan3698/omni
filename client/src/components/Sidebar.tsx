@@ -79,6 +79,7 @@ const menuSections: MenuSection[] = [
       },
       { label: 'Companies', icon: Building2, path: '/companies', permission: 'can_view_companies' },
       { label: 'Employees', icon: Users, path: '/employees', permission: 'can_view_employees' },
+      { label: 'Employee Groups', icon: Users, path: '/employee-groups', permission: 'can_manage_employees' },
       { label: 'Tasks', icon: CheckSquare, path: '/tasks', permission: 'can_view_tasks' },
     ]
   },

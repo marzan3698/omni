@@ -22,6 +22,9 @@ router.get('/:id/products', campaignController.getCampaignProducts);
 // Get campaign clients
 router.get('/:id/clients', campaignController.getCampaignClients);
 
+// Get campaign employees
+router.get('/:id/employees', verifyPermission('can_manage_campaigns'), campaignController.getCampaignEmployees);
+
 // Get campaign by ID
 router.get('/:id', campaignController.getCampaignById);
 
