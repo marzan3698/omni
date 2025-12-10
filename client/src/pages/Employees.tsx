@@ -1,34 +1,150 @@
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { employeeApi } from '@/lib/api';
+import { employeeApi, userApi } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { Users, Plus } from 'lucide-react';
+import { AddEmployeeModal } from '@/components/AddEmployeeModal';
+import { Users, Plus, Building2, Eye, Edit } from 'lucide-react';
+
+interface UserWithRole {
+  id: string;
+  name?: string | null;
+  email: string;
+  phone?: string | null;
+  address?: string | null;
+  education?: string | null;
+  roleId: number;
+  companyId: number;
+  profileImage?: string | null;
+  eSignature?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  role: {
+    id: number;
+    name: string;
+    permissions: Record<string, boolean>;
+  };
+  company: {
+    id: number;
+    name: string;
+  };
+  employee?: {
+    id: number;
+    designation?: string | null;
+    department?: string | null;
+    salary?: string | null;
+    joinDate?: string | null;
+  } | null;
+}
+
+// Utility function to get initials from email or name
+const getInitials = (email: string, name?: string | null): string => {
+  if (name) {
+    const parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  }
+  if (!email) return '?';
+  const parts = email.split('@')[0].split(/[._-]/);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+  return email.substring(0, 2).toUpperCase();
+};
+
+// Utility function to get avatar background color based on email
+const getAvatarColor = (email: string): string => {
+  const colors = [
+    'bg-indigo-500',
+    'bg-blue-500',
+    'bg-purple-500',
+    'bg-pink-500',
+    'bg-red-500',
+    'bg-orange-500',
+    'bg-yellow-500',
+    'bg-green-500',
+    'bg-teal-500',
+    'bg-cyan-500',
+  ];
+  const index = email.charCodeAt(0) % colors.length;
+  return colors[index];
+};
 
 export function Employees() {
   const { user } = useAuth();
-  const [employees, setEmployees] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  const isSuperAdmin = user?.roleName === 'SuperAdmin';
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-  useEffect(() => {
-    if (user?.companyId) {
-      loadEmployees();
-    }
-  }, [user]);
-
-  const loadEmployees = async () => {
-    try {
-      setLoading(true);
-      const response = await employeeApi.getAll(user!.companyId!);
-      if (response.data.success) {
-        setEmployees(response.data.data || []);
+  // For SuperAdmin: fetch all users and filter out clients
+  // For others: fetch employees as before
+  const { data: usersResponse, isLoading: usersLoading } = useQuery({
+    queryKey: ['all-users', isSuperAdmin],
+    queryFn: async () => {
+      if (isSuperAdmin) {
+        const response = await userApi.getAll();
+        // Filter out users with role "Client"
+        const allUsers = (response.data.data || []) as UserWithRole[];
+        return allUsers.filter((u) => u.role.name !== 'Client');
       }
-    } catch (error) {
-      console.error('Failed to load employees:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+      return [];
+    },
+    enabled: isSuperAdmin,
+  });
+
+  const { data: employeesResponse, isLoading: employeesLoading } = useQuery({
+    queryKey: ['employees', user?.companyId],
+    queryFn: async () => {
+      if (!user?.companyId || isSuperAdmin) return null;
+      const response = await employeeApi.getAll(user.companyId);
+      return response.data.data || [];
+    },
+    enabled: !isSuperAdmin && !!user?.companyId,
+  });
+
+  const loading = isSuperAdmin ? usersLoading : employeesLoading;
+  
+  // Format data for display - keep full user data for modals
+  const displayData = isSuperAdmin
+    ? (usersResponse || []).map((userData: UserWithRole) => ({
+        ...userData,
+        id: userData.id,
+        email: userData.email,
+        roleName: userData.role.name,
+        companyName: userData.company.name,
+        designation: userData.employee?.designation || null,
+        department: userData.employee?.department || null,
+        salary: userData.employee?.salary || null,
+        profileImage: userData.profileImage,
+      }))
+    : (employeesResponse || []).map((employee: any) => {
+        const userData = employee.user;
+        return {
+          id: userData?.id || employee.id,
+          email: userData?.email || 'N/A',
+          roleName: userData?.role?.name || 'Employee',
+          companyName: user?.companyId ? 'Current Company' : 'N/A',
+          designation: employee.designation || null,
+          department: employee.department || null,
+          salary: employee.salary || null,
+          profileImage: userData?.profileImage,
+          role: userData?.role || { id: 0, name: 'Employee', permissions: {} },
+          company: { id: user?.companyId || 0, name: 'Current Company' },
+          roleId: userData?.roleId || 0,
+          companyId: user?.companyId || 0,
+          employee: {
+            id: employee.id,
+            designation: employee.designation,
+            department: employee.department,
+            salary: employee.salary,
+            joinDate: employee.joinDate,
+          },
+        };
+      });
 
   if (loading) {
     return <div className="flex items-center justify-center h-64">Loading...</div>;
@@ -38,44 +154,140 @@ export function Employees() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Employees</h1>
-          <p className="text-slate-600 mt-1">Manage your team</p>
+          <h1 className="text-3xl font-bold text-slate-900">
+            {isSuperAdmin ? 'All Users' : 'Employees'}
+          </h1>
+          <p className="text-slate-600 mt-1">
+            {isSuperAdmin ? 'View all users and their roles (excluding clients)' : 'Manage your team'}
+          </p>
         </div>
-        <Button>
+        <Button onClick={() => setIsAddModalOpen(true)}>
           <Plus className="w-4 h-4 mr-2" />
           Add Employee
         </Button>
       </div>
 
       <Card className="shadow-sm border-gray-200">
-        <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {employees.map((employee) => (
-              <Card key={employee.id} className="shadow-sm border-gray-200">
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <Users className="w-8 h-8 text-indigo-600" />
-                    <div>
-                      <CardTitle className="text-lg">{employee.user?.email}</CardTitle>
-                      <p className="text-sm text-slate-500">{employee.designation || 'Employee'}</p>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2 text-sm">
-                    {employee.department && <p className="text-slate-600">📁 {employee.department}</p>}
-                    {employee.salary && <p className="text-slate-600">💰 ${Number(employee.salary).toLocaleString()}</p>}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-          {employees.length === 0 && (
-            <div className="text-center py-12 text-slate-500">No employees found</div>
+        <CardContent className="p-0">
+          {displayData.length === 0 ? (
+            <div className="text-center py-12 text-slate-500">
+              {isSuperAdmin ? 'No users found (excluding clients)' : 'No employees found'}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-slate-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">
+                      User
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">
+                      Role
+                    </th>
+                    {isSuperAdmin && (
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">
+                        Company
+                      </th>
+                    )}
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">
+                      Designation
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">
+                      Department
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">
+                      Salary
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {displayData.map((item) => (
+                    <tr key={item.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-3">
+                          {item.profileImage ? (
+                            <img
+                              src={item.profileImage}
+                              alt={item.email}
+                              className="w-10 h-10 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div className={`w-10 h-10 rounded-full ${getAvatarColor(item.email)} flex items-center justify-center text-white font-semibold text-sm`}>
+                              {getInitials(item.email, (item as UserWithRole).name)}
+                            </div>
+                          )}
+                          <div>
+                            <div className="text-sm font-medium text-slate-900">{item.email}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-indigo-100 text-indigo-800">
+                          {item.roleName}
+                        </span>
+                      </td>
+                      {isSuperAdmin && (
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-2 text-sm text-slate-600">
+                            <Building2 className="w-4 h-4" />
+                            <span>{item.companyName}</span>
+                          </div>
+                        </td>
+                      )}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                        {item.designation || <span className="text-slate-400">—</span>}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                        {item.department || <span className="text-slate-400">—</span>}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                        {item.salary ? (
+                          <span className="font-medium">${Number(item.salary).toLocaleString()}</span>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => navigate(`/employees/${item.id}`)}
+                            className="h-8 px-3"
+                          >
+                            <Eye className="w-4 h-4 mr-1" />
+                            View
+                          </Button>
+                          {isSuperAdmin && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => navigate(`/employees/${item.id}?edit=true`)}
+                              className="h-8 px-3"
+                            >
+                              <Edit className="w-4 h-4 mr-1" />
+                              Edit
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Add Employee Modal */}
+      <AddEmployeeModal 
+        isOpen={isAddModalOpen} 
+        onClose={() => setIsAddModalOpen(false)} 
+      />
     </div>
   );
 }
-

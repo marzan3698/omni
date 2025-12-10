@@ -33,6 +33,12 @@ export const userService = {
             id: true,
             designation: true,
             department: true,
+            salary: true,
+            workHours: true,
+            holidays: true,
+            bonus: true,
+            responsibilities: true,
+            joinDate: true,
           },
         },
       },
@@ -75,6 +81,12 @@ export const userService = {
             id: true,
             designation: true,
             department: true,
+            salary: true,
+            workHours: true,
+            holidays: true,
+            bonus: true,
+            responsibilities: true,
+            joinDate: true,
           },
         },
       },
@@ -96,7 +108,12 @@ export const userService = {
     password: string;
     roleId: number;
     companyId: number;
-    profileImage?: string;
+    name?: string | null;
+    phone?: string | null;
+    address?: string | null;
+    education?: string | null;
+    profileImage?: string | null;
+    eSignature?: string | null;
   }) {
     // Check if user already exists
     const existingUser = await prisma.user.findFirst({
@@ -137,7 +154,12 @@ export const userService = {
         passwordHash,
         roleId: data.roleId,
         companyId: data.companyId,
-        profileImage: data.profileImage,
+        name: data.name || null,
+        phone: data.phone || null,
+        address: data.address || null,
+        education: data.education || null,
+        profileImage: data.profileImage || null,
+        eSignature: data.eSignature || null,
       },
       include: {
         role: {
@@ -164,10 +186,24 @@ export const userService = {
    * Update user (SuperAdmin only)
    */
   async updateUser(id: string, data: {
+    name?: string | null;
     email?: string;
+    phone?: string | null;
     password?: string;
+    address?: string | null;
+    education?: string | null;
     roleId?: number;
-    profileImage?: string;
+    companyId?: number;
+    profileImage?: string | null;
+    eSignature?: string | null;
+    // Employee fields
+    designation?: string | null;
+    department?: string | null;
+    salary?: number | null;
+    workHours?: number | null;
+    holidays?: number | null;
+    bonus?: number | null;
+    responsibilities?: string | null;
   }, companyId?: number) {
     const where: any = { id };
     if (companyId) {
@@ -206,12 +242,18 @@ export const userService = {
     }
 
     const updateData: any = {};
+    if (data.name !== undefined) updateData.name = data.name || null;
     if (data.email) updateData.email = data.email;
+    if (data.phone !== undefined) updateData.phone = data.phone || null;
     if (data.password) {
       updateData.passwordHash = await bcrypt.hash(data.password, 10);
     }
+    if (data.address !== undefined) updateData.address = data.address || null;
+    if (data.education !== undefined) updateData.education = data.education || null;
     if (data.roleId) updateData.roleId = data.roleId;
-    if (data.profileImage !== undefined) updateData.profileImage = data.profileImage;
+    if (data.companyId) updateData.companyId = data.companyId;
+    if (data.profileImage !== undefined) updateData.profileImage = data.profileImage || null;
+    if (data.eSignature !== undefined) updateData.eSignature = data.eSignature || null;
 
     const user = await prisma.user.update({
       where: { id },
@@ -230,8 +272,95 @@ export const userService = {
             name: true,
           },
         },
+        employee: {
+          select: {
+            id: true,
+            designation: true,
+            department: true,
+            salary: true,
+            workHours: true,
+            holidays: true,
+            bonus: true,
+            responsibilities: true,
+            joinDate: true,
+          },
+        },
       },
     });
+
+    // Update or create employee record if employee fields are provided
+    const finalCompanyId = data.companyId || existingUser.companyId;
+    if (data.designation !== undefined || data.department !== undefined || 
+        data.salary !== undefined || data.workHours !== undefined || 
+        data.holidays !== undefined || data.bonus !== undefined || 
+        data.responsibilities !== undefined) {
+      
+      const existingEmployee = await prisma.employee.findUnique({
+        where: { userId: id },
+      });
+
+      const employeeData: any = {};
+      if (data.designation !== undefined) employeeData.designation = data.designation || null;
+      if (data.department !== undefined) employeeData.department = data.department || null;
+      if (data.salary !== undefined) employeeData.salary = data.salary || null;
+      if (data.workHours !== undefined) employeeData.workHours = data.workHours || null;
+      if (data.holidays !== undefined) employeeData.holidays = data.holidays || null;
+      if (data.bonus !== undefined) employeeData.bonus = data.bonus || null;
+      if (data.responsibilities !== undefined) employeeData.responsibilities = data.responsibilities || null;
+
+      if (existingEmployee) {
+        await prisma.employee.update({
+          where: { userId: id },
+          data: employeeData,
+        });
+      } else {
+        await prisma.employee.create({
+          data: {
+            userId: id,
+            companyId: finalCompanyId,
+            ...employeeData,
+          },
+        });
+      }
+
+      // Refetch user with updated employee data
+      const updatedUser = await prisma.user.findUnique({
+        where: { id },
+        include: {
+          role: {
+            select: {
+              id: true,
+              name: true,
+              permissions: true,
+            },
+          },
+          company: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          employee: {
+            select: {
+              id: true,
+              designation: true,
+              department: true,
+              salary: true,
+              workHours: true,
+              holidays: true,
+              bonus: true,
+              responsibilities: true,
+              joinDate: true,
+            },
+          },
+        },
+      });
+      
+      if (updatedUser) {
+        const { passwordHash: _, ...userWithoutPassword } = updatedUser;
+        return userWithoutPassword;
+      }
+    }
 
     const { passwordHash, ...userWithoutPassword } = user;
     return userWithoutPassword;

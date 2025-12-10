@@ -78,11 +78,16 @@ model Role {
 
 model User {
   id           String   @id @default(uuid())
+  name         String?  @db.VarChar(255)
   email        String   @db.VarChar(255)
+  phone        String?  @db.VarChar(50)
   passwordHash String   @map("password_hash") @db.VarChar(255)
+  address      String?  @db.Text
+  education    String?  @db.Text
   roleId       Int      @map("role_id")
   companyId    Int      @map("company_id")
-  profileImage String?  @map("profile_image") @db.VarChar(500)
+  profileImage String?  @map("profile_image") @db.Text
+  eSignature   String?  @map("e_signature") @db.Text
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
@@ -130,6 +135,10 @@ model Employee {
   departmentId Int?    @map("department_id")
   designation String?  @db.VarChar(100)
   salary      Decimal?  @db.Decimal(10, 2)
+  workHours   Decimal?  @map("work_hours") @db.Decimal(5, 2)
+  holidays    Int?
+  bonus       Decimal?  @db.Decimal(10, 2)
+  responsibilities String? @db.Text
   joinDate    DateTime? @map("join_date") @db.Date
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")

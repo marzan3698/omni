@@ -255,5 +255,31 @@ export const taskController = {
       return sendError(res, 'Failed to retrieve comments', 500);
     }
   },
+
+  /**
+   * Get tasks for a specific user
+   * GET /api/tasks/user/:userId?companyId=1
+   */
+  getUserTasks: async (req: Request, res: Response) => {
+    try {
+      const userId = req.params.userId;
+      const companyId = parseInt(req.query.companyId as string);
+      
+      if (!userId) {
+        return sendError(res, 'User ID is required', 400);
+      }
+      if (isNaN(companyId)) {
+        return sendError(res, 'Company ID is required', 400);
+      }
+
+      const tasks = await taskService.getUserTasks(userId, companyId);
+      return sendSuccess(res, tasks, 'User tasks retrieved successfully');
+    } catch (error) {
+      if (error instanceof AppError) {
+        return sendError(res, error.message, error.statusCode);
+      }
+      return sendError(res, 'Failed to retrieve user tasks', 500);
+    }
+  },
 };
 

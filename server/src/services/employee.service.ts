@@ -8,6 +8,10 @@ interface CreateEmployeeData {
   departmentId?: number;
   designation?: string;
   salary?: number;
+  workHours?: number;
+  holidays?: number;
+  bonus?: number;
+  responsibilities?: string;
   joinDate?: Date;
 }
 
@@ -16,6 +20,10 @@ interface UpdateEmployeeData {
   departmentId?: number;
   designation?: string;
   salary?: number;
+  workHours?: number;
+  holidays?: number;
+  bonus?: number;
+  responsibilities?: string;
   joinDate?: Date;
 }
 
@@ -133,6 +141,10 @@ export const employeeService = {
         departmentId: data.departmentId,
         designation: data.designation,
         salary: data.salary ? data.salary : undefined,
+        workHours: data.workHours ? data.workHours : undefined,
+        holidays: data.holidays,
+        bonus: data.bonus ? data.bonus : undefined,
+        responsibilities: data.responsibilities,
         joinDate: data.joinDate,
       },
       include: {

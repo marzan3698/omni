@@ -10,6 +10,7 @@ router.use(authMiddleware);
 
 // Task routes
 router.get('/', verifyPermission('can_manage_tasks'), taskController.getAllTasks);
+router.get('/user/:userId', verifyPermission('can_view_tasks'), taskController.getUserTasks);
 router.get('/:id', verifyPermission('can_manage_tasks'), taskController.getTaskById);
 router.post('/', verifyPermission('can_manage_tasks'), taskController.createTask);
 router.put('/:id', verifyPermission('can_manage_tasks'), taskController.updateTask);

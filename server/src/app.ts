@@ -34,8 +34,9 @@ app.use('/uploads', express.static('uploads'));
 app.use('/api/webhooks/facebook', express.raw({ type: 'application/json' }));
 app.use('/api/chatwoot/webhooks/chatwoot', express.raw({ type: 'application/json' }));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Increase body parser limit to handle large base64 images (10MB)
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Health check endpoint
 app.get('/health', (req: Request, res: Response) => {

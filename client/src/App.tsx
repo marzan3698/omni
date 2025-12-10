@@ -17,6 +17,7 @@ import { Inbox } from './pages/Inbox';
 import { Settings } from './pages/Settings';
 import { Companies } from './pages/Companies';
 import { Employees } from './pages/Employees';
+import { UserDetail } from './pages/UserDetail';
 import { Tasks } from './pages/Tasks';
 import { Finance } from './pages/Finance';
 import { Leads } from './pages/Leads';
@@ -100,6 +101,16 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <Employees />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/employees/:id"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <UserDetail />
                 </Layout>
               </ProtectedRoute>
             }

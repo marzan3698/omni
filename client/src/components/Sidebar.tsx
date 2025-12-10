@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -49,67 +49,127 @@ interface NavItem {
   submenu?: SubMenuItem[];
 }
 
-const navItems: NavItem[] = [
-  { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-  { label: 'Companies', icon: Building2, path: '/companies', permission: 'can_view_companies' },
-  { label: 'Employees', icon: Users, path: '/employees', permission: 'can_view_employees' },
-  { label: 'Leads', icon: Target, path: '/leads', permission: 'can_view_leads' },
-  { label: 'Tasks', icon: CheckSquare, path: '/tasks', permission: 'can_view_tasks' },
+interface MenuSection {
+  label: string;
+  items: NavItem[];
+}
+
+// Reorganized menu sections (বাংলা: পুনর্বিন্যাসকৃত মেনু সেকশন)
+const menuSections: MenuSection[] = [
+  // Section 1: Main Operations (প্রধান অপারেশন)
+  {
+    label: '',
+    items: [
+      { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+      { label: 'Inbox', icon: MessageSquare, path: '/inbox', permission: 'can_manage_inbox' },
+    ]
+  },
+  // Section 2: CRM & Sales (সিআরএম এবং বিক্রয়)
+  {
+    label: 'CRM & Sales',
+    items: [
+      {
+        label: 'Leads',
+        icon: Target,
+        permission: 'can_view_leads',
+        submenu: [
+          { label: 'All Leads', path: '/leads', icon: Eye },
+          { label: 'Lead Configuration', path: '/lead-config', icon: ListChecks },
+        ]
+      },
+      { label: 'Companies', icon: Building2, path: '/companies', permission: 'can_view_companies' },
+      { label: 'Employees', icon: Users, path: '/employees', permission: 'can_view_employees' },
+      { label: 'Tasks', icon: CheckSquare, path: '/tasks', permission: 'can_view_tasks' },
+    ]
+  },
+  // Section 3: Project Management (প্রকল্প ব্যবস্থাপনা)
+  {
+    label: 'Project Management',
+    items: [
+      { label: 'Projects & Clients', icon: Users, path: '/admin/projects-clients', permission: 'can_manage_companies' },
+    ]
+  },
+  // Section 4: Finance (আর্থিক)
   {
     label: 'Finance',
-    icon: DollarSign,
-    permission: 'can_view_finance',
-    submenu: [
-      { label: 'Finance Overview', path: '/finance', icon: DollarSign },
-      { label: 'Payment Management', path: '/payment-management', icon: DollarSign },
+    items: [
+      {
+        label: 'Finance',
+        icon: DollarSign,
+        permission: 'can_view_finance',
+        submenu: [
+          { label: 'Finance Overview', path: '/finance', icon: DollarSign },
+          { label: 'Payment Management', path: '/payment-management', icon: DollarSign },
+          { label: 'Payment Settings', path: '/payment-settings', icon: CreditCard },
+        ]
+      },
     ]
   },
-  { label: 'Inbox', icon: MessageSquare, path: '/inbox', permission: 'can_manage_inbox' },
-  // SuperAdmin section
-  { label: 'Users', icon: Shield, path: '/users', permission: 'can_view_all_users' },
-  { label: 'Roles', icon: Shield, path: '/roles', permission: 'can_manage_roles' },
+  // Section 5: Content & Marketing (কনটেন্ট এবং মার্কেটিং)
   {
-    label: 'System Settings',
-    icon: Cog,
-    permission: 'can_manage_root_items',
-    submenu: [
-      { label: 'System Settings', path: '/system-settings', icon: Cog },
+    label: 'Content & Marketing',
+    items: [
+      {
+        label: 'Campaigns',
+        icon: Megaphone,
+        permission: 'can_manage_campaigns',
+        submenu: [
+          { label: 'View Campaigns', path: '/campaigns', icon: Eye },
+          { label: 'Add New Campaign', path: '/campaigns/new', icon: Plus },
+        ]
+      },
+      {
+        label: 'Products',
+        icon: Package,
+        permission: 'can_manage_products',
+        submenu: [
+          { label: 'All Products', path: '/products', icon: Eye },
+          { label: 'Add New Product', path: '/products/new', icon: Plus },
+          { label: 'Product Categories', path: '/product-categories', icon: Eye },
+          { label: 'Add Category', path: '/product-categories/new', icon: Plus },
+        ]
+      },
+      { label: 'Services', icon: Package, path: '/services', permission: 'can_manage_products' },
     ]
   },
-  { label: 'Payment Settings', icon: CreditCard, path: '/payment-settings', permission: 'can_manage_payment_settings' },
-  { label: 'Integrations', icon: Plug, path: '/integrations', permission: 'can_view_integrations' },
-  { label: 'Task Config', icon: ListChecks, path: '/task-config', permission: 'can_manage_task_config' },
+  // Section 6: System Administration (সিস্টেম প্রশাসন)
   {
-    label: 'Campaigns',
-    icon: Megaphone,
-    permission: 'can_manage_campaigns',
-    submenu: [
-      { label: 'Add New Campaign', path: '/campaigns/new', icon: Plus },
-      { label: 'View Campaigns', path: '/campaigns', icon: Eye },
+    label: 'System Administration',
+    items: [
+      { label: 'Users', icon: Shield, path: '/users', permission: 'can_view_all_users' },
+      { label: 'Roles', icon: Shield, path: '/roles', permission: 'can_manage_roles' },
+      {
+        label: 'System Settings',
+        icon: Cog,
+        permission: 'can_manage_root_items',
+        submenu: [
+          { label: 'General Settings', path: '/system-settings', icon: Cog },
+          { label: 'Integrations', path: '/integrations', icon: Plug },
+          { label: 'Task Configuration', path: '/task-config', icon: ListChecks },
+          { label: 'Settings', path: '/settings', icon: Settings },
+        ]
+      },
     ]
   },
-  {
-    label: 'Product Management',
-    icon: Package,
-    permission: 'can_manage_products',
-    submenu: [
-      { label: 'Add New Product', path: '/products/new', icon: Plus },
-      { label: 'All Products', path: '/products', icon: Eye },
-      { label: 'Add Product Category', path: '/product-categories/new', icon: Plus },
-      { label: 'Product Category List', path: '/product-categories', icon: Eye },
-    ]
-  },
-  { label: 'Services', icon: Package, path: '/services', permission: 'can_manage_products' },
-  { label: 'Projects & Clients', icon: Users, path: '/admin/projects-clients', permission: 'can_manage_companies' },
-  // Lead Manager section
-  { label: 'Lead Config', icon: ListChecks, path: '/lead-config', permission: 'can_manage_lead_config' },
-  { label: 'Settings', icon: Settings, path: '/settings', permission: 'can_manage_integrations' },
 ];
 
 export function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
   const location = useLocation();
   const { user, logout } = useAuth();
   const [openDropdowns, setOpenDropdowns] = useState<Record<string, boolean>>({});
+
+  // Auto-expand dropdowns with active submenu items
+  useEffect(() => {
+    const activeDropdowns: Record<string, boolean> = {};
+    menuSections.forEach(section => {
+      section.items.forEach(item => {
+        if (item.submenu?.some(sub => location.pathname === sub.path)) {
+          activeDropdowns[item.label] = true;
+        }
+      });
+    });
+    setOpenDropdowns(prev => ({ ...prev, ...activeDropdowns }));
+  }, [location.pathname]);
 
   const toggleDropdown = (label: string) => {
     setOpenDropdowns((prev) => ({
@@ -154,113 +214,139 @@ export function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-4 px-3 min-h-0">
-          <ul className="space-y-1">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = item.path ? location.pathname === item.path : item.submenu?.some(sub => location.pathname === sub.path);
-              // Check permission or if user is SuperAdmin
+        <nav className="flex-1 overflow-y-auto py-4 min-h-0">
+          {menuSections.map((section, sectionIndex) => {
+            // Filter items by permission
+            const visibleItems = section.items.filter(item => {
               const hasPermission = !item.permission || user?.permissions?.[item.permission] || user?.roleName === 'SuperAdmin';
+              return hasPermission;
+            });
 
-              if (!hasPermission) return null;
+            // Skip section if no visible items
+            if (visibleItems.length === 0) return null;
 
-              // Render dropdown menu item
-              if (item.submenu && item.submenu.length > 0) {
-                const isDropdownOpen = openDropdowns[item.label] || false;
-                const hasActiveSubmenu = item.submenu.some(sub => location.pathname === sub.path);
+            return (
+              <div key={section.label || `section-${sectionIndex}`} className={cn(section.label && "mt-6 first:mt-0")}>
+                {/* Section Header */}
+                {section.label && (
+                  <div className="px-4 py-2 mb-2">
+                    <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                      {section.label}
+                    </h3>
+                  </div>
+                )}
 
-                return (
-                  <li key={item.label}>
-                    <button
-                      onClick={() => toggleDropdown(item.label)}
-                      className={cn(
-                        "w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors",
-                        "hover:bg-gray-100",
-                        hasActiveSubmenu
-                          ? "bg-indigo-50 text-indigo-700 border-l-2 border-indigo-600"
-                          : "text-slate-700 hover:text-slate-900"
-                      )}
-                    >
-                      <Icon className={cn(
-                        "w-5 h-5",
-                        hasActiveSubmenu ? "text-indigo-600" : "text-slate-500"
-                      )} />
-                      <span className="flex-1 text-left">{item.label}</span>
-                      {isDropdownOpen ? (
-                        <ChevronDown className="w-4 h-4 text-slate-500" />
-                      ) : (
-                        <ChevronRight className="w-4 h-4 text-slate-500" />
-                      )}
-                    </button>
-                    {isDropdownOpen && (
-                      <ul className="ml-4 mt-1 space-y-1 border-l-2 border-gray-200 pl-4">
-                        {item.submenu.map((subItem) => {
-                          const SubIcon = subItem.icon || Eye;
-                          const isSubActive = location.pathname === subItem.path;
+                {/* Section Items */}
+                <ul className="space-y-1">
+                  {visibleItems.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = item.path ? location.pathname === item.path : item.submenu?.some(sub => location.pathname === sub.path);
 
-                          return (
-                            <li key={subItem.path}>
-                              <Link
-                                to={subItem.path}
-                                onClick={() => {
-                                  if (window.innerWidth < 1024 && onToggle) {
-                                    onToggle();
-                                  }
-                                }}
-                                className={cn(
-                                  "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
-                                  "hover:bg-gray-100",
-                                  isSubActive
-                                    ? "bg-indigo-50 text-indigo-600"
-                                    : "text-slate-600 hover:text-slate-900"
-                                )}
-                              >
-                                <SubIcon className="w-4 h-4" />
-                                <span>{subItem.label}</span>
-                              </Link>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    )}
-                  </li>
-                );
-              }
+                    // Render dropdown menu item
+                    if (item.submenu && item.submenu.length > 0) {
+                      const isDropdownOpen = openDropdowns[item.label] || false;
+                      const hasActiveSubmenu = item.submenu.some(sub => location.pathname === sub.path);
 
-              // Render regular menu item
-              return (
-                <li key={item.path}>
-                  <Link
-                    to={item.path!}
-                    onClick={() => {
-                      // Close sidebar on mobile when navigating
-                      if (window.innerWidth < 1024 && onToggle) {
-                        onToggle();
-                      }
-                    }}
-                    className={cn(
-                      "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors",
-                      "hover:bg-gray-100",
-                      isActive
-                        ? "bg-indigo-50 text-indigo-700 border-l-2 border-indigo-600"
-                        : "text-slate-700 hover:text-slate-900"
-                    )}
-                  >
-                    <Icon className={cn(
-                      "w-5 h-5",
-                      isActive ? "text-indigo-600" : "text-slate-500"
-                    )} />
-                    <span className="flex-1">{item.label}</span>
-                    {item.badge && (
-                      <span className="bg-indigo-600 text-white text-xs font-medium px-2 py-0.5 rounded-full">
-                        {item.badge}
-                      </span>
-                    )}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+                      return (
+                        <li key={item.label}>
+                          <button
+                            onClick={() => toggleDropdown(item.label)}
+                            className={cn(
+                              "w-full flex items-center gap-3 px-4 py-2.5 rounded-md text-sm font-medium transition-all duration-200",
+                              "hover:bg-gray-50",
+                              hasActiveSubmenu
+                                ? "bg-indigo-50 text-indigo-700 border-l-4 border-indigo-600"
+                                : "text-slate-700 hover:text-slate-900"
+                            )}
+                          >
+                            <Icon className={cn(
+                              "w-5 h-5 flex-shrink-0 transition-colors",
+                              hasActiveSubmenu ? "text-indigo-600" : "text-slate-500"
+                            )} />
+                            <span className="flex-1 text-left">{item.label}</span>
+                            <div className="flex-shrink-0 transition-transform duration-200" style={{
+                              transform: isDropdownOpen ? 'rotate(0deg)' : 'rotate(-90deg)'
+                            }}>
+                              <ChevronDown className="w-4 h-4 text-slate-500" />
+                            </div>
+                          </button>
+                          <div
+                            className={cn(
+                              "overflow-hidden transition-all duration-300 ease-in-out",
+                              isDropdownOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+                            )}
+                          >
+                            <ul className="ml-6 mt-1 mb-1 space-y-1 border-l-2 border-indigo-200 pl-4">
+                              {item.submenu.map((subItem) => {
+                                const SubIcon = subItem.icon || Eye;
+                                const isSubActive = location.pathname === subItem.path;
+
+                                return (
+                                  <li key={subItem.path}>
+                                    <Link
+                                      to={subItem.path}
+                                      onClick={() => {
+                                        if (window.innerWidth < 1024 && onToggle) {
+                                          onToggle();
+                                        }
+                                      }}
+                                      className={cn(
+                                        "flex items-center gap-3 px-4 py-2 rounded-md text-sm font-normal transition-colors",
+                                        "hover:bg-gray-50",
+                                        isSubActive
+                                          ? "bg-indigo-50 text-indigo-600 font-medium"
+                                          : "text-slate-600 hover:text-slate-900"
+                                      )}
+                                    >
+                                      <SubIcon className="w-4 h-4 flex-shrink-0" />
+                                      <span className="flex-1 text-left">{subItem.label}</span>
+                                    </Link>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          </div>
+                        </li>
+                      );
+                    }
+
+                    // Render regular menu item
+                    return (
+                      <li key={item.path}>
+                        <Link
+                          to={item.path!}
+                          onClick={() => {
+                            // Close sidebar on mobile when navigating
+                            if (window.innerWidth < 1024 && onToggle) {
+                              onToggle();
+                            }
+                          }}
+                          className={cn(
+                            "flex items-center gap-3 px-4 py-2.5 rounded-md text-sm font-medium transition-colors",
+                            "hover:bg-gray-50",
+                            isActive
+                              ? "bg-indigo-50 text-indigo-700 border-l-4 border-indigo-600"
+                              : "text-slate-700 hover:text-slate-900"
+                          )}
+                        >
+                          <Icon className={cn(
+                            "w-5 h-5 flex-shrink-0",
+                            isActive ? "text-indigo-600" : "text-slate-500"
+                          )} />
+                          <span className="flex-1 text-left">{item.label}</span>
+                          {item.badge && (
+                            <span className="bg-indigo-600 text-white text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0">
+                              {item.badge}
+                            </span>
+                          )}
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            );
+          })}
         </nav>
 
         {/* Footer */}

@@ -13,6 +13,10 @@ const createEmployeeSchema = z.object({
   departmentId: z.number().int().positive().optional(),
   designation: z.string().optional(),
   salary: z.number().positive().optional(),
+  workHours: z.number().nonnegative().optional(),
+  holidays: z.number().int().nonnegative().optional(),
+  bonus: z.number().nonnegative().optional(),
+  responsibilities: z.string().optional(),
   joinDate: z.string().datetime().or(z.date()).optional(),
 });
 
@@ -21,6 +25,10 @@ const updateEmployeeSchema = z.object({
   departmentId: z.number().int().positive().optional(),
   designation: z.string().optional(),
   salary: z.number().positive().optional(),
+  workHours: z.number().nonnegative().optional(),
+  holidays: z.number().int().nonnegative().optional(),
+  bonus: z.number().nonnegative().optional(),
+  responsibilities: z.string().optional(),
   joinDate: z.string().datetime().or(z.date()).optional(),
 });
 
