@@ -31,6 +31,7 @@ import Roles from './pages/Roles';
 import TaskConfig from './pages/TaskConfig';
 import Integrations from './pages/Integrations';
 import Campaigns from './pages/Campaigns';
+import CampaignForm from './pages/CampaignForm';
 import Products from './pages/Products';
 import ProductForm from './pages/ProductForm';
 import ProductView from './pages/ProductView';
@@ -261,7 +262,21 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <Campaigns />
+                  <PermissionGuard permission="can_manage_campaigns">
+                    <CampaignForm />
+                  </PermissionGuard>
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/campaigns/:id/edit"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <PermissionGuard permission="can_manage_campaigns">
+                    <CampaignForm />
+                  </PermissionGuard>
                 </Layout>
               </ProtectedRoute>
             }

@@ -34,15 +34,19 @@ export default function EmployeeGroups() {
   const [editingGroup, setEditingGroup] = useState<EmployeeGroup | null>(null);
 
   // Fetch employee groups
-  const { data: groupsResponse, isLoading } = useQuery({
+  const { data: groupsResponse, isLoading, error } = useQuery({
     queryKey: ['employee-groups', user?.companyId],
     queryFn: async () => {
-      if (!user?.companyId) return null;
+      if (!user?.companyId) {
+        return null;
+      }
       const response = await employeeGroupApi.getAll(user.companyId);
       if (!response.data.success) {
         throw new Error(response.data.message || 'Failed to fetch employee groups');
       }
-      return response.data.data as EmployeeGroup[];
+      return Array.isArray(response.data.data) 
+        ? (response.data.data as EmployeeGroup[])
+        : [];
     },
     enabled: !!user?.companyId,
   });
@@ -96,6 +100,27 @@ export default function EmployeeGroups() {
       <PermissionGuard permission="can_manage_employees">
         <div className="flex items-center justify-center h-64">
           <p className="text-slate-500">Loading employee groups...</p>
+        </div>
+      </PermissionGuard>
+    );
+  }
+
+  if (error) {
+    return (
+      <PermissionGuard permission="can_manage_employees">
+        <div className="p-6">
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
+            <p className="font-medium">Error loading employee groups</p>
+            <p className="text-sm mt-1">{error instanceof Error ? error.message : 'An unknown error occurred'}</p>
+            <Button
+              onClick={() => window.location.reload()}
+              className="mt-2"
+              variant="outline"
+              size="sm"
+            >
+              Retry
+            </Button>
+          </div>
         </div>
       </PermissionGuard>
     );
@@ -177,7 +202,7 @@ export default function EmployeeGroups() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-slate-900">
-                            {group._count?.campaigns || 0} campaign{group._count?.campaigns !== 1 ? 's' : ''}
+                            {group._count?.campaigns ?? 0} campaign{group._count?.campaigns !== 1 ? 's' : ''}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">

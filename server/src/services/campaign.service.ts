@@ -4,6 +4,7 @@ import { CampaignType, Prisma } from '@prisma/client';
 
 interface CreateCampaignData {
   companyId: number;
+  projectId: number;
   name: string;
   description?: string;
   startDate: Date;
@@ -11,8 +12,6 @@ interface CreateCampaignData {
   budget: number;
   type: CampaignType;
   productIds?: number[];
-  clientIds?: string[];
-  employeeIds?: number[];
   groupIds?: number[];
 }
 
@@ -24,8 +23,7 @@ interface UpdateCampaignData {
   budget?: number;
   type?: CampaignType;
   productIds?: number[];
-  clientIds?: string[];
-  employeeIds?: number[];
+  projectId?: number;
   groupIds?: number[];
 }
 
@@ -114,50 +112,50 @@ export const campaignService = {
             },
           },
         },
+        groups: {
+          include: {
+            group: {
+              select: {
+                id: true,
+                name: true,
+                description: true,
+              },
+            },
+          },
+        },
+        project: {
+          select: {
+            id: true,
+            title: true,
+            clientId: true,
+            client: {
+              select: {
+                id: true,
+                email: true,
+                name: true,
+              },
+            },
+          },
+        },
         clients: {
           include: {
             client: {
               select: {
                 id: true,
                 email: true,
+                name: true,
               },
             },
           },
         },
-        employees: {
+        invoices: {
           include: {
-            employee: {
-              include: {
-                user: {
-                  select: {
-                    id: true,
-                    email: true,
-                    name: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-        groups: {
-          include: {
-            group: {
-              include: {
-                members: {
-                  include: {
-                    employee: {
-                      include: {
-                        user: {
-                          select: {
-                            id: true,
-                            email: true,
-                            name: true,
-                          },
-                        },
-                      },
-                    },
-                  },
-                },
+            invoice: {
+              select: {
+                id: true,
+                invoiceNumber: true,
+                totalAmount: true,
+                status: true,
               },
             },
           },
@@ -195,10 +193,26 @@ export const campaignService = {
       throw new AppError('Company not found', 404);
     }
 
+    // Verify project exists and get clientId from project
+    const project = await prisma.project.findFirst({
+      where: {
+        id: data.projectId,
+        companyId: data.companyId,
+      },
+      include: {
+        invoices: true,
+      },
+    });
+
+    if (!project) {
+      throw new AppError('Project not found or does not belong to your company', 404);
+    }
+
     // Create campaign
     const campaign = await prisma.campaign.create({
       data: {
         companyId: data.companyId,
+        projectId: data.projectId,
         name: data.name,
         description: data.description && data.description.trim() ? data.description.trim() : null,
         startDate: new Date(data.startDate),
@@ -207,6 +221,27 @@ export const campaignService = {
         type: data.type,
       },
     });
+
+    // Auto-assign client from project
+    await prisma.campaignClient.create({
+      data: {
+        campaignId: campaign.id,
+        clientId: project.clientId,
+      },
+    }).catch(() => {
+      // Ignore if already exists
+    });
+
+    // Auto-assign invoices from project
+    if (project.invoices && project.invoices.length > 0) {
+      await prisma.campaignInvoice.createMany({
+        data: project.invoices.map((invoice) => ({
+          campaignId: campaign.id,
+          invoiceId: invoice.id,
+        })),
+        skipDuplicates: true,
+      });
+    }
 
     // Assign products if provided
     if (data.productIds && data.productIds.length > 0) {
@@ -232,68 +267,9 @@ export const campaignService = {
       });
     }
 
-    // Assign clients if provided
-    if (data.clientIds && data.clientIds.length > 0) {
-      // Validate clients exist and have Client role
-      const clients = await prisma.user.findMany({
-        where: {
-          id: { in: data.clientIds },
-          companyId: data.companyId,
-          role: {
-            name: 'Client',
-          },
-        },
-      });
-
-      if (clients.length !== data.clientIds.length) {
-        throw new AppError('Some clients not found or are not valid clients', 400);
-      }
-
-      // Create campaign-client relationships
-      await prisma.campaignClient.createMany({
-        data: data.clientIds.map((clientId) => ({
-          campaignId: campaign.id,
-          clientId,
-        })),
-        skipDuplicates: true,
-      });
-    }
-
-    // Assign employees if provided
-    if (data.employeeIds && data.employeeIds.length > 0) {
-      // Validate employees exist
-      // Note: For SuperAdmin, we allow cross-company employee assignment
-      // For regular users, employees should belong to the campaign's company
-      const employees = await prisma.employee.findMany({
-        where: {
-          id: { in: data.employeeIds },
-        },
-        include: {
-          user: {
-            select: {
-              companyId: true,
-            },
-          },
-        },
-      });
-
-      if (employees.length !== data.employeeIds.length) {
-        throw new AppError('Some employees not found', 400);
-      }
-
-      // Create campaign-employee relationships
-      await prisma.campaignEmployee.createMany({
-        data: data.employeeIds.map((employeeId) => ({
-          campaignId: campaign.id,
-          employeeId,
-        })),
-        skipDuplicates: true,
-      });
-    }
-
     // Assign employee groups if provided
     if (data.groupIds && data.groupIds.length > 0) {
-      // Validate groups exist and belong to the same company
+      // Validate groups belong to the same company
       const groups = await prisma.employeeGroup.findMany({
         where: {
           id: { in: data.groupIds },
@@ -302,10 +278,10 @@ export const campaignService = {
       });
 
       if (groups.length !== data.groupIds.length) {
-        throw new AppError('Some employee groups not found or do not belong to the company', 400);
+        throw new AppError('Some employee groups not found or do not belong to your company', 400);
       }
 
-      // Create campaign-group relationships (dynamic linking)
+      // Create campaign-group relationships
       await prisma.campaignGroup.createMany({
         data: data.groupIds.map((groupId) => ({
           campaignId: campaign.id,
@@ -315,10 +291,24 @@ export const campaignService = {
       });
     }
 
-    // Return campaign with products, clients, employees, groups, and leads
+    // Return campaign with project, products, clients (auto-assigned from project), invoices (auto-assigned from project), and leads
     return await prisma.campaign.findUnique({
       where: { id: campaign.id },
       include: {
+        project: {
+          select: {
+            id: true,
+            title: true,
+            clientId: true,
+            client: {
+              select: {
+                id: true,
+                email: true,
+                name: true,
+              },
+            },
+          },
+        },
         products: {
           include: {
             product: {
@@ -339,44 +329,19 @@ export const campaignService = {
               select: {
                 id: true,
                 email: true,
+                name: true,
               },
             },
           },
         },
-        employees: {
+        invoices: {
           include: {
-            employee: {
-              include: {
-                user: {
-                  select: {
-                    id: true,
-                    email: true,
-                    name: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-        groups: {
-          include: {
-            group: {
-              include: {
-                members: {
-                  include: {
-                    employee: {
-                      include: {
-                        user: {
-                          select: {
-                            id: true,
-                            email: true,
-                            name: true,
-                          },
-                        },
-                      },
-                    },
-                  },
-                },
+            invoice: {
+              select: {
+                id: true,
+                invoiceNumber: true,
+                totalAmount: true,
+                status: true,
               },
             },
           },
@@ -385,6 +350,17 @@ export const campaignService = {
           select: {
             id: true,
             value: true,
+          },
+        },
+        groups: {
+          include: {
+            group: {
+              select: {
+                id: true,
+                name: true,
+                description: true,
+              },
+            },
           },
         },
       },
@@ -428,7 +404,53 @@ export const campaignService = {
       throw new AppError('Budget must be greater than 0', 400);
     }
 
+    // If projectId is being updated, verify the new project and update client/invoices
+    if (data.projectId !== undefined && data.projectId !== campaign.projectId) {
+      const project = await prisma.project.findFirst({
+        where: {
+          id: data.projectId,
+          companyId: companyId,
+        },
+        include: {
+          invoices: true,
+        },
+      });
+
+      if (!project) {
+        throw new AppError('Project not found or does not belong to your company', 404);
+      }
+
+      // Update projectId
+      updateData.projectId = data.projectId;
+
+      // Update client assignment (remove old, add new)
+      await prisma.campaignClient.deleteMany({
+        where: { campaignId: id },
+      });
+      await prisma.campaignClient.create({
+        data: {
+          campaignId: id,
+          clientId: project.clientId,
+        },
+      });
+
+      // Update invoice assignments (remove old, add new)
+      await prisma.campaignInvoice.deleteMany({
+        where: { campaignId: id },
+      });
+      if (project.invoices && project.invoices.length > 0) {
+        await prisma.campaignInvoice.createMany({
+          data: project.invoices.map((invoice) => ({
+            campaignId: id,
+            invoiceId: invoice.id,
+          })),
+          skipDuplicates: true,
+        });
+      }
+    }
+
     const updateData: any = {};
+    if (data.projectId !== undefined) updateData.projectId = data.projectId;
     if (data.name !== undefined) updateData.name = data.name;
     if (data.description !== undefined) {
       updateData.description = data.description && data.description.trim() ? data.description.trim() : null;
@@ -476,37 +498,6 @@ export const campaignService = {
       }
     }
 
-    // Update employees if provided
-    if (data.employeeIds !== undefined) {
-      // Delete existing employee assignments
-      await prisma.campaignEmployee.deleteMany({
-        where: { campaignId: id },
-      });
-
-      // Add new employee assignments if any
-      if (data.employeeIds.length > 0) {
-        // Validate employees exist
-        const employees = await prisma.employee.findMany({
-          where: {
-            id: { in: data.employeeIds },
-          },
-        });
-
-        if (employees.length !== data.employeeIds.length) {
-          throw new AppError('Some employees not found', 400);
-        }
-
-        // Create campaign-employee relationships
-        await prisma.campaignEmployee.createMany({
-          data: data.employeeIds.map((employeeId) => ({
-            campaignId: id,
-            employeeId,
-          })),
-          skipDuplicates: true,
-        });
-      }
-    }
-
     // Update employee groups if provided
     if (data.groupIds !== undefined) {
       // Delete existing group assignments
@@ -516,19 +507,19 @@ export const campaignService = {
 
       // Add new group assignments if any
       if (data.groupIds.length > 0) {
-        // Validate groups exist and belong to the same company
+        // Validate groups belong to the same company
         const groups = await prisma.employeeGroup.findMany({
           where: {
             id: { in: data.groupIds },
-            companyId: companyId,
+            companyId,
           },
         });
 
         if (groups.length !== data.groupIds.length) {
-          throw new AppError('Some employee groups not found or do not belong to the company', 400);
+          throw new AppError('Some employee groups not found or do not belong to your company', 400);
         }
 
-        // Create campaign-group relationships (dynamic linking)
+        // Create campaign-group relationships
         await prisma.campaignGroup.createMany({
           data: data.groupIds.map((groupId) => ({
             campaignId: id,
@@ -539,10 +530,24 @@ export const campaignService = {
       }
     }
 
-    // Return campaign with products, employees, groups, and leads
+    // Return campaign with project, products, clients, invoices, and leads
     return await prisma.campaign.findUnique({
       where: { id },
       include: {
+        project: {
+          select: {
+            id: true,
+            title: true,
+            clientId: true,
+            client: {
+              select: {
+                id: true,
+                email: true,
+                name: true,
+              },
+            },
+          },
+        },
         products: {
           include: {
             product: {
@@ -557,17 +562,25 @@ export const campaignService = {
             },
           },
         },
-        employees: {
+        clients: {
           include: {
-            employee: {
-              include: {
-                user: {
-                  select: {
-                    id: true,
-                    email: true,
-                    name: true,
-                  },
-                },
+            client: {
+              select: {
+                id: true,
+                email: true,
+                name: true,
+              },
+            },
+          },
+        },
+        invoices: {
+          include: {
+            invoice: {
+              select: {
+                id: true,
+                invoiceNumber: true,
+                totalAmount: true,
+                status: true,
               },
             },
           },
@@ -576,6 +589,17 @@ export const campaignService = {
           select: {
             id: true,
             value: true,
+          },
+        },
+        groups: {
+          include: {
+            group: {
+              select: {
+                id: true,
+                name: true,
+                description: true,
+              },
+            },
           },
         },
       },

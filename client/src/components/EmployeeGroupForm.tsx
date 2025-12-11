@@ -42,8 +42,16 @@ export function EmployeeGroupForm({ group, onClose, onSuccess }: EmployeeGroupFo
 
   const createGroupMutation = useMutation({
     mutationFn: (data: any) => employeeGroupApi.create(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['employee-groups'] });
+    onSuccess: async () => {
+      // Invalidate and refetch all employee-groups queries
+      await queryClient.invalidateQueries({ 
+        queryKey: ['employee-groups'],
+        refetchType: 'active'
+      });
+      await queryClient.invalidateQueries({ 
+        queryKey: ['employee-groups-selector'],
+        refetchType: 'active'
+      });
       onSuccess?.();
       onClose();
     },
@@ -52,9 +60,16 @@ export function EmployeeGroupForm({ group, onClose, onSuccess }: EmployeeGroupFo
   const updateGroupMutation = useMutation({
     mutationFn: (data: any) =>
       employeeGroupApi.update(group!.id, data, user?.companyId || 0),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['employee-groups'] });
-      queryClient.invalidateQueries({ queryKey: ['employee-groups-selector'] });
+    onSuccess: async () => {
+      // Invalidate and refetch all employee-groups queries
+      await queryClient.invalidateQueries({ 
+        queryKey: ['employee-groups'],
+        refetchType: 'active'
+      });
+      await queryClient.invalidateQueries({ 
+        queryKey: ['employee-groups-selector'],
+        refetchType: 'active'
+      });
       onSuccess?.();
       onClose();
     },

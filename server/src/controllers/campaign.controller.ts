@@ -9,6 +9,7 @@ import { AuthRequest } from '../types/index.js';
 // Validation schemas
 const createCampaignSchema = z.object({
   companyId: z.number().int().positive(),
+  projectId: z.number().int().positive('Project ID is required'),
   name: z.string().min(1, 'Campaign name is required'),
   description: z.string().optional(),
   startDate: z.string().or(z.date()),
@@ -16,8 +17,6 @@ const createCampaignSchema = z.object({
   budget: z.number().positive('Budget must be greater than 0'),
   type: z.enum(['reach', 'sale', 'research']),
   productIds: z.array(z.number().int().positive()).optional(),
-  clientIds: z.array(z.string().uuid()).optional(),
-  employeeIds: z.array(z.number().int().positive()).optional(),
   groupIds: z.array(z.number().int().positive()).optional(),
 });
 
@@ -29,8 +28,7 @@ const updateCampaignSchema = z.object({
   budget: z.number().positive().optional(),
   type: z.enum(['reach', 'sale', 'research']).optional(),
   productIds: z.array(z.number().int().positive()).optional(),
-  clientIds: z.array(z.string().uuid()).optional(),
-  employeeIds: z.array(z.number().int().positive()).optional(),
+  projectId: z.number().int().positive().optional(),
   groupIds: z.array(z.number().int().positive()).optional(),
 });
 
@@ -111,8 +109,6 @@ export const campaignController = {
         budget: validatedData.budget,
         type: validatedData.type,
         productIds: validatedData.productIds,
-        clientIds: validatedData.clientIds,
-        employeeIds: validatedData.employeeIds,
         groupIds: validatedData.groupIds,
       };
 
