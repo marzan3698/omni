@@ -64,6 +64,59 @@ export const projectService = {
   },
 
   /**
+   * Get all projects (for SuperAdmin or filtered by company)
+   */
+  async getAllProjects(companyId?: number) {
+    try {
+      const where: any = {};
+      if (companyId) {
+        where.companyId = companyId;
+      }
+
+      const projects = await prisma.project.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          service: {
+            select: {
+              id: true,
+              title: true,
+              pricing: true,
+            },
+          },
+          client: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+            },
+          },
+          company: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          invoices: {
+            orderBy: { createdAt: 'desc' },
+            select: {
+              id: true,
+              invoiceNumber: true,
+              status: true,
+              totalAmount: true,
+              dueDate: true,
+            },
+          },
+        },
+      });
+      return projects;
+    } catch (error) {
+      console.error('Error fetching all projects:', error);
+      throw new AppError('Failed to fetch projects', 500);
+    }
+  },
+
+  /**
    * Get project by ID
    */
   async getProjectById(id: number, clientId: string) {

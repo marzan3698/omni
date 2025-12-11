@@ -68,6 +68,12 @@ interface Project {
     email: string;
     name: string | null;
   };
+  invoices?: Array<{
+    id: number;
+    invoiceNumber: string;
+    totalAmount: number | string;
+    status: string;
+  }>;
 }
 
 export default function CampaignForm() {
@@ -121,8 +127,8 @@ export default function CampaignForm() {
         projects = projects.filter((p: any) => p.companyId === user.companyId);
       }
       
-      // Filter by status - only show projects with status "StartedWorking"
-      projects = projects.filter((p: any) => p.status === 'StartedWorking');
+      // Filter by status - exclude projects with status "Completed"
+      projects = projects.filter((p: any) => p.status !== 'Completed');
       
       return projects;
     },
@@ -177,7 +183,24 @@ export default function CampaignForm() {
   const handleProjectChange = (projectId: string) => {
     const project = projects.find((p) => p.id === Number(projectId));
     setSelectedProject(project || null);
-    setFormData({ ...formData, projectId });
+    
+    // Auto-calculate budget from project invoices (only for new campaigns or when manually changing project)
+    let calculatedBudget = '';
+    if (project && project.invoices && project.invoices.length > 0) {
+      const totalAmount = project.invoices.reduce((sum, invoice) => {
+        return sum + Number(invoice.totalAmount || 0);
+      }, 0);
+      calculatedBudget = totalAmount.toFixed(2);
+    }
+    
+    // Only auto-fill budget if it's a new campaign (not in edit mode) or if budget is currently empty
+    const shouldAutoFillBudget = !isEditMode || !formData.budget;
+    
+    setFormData({ 
+      ...formData, 
+      projectId,
+      budget: (shouldAutoFillBudget && calculatedBudget) ? calculatedBudget : formData.budget,
+    });
   };
 
   // Create/Update mutation
@@ -319,8 +342,16 @@ export default function CampaignForm() {
                   <p className="mt-1">
                     <strong>Client Email:</strong> {selectedProject.client?.email || 'N/A'}
                   </p>
+                  {selectedProject.invoices && selectedProject.invoices.length > 0 && (
+                    <p className="mt-1">
+                      <strong>Total Invoice Amount:</strong> ${selectedProject.invoices.reduce((sum, inv) => sum + Number(inv.totalAmount || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
+                  )}
                   <p className="mt-1 text-blue-600">
                     ✓ Client and invoices from this project will be automatically assigned to the campaign
+                    {selectedProject.invoices && selectedProject.invoices.length > 0 && (
+                      <span className="block mt-1">✓ Budget has been auto-filled from project invoices</span>
+                    )}
                   </p>
                 </div>
               )}

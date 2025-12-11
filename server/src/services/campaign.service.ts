@@ -25,6 +25,7 @@ interface UpdateCampaignData {
   productIds?: number[];
   projectId?: number;
   groupIds?: number[];
+  isActive?: boolean;
 }
 
 export const campaignService = {
@@ -459,6 +460,7 @@ export const campaignService = {
     if (data.endDate !== undefined) updateData.endDate = new Date(data.endDate);
     if (data.budget !== undefined) updateData.budget = new Prisma.Decimal(data.budget);
     if (data.type !== undefined) updateData.type = data.type;
+    if (data.isActive !== undefined) updateData.isActive = data.isActive;
 
     // Update campaign
     const updatedCampaign = await prisma.campaign.update({

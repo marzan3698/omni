@@ -30,6 +30,7 @@ const updateCampaignSchema = z.object({
   productIds: z.array(z.number().int().positive()).optional(),
   projectId: z.number().int().positive().optional(),
   groupIds: z.array(z.number().int().positive()).optional(),
+  isActive: z.boolean().optional(),
 });
 
 export const campaignController = {
@@ -98,6 +99,7 @@ export const campaignController = {
       // Convert date strings to Date objects if needed
       const campaignData = {
         companyId: validatedData.companyId,
+        projectId: validatedData.projectId,
         name: validatedData.name,
         description: validatedData.description,
         startDate: validatedData.startDate instanceof Date

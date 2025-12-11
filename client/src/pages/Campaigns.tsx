@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { PermissionGuard } from '@/components/PermissionGuard';
-import { Plus, Edit, Trash2 } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye } from 'lucide-react';
 
 interface Campaign {
   id: number;
@@ -15,6 +15,7 @@ interface Campaign {
   endDate: string;
   budget: string | number;
   type: 'reach' | 'sale' | 'research';
+  isActive: boolean;
   companyId: number;
   createdAt: string;
   updatedAt: string;
@@ -53,6 +54,10 @@ export default function Campaigns() {
     },
   });
 
+  const handleView = (campaign: Campaign) => {
+    navigate(`/campaigns/${campaign.id}`);
+  };
+
   const handleEdit = (campaign: Campaign) => {
     navigate(`/campaigns/${campaign.id}/edit`);
   };
@@ -76,7 +81,7 @@ export default function Campaigns() {
     }
   };
 
-  const isActive = (campaign: Campaign) => {
+  const isActiveByDate = (campaign: Campaign) => {
     const now = new Date();
     const startDate = new Date(campaign.startDate);
     const endDate = new Date(campaign.endDate);
@@ -127,7 +132,6 @@ export default function Campaigns() {
                   </thead>
                   <tbody>
                     {campaigns.map((campaign) => {
-                      const active = isActive(campaign);
                       return (
                         <tr key={campaign.id} className="border-b border-gray-100 hover:bg-gray-50">
                           <td className="py-3 px-4">
@@ -156,9 +160,9 @@ export default function Campaigns() {
                           </td>
                           <td className="py-3 px-4">
                             <span className={`px-2 py-1 rounded text-xs font-medium ${
-                              active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                              campaign.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
                             }`}>
-                              {active ? 'Active' : 'Inactive'}
+                              {campaign.isActive ? 'Active' : 'Inactive'}
                             </span>
                           </td>
                           <td className="py-3 px-4">
@@ -166,7 +170,16 @@ export default function Campaigns() {
                               <Button
                                 variant="ghost"
                                 size="sm"
+                                onClick={() => handleView(campaign)}
+                                title="View Details"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
                                 onClick={() => handleEdit(campaign)}
+                                title="Edit"
                               >
                                 <Edit className="w-4 h-4" />
                               </Button>
@@ -174,6 +187,7 @@ export default function Campaigns() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleDelete(campaign.id)}
+                                title="Delete"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </Button>

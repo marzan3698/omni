@@ -51,7 +51,7 @@ export const employeeGroupService = {
           _count: {
             select: {
               members: true,
-              // campaigns: true, // Temporarily disabled - campaign_groups table may not exist
+              campaigns: true,
             },
           },
         },

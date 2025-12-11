@@ -34,16 +34,24 @@ export const projectController = {
   /**
    * Get all projects for the authenticated client
    * GET /api/projects
+   * For SuperAdmin, returns all projects
+   * For other users, returns only their client projects
    */
   getClientProjects: async (req: AuthRequest, res: Response) => {
     try {
       const clientId = req.user?.id;
+      const userRole = req.user?.role?.name;
+      const companyId = req.user?.companyId;
 
       if (!clientId) {
         return sendError(res, 'User not authenticated', 401);
       }
 
-      const projects = await projectService.getClientProjects(clientId);
+      // SuperAdmin can see all projects, others see only their own
+      const projects = userRole === 'SuperAdmin' 
+        ? await projectService.getAllProjects(companyId)
+        : await projectService.getClientProjects(clientId);
+      
       return sendSuccess(res, projects, 'Projects retrieved successfully');
     } catch (error) {
       if (error instanceof AppError) {
