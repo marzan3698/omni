@@ -167,8 +167,8 @@ export const campaignApi = {
     apiClientInstance.get<ApiResponse>('/campaigns/active', { params: { companyId } }),
   getProducts: (campaignId: number, companyId: number) =>
     apiClientInstance.get<ApiResponse>(`/campaigns/${campaignId}/products`, { params: { companyId } }),
-  getEmployees: (campaignId: number, companyId: number) =>
-    apiClientInstance.get<ApiResponse>(`/campaigns/${campaignId}/employees`, { params: { companyId } }),
+  getGroups: (campaignId: number, companyId: number) =>
+    apiClientInstance.get<ApiResponse>(`/campaigns/${campaignId}/groups`, { params: { companyId } }),
 };
 
 // Employee Group API
@@ -257,8 +257,12 @@ export const serviceApi = {
 export const adminApi = {
   getAllProjects: (filters?: { companyId?: number; status?: string; search?: string }) =>
     apiClientInstance.get<ApiResponse>('/admin/projects', { params: filters }),
+  getProjectById: (id: number) =>
+    apiClientInstance.get<ApiResponse>(`/admin/projects/${id}`),
   getAllClients: (filters?: { companyId?: number; search?: string }) =>
     apiClientInstance.get<ApiResponse>('/admin/clients', { params: filters }),
+  getClientById: (id: number) =>
+    apiClientInstance.get<ApiResponse>(`/admin/clients/${id}`),
   updateProject: (id: number, data: any) =>
     apiClientInstance.put<ApiResponse>(`/admin/projects/${id}`, data),
   deleteProject: (id: number) => apiClientInstance.delete<ApiResponse>(`/admin/projects/${id}`),

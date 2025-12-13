@@ -4,12 +4,16 @@ import { adminApi } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Edit, Trash2, Search } from 'lucide-react';
+import { Edit, Trash2, Search, Eye } from 'lucide-react';
+import { ClientDetailModal } from '@/components/ClientDetailModal';
+import { ProjectDetailModal } from '@/components/ProjectDetailModal';
 
 export function AdminProjectsClients() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'projects' | 'clients'>('projects');
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
 
   const { data: projectsResponse, isLoading: loadingProjects } = useQuery({
     queryKey: ['admin-projects', searchTerm],
@@ -134,6 +138,14 @@ export function AdminProjectsClients() {
                             <div className="flex gap-2">
                               <Button
                                 size="sm"
+                                variant="default"
+                                onClick={() => setSelectedProjectId(project.id)}
+                              >
+                                <Eye className="w-4 h-4 mr-1" />
+                                View
+                              </Button>
+                              <Button
+                                size="sm"
                                 variant="outline"
                                 onClick={() => {/* TODO: Edit modal */}}
                               >
@@ -189,6 +201,14 @@ export function AdminProjectsClients() {
                             <div className="flex gap-2">
                               <Button
                                 size="sm"
+                                variant="default"
+                                onClick={() => setSelectedClientId(client.id)}
+                              >
+                                <Eye className="w-4 h-4 mr-1" />
+                                View
+                              </Button>
+                              <Button
+                                size="sm"
                                 variant="outline"
                                 onClick={() => {/* TODO: Edit modal */}}
                               >
@@ -214,6 +234,22 @@ export function AdminProjectsClients() {
           )}
         </CardContent>
       </Card>
+
+      {/* Client Detail Modal */}
+      {selectedClientId && (
+        <ClientDetailModal
+          clientId={selectedClientId}
+          onClose={() => setSelectedClientId(null)}
+        />
+      )}
+
+      {/* Project Detail Modal */}
+      {selectedProjectId && (
+        <ProjectDetailModal
+          projectId={selectedProjectId}
+          onClose={() => setSelectedProjectId(null)}
+        />
+      )}
     </div>
   );
 }

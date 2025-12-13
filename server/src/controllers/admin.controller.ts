@@ -162,5 +162,49 @@ export const adminController = {
       return sendError(res, 'Failed to delete client', 500);
     }
   },
+
+  /**
+   * Get client by ID with all details
+   * GET /api/admin/clients/:id
+   */
+  getClientById: async (req: AuthRequest, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+
+      if (isNaN(id)) {
+        return sendError(res, 'Invalid client ID', 400);
+      }
+
+      const client = await adminService.getClientById(id);
+      return sendSuccess(res, client, 'Client details retrieved successfully');
+    } catch (error) {
+      if (error instanceof AppError) {
+        return sendError(res, error.message, error.statusCode);
+      }
+      return sendError(res, 'Failed to retrieve client details', 500);
+    }
+  },
+
+  /**
+   * Get project by ID with all details
+   * GET /api/admin/projects/:id
+   */
+  getProjectById: async (req: AuthRequest, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+
+      if (isNaN(id)) {
+        return sendError(res, 'Invalid project ID', 400);
+      }
+
+      const project = await adminService.getProjectById(id);
+      return sendSuccess(res, project, 'Project details retrieved successfully');
+    } catch (error) {
+      if (error instanceof AppError) {
+        return sendError(res, error.message, error.statusCode);
+      }
+      return sendError(res, 'Failed to retrieve project details', 500);
+    }
+  },
 };
 

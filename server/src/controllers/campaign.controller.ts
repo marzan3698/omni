@@ -252,10 +252,10 @@ export const campaignController = {
   },
 
   /**
-   * Get campaign employees
-   * GET /api/campaigns/:id/employees?companyId=1
+   * Get campaign groups (employee groups assigned to campaign)
+   * GET /api/campaigns/:id/groups?companyId=1
    */
-  getCampaignEmployees: async (req: Request, res: Response) => {
+  getCampaignGroups: async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       const companyId = parseInt(req.query.companyId as string);
@@ -268,13 +268,13 @@ export const campaignController = {
         return sendError(res, 'Company ID is required', 400);
       }
 
-      const employees = await campaignService.getCampaignEmployees(id, companyId);
-      return sendSuccess(res, employees, 'Campaign employees retrieved successfully');
+      const groups = await campaignService.getCampaignGroups(id, companyId);
+      return sendSuccess(res, groups, 'Campaign groups retrieved successfully');
     } catch (error) {
       if (error instanceof AppError) {
         return sendError(res, error.message, error.statusCode);
       }
-      return sendError(res, 'Failed to retrieve campaign employees', 500);
+      return sendError(res, 'Failed to retrieve campaign groups', 500);
     }
   },
 
@@ -329,6 +329,34 @@ export const campaignController = {
         return sendError(res, error.message, error.statusCode);
       }
       return sendError(res, 'Failed to retrieve campaign clients', 500);
+    }
+  },
+
+  /**
+   * Get campaigns for authenticated client
+   * GET /api/campaigns/client
+   */
+  getClientCampaigns: async (req: Request, res: Response) => {
+    try {
+      const authReq = req as AuthRequest;
+      const clientId = authReq.user?.id;
+      const companyId = authReq.user?.companyId;
+
+      if (!clientId) {
+        return sendError(res, 'User not authenticated', 401);
+      }
+
+      if (!companyId) {
+        return sendError(res, 'Company ID not found', 400);
+      }
+
+      const campaigns = await campaignService.getClientCampaigns(clientId, companyId);
+      return sendSuccess(res, campaigns, 'Client campaigns retrieved successfully');
+    } catch (error) {
+      if (error instanceof AppError) {
+        return sendError(res, error.message, error.statusCode);
+      }
+      return sendError(res, 'Failed to retrieve client campaigns', 500);
     }
   },
 };

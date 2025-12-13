@@ -736,21 +736,18 @@ export const campaignService = {
               select: {
                 id: true,
                 email: true,
+                name: true,
               },
             },
           },
         },
-        employees: {
+        groups: {
           include: {
-            employee: {
-              include: {
-                user: {
-                  select: {
-                    id: true,
-                    email: true,
-                    name: true,
-                  },
-                },
+            group: {
+              select: {
+                id: true,
+                name: true,
+                description: true,
               },
             },
           },
@@ -826,6 +823,139 @@ export const campaignService = {
     });
 
     return campaignProducts.map((cp) => cp.product);
+  },
+
+  /**
+   * Get campaign groups (employee groups assigned to campaign)
+   */
+  async getCampaignGroups(campaignId: number, companyId: number) {
+    // Verify campaign exists and belongs to company
+    const campaign = await prisma.campaign.findFirst({
+      where: {
+        id: campaignId,
+        companyId,
+      },
+    });
+
+    if (!campaign) {
+      throw new AppError('Campaign not found', 404);
+    }
+
+    // Get groups assigned to this campaign
+    const campaignGroups = await prisma.campaignGroup.findMany({
+      where: {
+        campaignId,
+      },
+      include: {
+        group: {
+          include: {
+            members: {
+              include: {
+                employee: {
+                  include: {
+                    user: {
+                      select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return campaignGroups.map((cg) => cg.group);
+  },
+
+  /**
+   * Get campaigns for a specific client
+   */
+  async getClientCampaigns(clientId: string, companyId: number) {
+    try {
+      // Find all campaigns where this client is assigned
+      const campaignClients = await prisma.campaignClient.findMany({
+        where: {
+          clientId,
+          campaign: {
+            companyId,
+          },
+        },
+        include: {
+          campaign: {
+            include: {
+              project: {
+                select: {
+                  id: true,
+                  title: true,
+                  status: true,
+                },
+              },
+              products: {
+                include: {
+                  product: {
+                    include: {
+                      category: {
+                        select: {
+                          id: true,
+                          name: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+              leads: {
+                select: {
+                  id: true,
+                  title: true,
+                  status: true,
+                  value: true,
+                },
+              },
+              invoices: {
+                include: {
+                  invoice: {
+                    select: {
+                      id: true,
+                      invoiceNumber: true,
+                      totalAmount: true,
+                      status: true,
+                    },
+                  },
+                },
+              },
+              groups: {
+                include: {
+                  group: {
+                    select: {
+                      id: true,
+                      name: true,
+                      description: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        orderBy: {
+          campaign: {
+            createdAt: 'desc',
+          },
+        },
+      });
+
+      // Return only the campaigns
+      return campaignClients.map((cc) => cc.campaign);
+    } catch (error) {
+      console.error('Error fetching client campaigns:', error);
+      throw new AppError('Failed to fetch client campaigns', 500);
+    }
   },
 };
 

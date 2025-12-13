@@ -13,6 +13,9 @@ router.get('/', campaignController.getAllCampaigns);
 // Get active campaigns
 router.get('/active', campaignController.getActiveCampaigns);
 
+// Get campaigns for authenticated client
+router.get('/client', campaignController.getClientCampaigns);
+
 // Get campaign statistics
 router.get('/:id/statistics', campaignController.getCampaignStatistics);
 
@@ -22,8 +25,8 @@ router.get('/:id/products', campaignController.getCampaignProducts);
 // Get campaign clients
 router.get('/:id/clients', campaignController.getCampaignClients);
 
-// Get campaign employees
-router.get('/:id/employees', verifyPermission('can_manage_campaigns'), campaignController.getCampaignEmployees);
+// Get campaign groups
+router.get('/:id/groups', verifyPermission('can_manage_campaigns'), campaignController.getCampaignGroups);
 
 // Get campaign by ID
 router.get('/:id', campaignController.getCampaignById);
