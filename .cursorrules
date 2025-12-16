@@ -1,71 +1,631 @@
-Cursor AI Rules & Coding Standards
+Cursor AI Rules & Coding Standards for Omni CRM
 
-You are an expert Senior Full-Stack Developer specializing in React, Node.js, and Enterprise Architecture.
+You are an expert Senior Full-Stack Developer specializing in React, Node.js, TypeScript, and Enterprise Architecture.
 
-General Behavior
+================================================================================
+PROJECT OVERVIEW
+================================================================================
 
-Context Awareness: Always check the docs/ folder (especially database_schema.md) before writing backend code.
+Project Name: Omni CRM - Enterprise Management System
+Type: Full-Stack ERP/CRM System
+Architecture: Monorepo with separate client and server
+Database: MySQL (via Prisma ORM)
+Multi-Tenancy: Yes (Company-based with optional tenant isolation)
 
-Modularity: Never generate one massive file. Split code into controllers, services, routes, components, and hooks.
+Project Structure:
+- client/: React frontend (Vite + TypeScript)
+- server/: Node.js backend (Express + TypeScript)
+- docs/: Project documentation and schemas
+- server/prisma/: Database schema and migrations
 
-Language: Explain logic in Bangla if requested, but write code comments in English.
+================================================================================
+GENERAL BEHAVIOR & CONTEXT AWARENESS
+================================================================================
 
-Frontend Rules (React)
+1. Context Awareness:
+   - ALWAYS check docs/ folder (especially database_schema.md) before writing backend code
+   - Review existing similar implementations before creating new features
+   - Check Prisma schema (server/prisma/schema.prisma) for database structure
+   - Understand multi-tenancy: All data is company-scoped (companyId required)
 
-Tech Stack: React (Vite), Tailwind CSS, Shadcn UI, Lucide React, React Query.
+2. Modularity:
+   - NEVER generate one massive file
+   - Split code into: controllers, services, routes, components, hooks, utilities
+   - Follow single responsibility principle
+   - If a file exceeds 200 lines, IMMEDIATELY suggest refactoring into smaller modules
 
-Styling:
+3. Language:
+   - Explain logic in Bangla if requested
+   - Write ALL code comments in English
+   - Use clear, descriptive variable and function names
 
-Use Tailwind classes exclusively.
+4. File Size Limit:
+   - Maximum 200 lines per file
+   - If exceeded, refactor into smaller utility files or custom hooks immediately
 
-Use flex and grid for layouts.
+================================================================================
+TECH STACK
+================================================================================
 
-Font: Use 'Inter' or 'Poppins' via Google Fonts.
+Frontend:
+- React 19 with TypeScript
+- Vite for build tooling and dev server
+- Tailwind CSS for styling (NO inline styles, NO CSS modules)
+- Shadcn UI components (Radix UI primitives)
+- Lucide React for icons
+- React Query (@tanstack/react-query) for server state management
+- React Hook Form + Zod for form validation
+- React Router DOM v7 for routing
+- Axios for API calls
 
-Spacing: Use standard Tailwind spacing (p-4, m-4, gap-4).
+Backend:
+- Node.js with Express
+- TypeScript (strict mode)
+- Prisma ORM (MySQL database)
+- JWT (jsonwebtoken) for authentication
+- bcryptjs for password hashing
+- Multer for file uploads
+- Zod for request validation
+- Axios for external API calls (Facebook, Chatwoot)
 
-Components:
+================================================================================
+FRONTEND RULES (React + TypeScript)
+================================================================================
 
-Create small, reusable components in src/components.
+1. Component Structure:
+   - Use functional components ONLY (no class components)
+   - Define TypeScript interfaces for all props
+   - Place components in src/components/
+   - Reusable UI components in src/components/ui/
+   - Page components in src/pages/
+   - Custom hooks in src/hooks/
 
-Use functional components with TypeScript interfaces.
+2. Styling Guidelines:
+   - Use Tailwind CSS classes EXCLUSIVELY
+   - NO inline styles, NO CSS modules, NO styled-components
+   - Use flex and grid for layouts
+   - Font: 'Inter' or 'Poppins' via Google Fonts
+   - Spacing: Standard Tailwind spacing scale (p-4, m-4, gap-4, etc.)
+   - Colors: Professional palette
+     * Text: slate-900 (primary), slate-600 (secondary), slate-500 (muted)
+     * Actions: indigo-600 (primary), indigo-50 (light bg)
+     * Status: green-500 (success), red-500 (error), yellow-500 (warning)
+   - Shadows: shadow-sm for cards, shadow-md for modals
+   - Borders: border-gray-200 for subtle borders
 
-Forms: Use react-hook-form and zod for validation.
+3. State Management:
+   - Global state (Auth): Context API (AuthContext)
+   - Server state: React Query (useQuery, useMutation)
+   - Local component state: useState hook
+   - Form state: React Hook Form (useForm hook)
 
-State Management: Use Context API for global state (Auth) and React Query for server state.
+4. Forms & Validation:
+   - ALWAYS use react-hook-form for forms
+   - ALWAYS use Zod for validation schemas
+   - Use @hookform/resolvers/zod for integration
+   - Show validation errors inline
+   - Disable submit button during submission
 
-Backend Rules (Node.js)
+5. API Integration:
+   - Use apiClient from src/lib/apiClient.ts
+   - Create API functions in src/lib/ (api.ts, social.ts, etc.)
+   - Use React Query for data fetching:
+     * useQuery for GET requests
+     * useMutation for POST/PUT/DELETE requests
+   - Set appropriate refetchInterval for real-time data (e.g., inbox: 5-10 seconds)
+   - Handle loading and error states
 
-Architecture: Controller-Service-Repository pattern.
+6. Routing:
+   - Use React Router DOM v7
+   - Protected routes: Wrap with ProtectedRoute component
+   - Public routes: No authentication required
+   - Client routes: /client/* prefix
+   - Admin routes: /admin/* prefix
 
-routes/: API endpoints definitions.
+7. Permission System:
+   - Use PermissionGuard component to protect UI elements
+   - Check permissions using useAuth().hasPermission()
+   - SuperAdmin has access to everything (bypass permission checks)
+   - Permission format: 'can_action_resource' (e.g., 'can_manage_users')
 
-controllers/: Request/Response handling.
+8. Component Patterns:
+   - Extract reusable logic into custom hooks
+   - Use TypeScript interfaces for all props
+   - Destructure props in function signature
+   - Use optional chaining (?.) and nullish coalescing (??)
+   - Memoize expensive computations with useMemo
+   - Memoize callbacks with useCallback when passing to children
 
-services/: Business logic.
+9. Error Handling:
+   - Use try-catch in async functions
+   - Show user-friendly error messages
+   - Log errors to console in development
+   - Handle 401 errors (redirect to login)
 
-Database:
+10. Responsive Design:
+    - MUST be mobile-responsive
+    - Use Tailwind responsive prefixes: sm:, md:, lg:, xl:
+    - Mobile-first approach
+    - Test on multiple screen sizes
 
-Use Prisma ORM (preferred) or raw SQL with strict validation.
+11. Loading States:
+    - Show loading indicators during data fetching
+    - Use skeleton loaders for better UX
+    - Disable buttons during mutations
 
-Ensure all database queries utilize proper indexing instructions.
+12. TypeScript:
+    - Use strict mode
+    - Define interfaces for all data structures
+    - Use type inference where appropriate
+    - Avoid 'any' type (use 'unknown' if needed)
+    - Export types from src/types/index.ts
 
-Error Handling:
+================================================================================
+BACKEND RULES (Node.js + Express + TypeScript)
+================================================================================
 
-Use a global error handling middleware.
+1. Architecture Pattern:
+   - Controller-Service-Repository pattern
+   - routes/: API endpoint definitions (route handlers only)
+   - controllers/: Request/Response handling (validation, error handling)
+   - services/: Business logic (database operations, external API calls)
+   - middleware/: Custom middleware (auth, error handling, upload)
 
-Never crash the server on an error.
+2. File Organization:
+   - routes/: One file per resource (e.g., user.routes.ts)
+   - controllers/: One file per resource (e.g., user.controller.ts)
+   - services/: One file per resource (e.g., user.service.ts)
+   - middleware/: Shared middleware (authMiddleware.ts, errorHandler.ts, upload.ts)
+   - utils/: Utility functions (response.ts, webhook.ts, pdfGenerator.ts)
+   - types/: TypeScript type definitions (index.ts)
 
-Return standardized JSON error responses: { success: false, message: "..." }.
+3. API Response Format:
+   - Success: { success: true, message: string, data: T }
+   - Error: { success: false, message: string }
+   - Use sendSuccess() and sendError() from utils/response.ts
+   - Status codes: 200 (success), 201 (created), 400 (bad request), 401 (unauthorized), 403 (forbidden), 404 (not found), 500 (server error)
 
-Design & UI Guidelines (Standard & Modern)
+4. Request Validation:
+   - Use Zod schemas for request validation
+   - Validate in controller before calling service
+   - Return 400 with clear error messages for invalid input
 
-Colors: Use a professional palette (Slate/Gray for text, Primary Blue/Indigo for actions).
+5. Authentication & Authorization:
+   - Use authMiddleware for protected routes
+   - JWT token in Authorization header: "Bearer <token>"
+   - Attach user info to request: (req as AuthRequest).user
+   - Check permissions using verifyPermission middleware
+   - SuperAdmin bypasses all permission checks
+   - Always filter data by companyId for multi-tenancy
 
-Widgets: Dashboard widgets should use Card component with a subtle shadow (shadow-sm) and border (border-gray-200).
+6. Database Operations:
+   - Use Prisma ORM (preferred) or raw SQL with strict validation
+   - ALWAYS include companyId in queries (multi-tenancy)
+   - Use transactions for multiple related operations
+   - Use proper indexing (check schema.prisma for indexes)
+   - Handle database errors gracefully
+   - Use Prisma's include/select for relations
+   - Use pagination for large datasets
 
-Responsiveness: All pages MUST be mobile-responsive (md:, lg: prefixes).
+7. Error Handling:
+   - Use AppError class for operational errors
+   - Use global errorHandler middleware
+   - NEVER crash the server on error
+   - Log errors in development, sanitize in production
+   - Return standardized JSON error responses
+   - Use try-catch in async functions
 
-Important "Cursor Barrier" Instruction
+8. File Uploads:
+   - Use Multer middleware (upload.ts)
+   - Store files in server/uploads/ directory
+   - Validate file types and sizes
+   - Generate unique filenames (timestamp-random-originalname)
+   - Serve static files via /uploads route
 
-If a file gets too long (>200 lines), suggest refactoring it into smaller utility files or hooks immediately.
+9. Webhooks:
+   - Use express.raw() for webhook endpoints (before json parser)
+   - Send 200 response immediately (async processing)
+   - Handle webhook verification (GET requests)
+   - Process webhook payloads asynchronously
+   - Log webhook events for debugging
+
+10. External API Integration:
+    - Use Axios for external API calls
+    - Handle rate limiting and retries
+    - Store API credentials securely (encrypted in database)
+    - Use environment variables for API URLs and tokens
+    - Handle API errors gracefully
+
+11. Multi-Tenancy:
+    - ALL data must be company-scoped
+    - Always include companyId in queries
+    - Filter by companyId in services
+    - Never expose data from other companies
+    - Use (req as AuthRequest).user.companyId
+
+12. TypeScript:
+    - Use strict mode
+    - Define interfaces for all data structures
+    - Use AuthRequest interface for authenticated requests
+    - Export types from src/types/index.ts
+    - Use Prisma generated types where possible
+
+13. Environment Variables:
+    - Use dotenv for configuration
+    - Never commit .env files
+    - Validate required environment variables on startup
+    - Use process.env with proper type checking
+
+================================================================================
+DATABASE RULES (Prisma + MySQL)
+================================================================================
+
+1. Schema Design:
+   - Use Prisma schema (server/prisma/schema.prisma)
+   - Follow existing naming conventions:
+     * Model names: PascalCase (e.g., SocialConversation)
+     * Table names: snake_case (e.g., social_conversations)
+     * Field names: camelCase in model, snake_case in database
+   - Always include companyId for multi-tenancy
+   - Use proper indexes for frequently queried fields
+   - Use enums for fixed value sets
+
+2. Migrations:
+   - Use Prisma migrations (prisma migrate)
+   - Never edit migration files directly
+   - Test migrations in development first
+   - Backup database before production migrations
+
+3. Queries:
+   - Use Prisma Client for all queries
+   - Always filter by companyId
+   - Use include/select for relations
+   - Use transactions for atomic operations
+   - Handle Prisma errors (PrismaClientKnownRequestError)
+
+4. Indexes:
+   - Index foreign keys
+   - Index frequently queried fields (status, createdAt, etc.)
+   - Index companyId (multi-tenancy)
+   - Check schema.prisma for existing indexes
+
+5. Relations:
+   - Define relations in schema.prisma
+   - Use onDelete: Cascade for dependent data
+   - Use onDelete: Restrict for critical relations
+   - Use onDelete: SetNull for optional relations
+
+================================================================================
+AUTHENTICATION & AUTHORIZATION
+================================================================================
+
+1. Authentication:
+   - JWT tokens stored in localStorage (frontend)
+   - Token in Authorization header: "Bearer <token>"
+   - Token expiration: Set in authService
+   - Auto-logout on 401 response
+
+2. Roles:
+   - SuperAdmin: Full access (bypasses all permission checks)
+   - Admin: Company-level admin
+   - Manager: Department-level manager
+   - Employee: Regular employee
+   - Client: External client access
+
+3. Permissions:
+   - Stored as JSON in roles.permissions
+   - Format: { "can_action_resource": true/false }
+   - Check permissions in middleware (verifyPermission)
+   - Check permissions in frontend (PermissionGuard, useAuth().hasPermission())
+
+4. Permission Naming Convention:
+   - Format: can_<action>_<resource>
+   - Examples:
+     * can_manage_users
+     * can_view_leads
+     * can_manage_inbox
+     * can_reply_social
+     * can_manage_finance
+
+5. Protected Routes:
+   - Backend: Use authMiddleware
+   - Frontend: Use ProtectedRoute component
+   - Client routes: Separate /client/* routes
+
+================================================================================
+INTEGRATION PATTERNS
+================================================================================
+
+1. Facebook Integration:
+   - Webhook endpoint: /api/webhooks/facebook
+   - Verification: GET request with hub.mode, hub.verify_token, hub.challenge
+   - Messages: POST request with webhook payload
+   - Store conversations in SocialConversation table
+   - Store messages in SocialMessage table
+   - Platform: 'facebook'
+   - External user ID: Facebook PSID
+
+2. Chatwoot Integration:
+   - Webhook endpoint: /api/chatwoot/webhooks/chatwoot
+   - Sync endpoint: /api/chatwoot/sync
+   - Store conversations: Format: chatwoot_contactId_conversationId
+   - Send messages via Chatwoot API
+   - Platform: 'chatwoot'
+   - Handle both old and new conversation ID formats
+
+3. Integration Storage:
+   - Store in Integration table
+   - Encrypt sensitive data (access tokens)
+   - Support multiple providers: facebook, whatsapp, chatwoot
+   - Track webhook status (isWebhookActive)
+
+================================================================================
+API ENDPOINT PATTERNS
+================================================================================
+
+1. Route Naming:
+   - RESTful conventions
+   - Plural resource names: /api/users, /api/leads
+   - Nested resources: /api/conversations/:id/messages
+   - Actions: /api/conversations/:id/reply
+
+2. HTTP Methods:
+   - GET: Retrieve data
+   - POST: Create new resource
+   - PUT: Update entire resource
+   - PATCH: Partial update
+   - DELETE: Delete resource
+
+3. Query Parameters:
+   - Filtering: ?status=Open
+   - Pagination: ?page=1&limit=10
+   - Sorting: ?sortBy=createdAt&order=desc
+
+4. Request/Response:
+   - Request body: JSON (except file uploads)
+   - Response: Standardized JSON format
+   - Error responses: Include error message
+
+================================================================================
+UI/UX GUIDELINES
+================================================================================
+
+1. Design System:
+   - Use Shadcn UI components
+   - Consistent spacing (Tailwind spacing scale)
+   - Professional color palette (slate, indigo)
+   - Subtle shadows and borders
+
+2. Components:
+   - Card: shadow-sm, border-gray-200
+   - Buttons: indigo-600 for primary, outline for secondary
+   - Inputs: border-gray-300, focus:ring-indigo-500
+   - Modals: Centered, backdrop blur
+
+3. Dashboard Widgets:
+   - Use Card component
+   - shadow-sm and border-gray-200
+   - Responsive grid layout
+   - Show loading states
+
+4. Forms:
+   - Clear labels
+   - Inline validation errors
+   - Disabled submit during submission
+   - Success/error feedback
+
+5. Tables:
+   - Responsive design
+   - Sortable columns
+   - Pagination for large datasets
+   - Action buttons (edit, delete)
+
+6. Modals:
+   - Centered on screen
+   - Backdrop overlay
+   - Close button (X icon)
+   - Form validation
+   - Loading states
+
+================================================================================
+ERROR HANDLING PATTERNS
+================================================================================
+
+1. Frontend:
+   - Try-catch in async functions
+   - Show user-friendly error messages
+   - Handle 401 (redirect to login)
+   - Handle network errors
+   - Log errors in development
+
+2. Backend:
+   - Use AppError class
+   - Global errorHandler middleware
+   - Never crash server
+   - Return standardized error responses
+   - Log errors with context
+
+3. Validation Errors:
+   - Return 400 status
+   - Include field-level errors
+   - Clear error messages
+
+================================================================================
+PERFORMANCE OPTIMIZATION
+================================================================================
+
+1. Frontend:
+   - Use React.memo for expensive components
+   - Use useMemo for expensive computations
+   - Use useCallback for stable function references
+   - Lazy load routes
+   - Optimize images
+
+2. Backend:
+   - Use database indexes
+   - Paginate large datasets
+   - Use select/include for Prisma queries
+   - Cache frequently accessed data
+   - Optimize database queries
+
+3. API:
+   - Set appropriate refetchInterval
+   - Use pagination
+   - Filter data on server
+   - Minimize payload size
+
+================================================================================
+SECURITY BEST PRACTICES
+================================================================================
+
+1. Authentication:
+   - Hash passwords with bcryptjs
+   - Use JWT with expiration
+   - Store tokens securely (localStorage)
+   - Validate tokens on every request
+
+2. Authorization:
+   - Check permissions on every protected route
+   - Filter data by companyId (multi-tenancy)
+   - Never expose sensitive data
+
+3. Input Validation:
+   - Validate all user input
+   - Use Zod schemas
+   - Sanitize user input
+   - Prevent SQL injection (Prisma handles this)
+
+4. File Uploads:
+   - Validate file types
+   - Limit file sizes
+   - Generate unique filenames
+   - Store outside web root
+
+5. API Security:
+   - Use HTTPS in production
+   - Validate webhook signatures
+   - Rate limiting (consider implementing)
+   - CORS configuration
+
+================================================================================
+TESTING & QUALITY
+================================================================================
+
+1. Code Quality:
+   - TypeScript strict mode
+   - ESLint for code linting
+   - Consistent code formatting
+   - Clear variable names
+
+2. Error Handling:
+   - Handle all error cases
+   - Provide meaningful error messages
+   - Log errors appropriately
+
+3. Documentation:
+   - Comment complex logic
+   - Document API endpoints
+   - Update database schema docs
+
+================================================================================
+NAMING CONVENTIONS
+================================================================================
+
+1. Files:
+   - Components: PascalCase (UserProfile.tsx)
+   - Utilities: camelCase (apiClient.ts)
+   - Types: camelCase (index.ts)
+
+2. Variables & Functions:
+   - camelCase (getUserProfile, userId)
+   - Boolean: is/has prefix (isLoading, hasPermission)
+   - Constants: UPPER_SNAKE_CASE
+
+3. Database:
+   - Models: PascalCase (SocialConversation)
+   - Tables: snake_case (social_conversations)
+   - Fields: camelCase in model, snake_case in DB
+
+4. API Routes:
+   - Plural nouns (/api/users)
+   - kebab-case for multi-word (/api/lead-categories)
+
+================================================================================
+SPECIFIC FEATURE PATTERNS
+================================================================================
+
+1. Inbox/Messaging:
+   - Auto-refresh conversations (10 seconds)
+   - Auto-refresh messages (5 seconds)
+   - Real-time updates via polling
+   - Support Facebook and Chatwoot
+   - Quick replies feature
+
+2. Leads:
+   - Create from inbox conversations
+   - Assign to employees
+   - Track status (New, Contacted, Qualified, etc.)
+   - Link to campaigns
+
+3. Campaigns:
+   - Support types: reach, sale, research
+   - Link products to campaigns
+   - Quick replies from campaign products
+
+4. Products:
+   - Image uploads
+   - Quick replies (attributes, sales messages)
+   - Categories
+
+5. Projects:
+   - Client assignment
+   - Invoice generation
+   - E-signature support
+
+6. Finance:
+   - Invoices
+   - Transactions
+   - Accounts Payable/Receivable
+   - Budgets
+
+================================================================================
+IMPORTANT REMINDERS
+================================================================================
+
+1. Multi-Tenancy:
+   - ALWAYS filter by companyId
+   - Never expose other companies' data
+   - Use (req as AuthRequest).user.companyId
+
+2. File Size:
+   - Maximum 200 lines per file
+   - Refactor immediately if exceeded
+
+3. Type Safety:
+   - Use TypeScript strictly
+   - Define interfaces for all data
+   - Avoid 'any' type
+
+4. Error Handling:
+   - Never crash the server
+   - Return standardized responses
+   - Handle all edge cases
+
+5. Security:
+   - Validate all input
+   - Check permissions
+   - Filter by companyId
+
+6. Performance:
+   - Use indexes
+   - Paginate large datasets
+   - Optimize queries
+
+7. Code Quality:
+   - Follow patterns
+   - Keep files small
+   - Write clear code
+
+================================================================================
+END OF RULES
+================================================================================

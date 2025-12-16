@@ -80,10 +80,10 @@ export const socialService = {
       const messageText = value.message.text;
       // Convert timestamp (can be string or number in seconds)
       // For test webhooks, Facebook sends old timestamps, so use current time
-      let timestampMs = typeof value.timestamp === 'string' 
-        ? parseInt(value.timestamp) * 1000 
+      let timestampMs = typeof value.timestamp === 'string'
+        ? parseInt(value.timestamp) * 1000
         : value.timestamp * 1000;
-      
+
       // If timestamp is too old (before 2020), use current time for test messages
       const timestampDate = new Date(timestampMs);
       const year2020 = new Date('2020-01-01').getTime();
@@ -91,7 +91,7 @@ export const socialService = {
         console.log('Test webhook: Using current timestamp instead of old test timestamp');
         timestampMs = Date.now();
       }
-      
+
       const timestamp = new Date(timestampMs);
 
       console.log(`Processing test message from ${senderId}: ${messageText}`);
@@ -157,7 +157,7 @@ export const socialService = {
 
           const senderId = event.sender.id;
           const recipientId = event.recipient.id;
-          
+
           // Convert timestamp (Facebook sends in seconds, JavaScript Date needs milliseconds)
           const timestamp = new Date(event.timestamp * 1000);
 
@@ -414,7 +414,7 @@ export const socialService = {
       // Old format: chatwoot_contactId (need to find conversation ID from Chatwoot API)
       let chatwootConversationId: number | null = null;
       const conversationIdMatch = conversation.externalUserId.match(/chatwoot_\d+_(\d+)/);
-      
+
       if (conversationIdMatch) {
         // New format - extract conversation ID directly
         chatwootConversationId = parseInt(conversationIdMatch[1], 10);
@@ -424,16 +424,16 @@ export const socialService = {
         if (contactIdMatch) {
           const contactId = contactIdMatch[1];
           console.log(`Old format detected. Finding conversation for contact ${contactId}...`);
-          
+
           // Import chatwootService
           const { chatwootService } = await import('./chatwoot.service.js');
-          
+
           // Get inbox ID from integration (pageId stores inboxId for Chatwoot)
           const inboxId = integration.pageId;
           if (!inboxId) {
             throw new AppError('Chatwoot inbox ID not configured', 400);
           }
-          
+
           // Fetch conversations from Chatwoot to find the one for this contact
           try {
             const chatwootConversations = await chatwootService.getChatwootConversations(
@@ -442,17 +442,17 @@ export const socialService = {
               integration.accessToken,
               integration.baseUrl
             );
-            
+
             // Find conversation for this contact
             console.log(`Searching ${chatwootConversations.length} conversations for contact ${contactId}`);
             const chatwootConv = chatwootConversations.find(
               conv => conv.contact.id.toString() === contactId
             );
-            
+
             if (chatwootConv) {
               chatwootConversationId = chatwootConv.id;
               console.log(`✅ Found Chatwoot conversation ID: ${chatwootConversationId} for contact ${contactId}`);
-              
+
               // Update conversation to new format for future use
               await prisma.socialConversation.update({
                 where: { id: conversation.id },
@@ -461,9 +461,9 @@ export const socialService = {
                 },
               });
             } else {
-              console.log(`❌ Conversation not found for contact ${contactId}. Available contacts:`, 
+              console.log(`❌ Conversation not found for contact ${contactId}. Available contacts:`,
                 chatwootConversations.map(c => `${c.contact.id} (${c.contact.name})`).join(', '));
-              
+
               // Fallback: Try to get conversation ID from Chatwoot API directly by contact ID
               // This might work if the conversation exists but wasn't returned in the list
               try {
@@ -474,7 +474,7 @@ export const socialService = {
                   const url = baseUrl.trim().replace(/\/$/, '');
                   return url || defaultUrl;
                 };
-                
+
                 const apiUrl = getChatwootApiUrl(integration.baseUrl);
                 // Try to get conversations directly with contact_id filter
                 const convUrl = `${apiUrl}/api/v1/accounts/${integration.accountId}/conversations`;
@@ -488,12 +488,12 @@ export const socialService = {
                     contact_id: contactId,
                   },
                 });
-                
+
                 if (convResponse.data?.payload && convResponse.data.payload.length > 0) {
                   const conv = convResponse.data.payload[0];
                   chatwootConversationId = conv.id;
                   console.log(`✅ Found Chatwoot conversation ID via direct API call: ${chatwootConversationId}`);
-                  
+
                   // Update conversation to new format
                   await prisma.socialConversation.update({
                     where: { id: conversation.id },
@@ -505,7 +505,7 @@ export const socialService = {
               } catch (fallbackError: any) {
                 console.error('Fallback API call failed:', fallbackError.message);
               }
-              
+
               if (!chatwootConversationId) {
                 // Last resort: Try to get conversation ID from webhook payload stored in logs
                 // Or check if we can create a new conversation
@@ -519,7 +519,7 @@ export const socialService = {
           }
         }
       }
-      
+
       if (!chatwootConversationId || isNaN(chatwootConversationId)) {
         throw new AppError('Chatwoot conversation ID not found. Please sync conversations first.', 400);
       }

@@ -160,12 +160,12 @@ export function Inbox() {
 
   const handleCreateLead = () => {
     if (!selectedConversation) return;
-    
+
     // Pre-fill form with conversation data
-    const defaultTitle = selectedConversation.externalUserName 
+    const defaultTitle = selectedConversation.externalUserName
       ? `Lead from ${selectedConversation.externalUserName}`
       : `Lead from ${selectedConversation.platform}`;
-    
+
     setLeadFormData({
       title: defaultTitle,
       description: selectedConversation.messages?.[0]?.content || '',
@@ -204,11 +204,11 @@ export function Inbox() {
     }
 
     // Ensure categoryId and interestId are numbers, not undefined
-    const categoryIdNum = leadFormData.categoryId && leadFormData.categoryId !== '' 
-      ? parseInt(leadFormData.categoryId, 10) 
+    const categoryIdNum = leadFormData.categoryId && leadFormData.categoryId !== ''
+      ? parseInt(leadFormData.categoryId, 10)
       : null;
-    const interestIdNum = leadFormData.interestId && leadFormData.interestId !== '' 
-      ? parseInt(leadFormData.interestId, 10) 
+    const interestIdNum = leadFormData.interestId && leadFormData.interestId !== ''
+      ? parseInt(leadFormData.interestId, 10)
       : null;
 
     if (!categoryIdNum || isNaN(categoryIdNum)) {
@@ -221,8 +221,8 @@ export function Inbox() {
       return;
     }
 
-    const campaignIdNum = leadFormData.campaignId && leadFormData.campaignId !== '' 
-      ? parseInt(leadFormData.campaignId, 10) 
+    const campaignIdNum = leadFormData.campaignId && leadFormData.campaignId !== ''
+      ? parseInt(leadFormData.campaignId, 10)
       : undefined;
 
     createLeadMutation.mutate({

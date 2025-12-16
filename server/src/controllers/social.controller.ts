@@ -33,7 +33,7 @@ export const socialController = {
       }
 
       const challengeResponse = socialService.verifyWebhook(token, challenge, mode);
-      
+
       // Facebook expects a plain text response with the challenge
       console.log('✅ Webhook verification successful');
       res.status(200).send(challengeResponse);
@@ -60,7 +60,7 @@ export const socialController = {
       console.log('URL:', req.url);
       console.log('Content-Type:', req.headers['content-type']);
       console.log('User-Agent:', req.headers['user-agent']);
-      
+
       // Facebook requires immediate 200 response
       res.status(200).send('EVENT_RECEIVED');
       console.log('✅ Sent 200 response to Facebook');
@@ -85,7 +85,7 @@ export const socialController = {
       const payloadType = payload.object || payload.field || 'unknown';
       console.log('📦 Payload type:', payloadType);
       console.log('Payload keys:', Object.keys(payload));
-      
+
       if (payload.entry && Array.isArray(payload.entry)) {
         console.log(`📨 Number of entries: ${payload.entry.length}`);
         payload.entry.forEach((entry: any, index: number) => {
@@ -96,9 +96,9 @@ export const socialController = {
           });
         });
       }
-      
+
       await socialService.processFacebookMessage(payload);
-      
+
       console.log('✅ === Webhook Processing Complete ===');
       console.log(`${'='.repeat(60)}\n`);
 
