@@ -1,0 +1,154 @@
+9s
+Run npm run build
+  
+> server@1.0.0 build
+> tsc
+Error: src/app.ts(2,1): error TS6133: 'cors' is declared but its value is never read.
+Error: src/app.ts(11,9): error TS7030: Not all code paths return a value.
+Error: src/app.ts(42,21): error TS6133: 'req' is declared but its value is never read.
+Error: src/app.ts(106,***): error TS6133: 'req' is declared but its value is never read.
+Error: src/app.ts(106,51): error TS6133: 'next' is declared but its value is never read.
+Error: src/app.ts(115,10): error TS6133: 'req' is declared but its value is never read.
+Error: src/controllers/admin.controller.ts(1,10): error TS6133: 'Request' is declared but its value is never read.
+Error: src/controllers/blog.controller.ts(18,9): error TS7030: Not all code paths return a value.
+Error: src/controllers/blog.controller.ts(41,9): error TS7030: Not all code paths return a value.
+Error: src/controllers/blog.controller.ts(54,9): error TS7030: Not all code paths return a value.
+Error: src/controllers/blog.controller.ts(71,9): error TS7030: Not all code paths return a value.
+Error: src/controllers/campaign.controller.ts(44,13): error TS6133: 'userRole' is declared but its value is never read.
+Error: src/controllers/campaign.controller.ts(44,51): error TS2339: Property 'roleName' does not exist on type '{ id: string; email: string; roleId: number; companyId: number; role?: { name: string; } | undefined; }'.
+Error: src/controllers/campaign.controller.ts(161,25): error TS2339: Property 'clientIds' does not exist on type '{ budget?: number | undefined; name?: string | undefined; isActive?: boolean | undefined; type?: "reach" | "sale" | "research" | undefined; description?: string | undefined; startDate?: string | ... 1 more ... | undefined; endDate?: string | ... 1 more ... | undefined; projectId?: number | undefined; productIds?: nu...'.
+Error: src/controllers/campaign.controller.ts(162,46): error TS2339: Property 'clientIds' does not exist on type '{ budget?: number | undefined; name?: string | undefined; isActive?: boolean | undefined; type?: "reach" | "sale" | "research" | undefined; description?: string | undefined; startDate?: string | ... 1 more ... | undefined; endDate?: string | ... 1 more ... | undefined; projectId?: number | undefined; productIds?: nu...'.
+Error: src/controllers/campaign.controller.ts(165,25): error TS2339: Property 'employeeIds' does not exist on type '{ budget?: number | undefined; name?: string | undefined; isActive?: boolean | undefined; type?: "reach" | "sale" | "research" | undefined; description?: string | undefined; startDate?: string | ... 1 more ... | undefined; endDate?: string | ... 1 more ... | undefined; projectId?: number | undefined; productIds?: nu...'.
+Error: src/controllers/campaign.controller.ts(166,48): error TS2339: Property 'employeeIds' does not exist on type '{ budget?: number | undefined; name?: string | undefined; isActive?: boolean | undefined; type?: "reach" | "sale" | "research" | undefined; description?: string | undefined; startDate?: string | ... 1 more ... | undefined; endDate?: string | ... 1 more ... | undefined; projectId?: number | undefined; productIds?: nu...'.
+Error: src/controllers/chatwoot.controller.ts(14,***): error TS7030: Not all code paths return a value.
+Error: src/controllers/chatwoot.controller.ts(55,21): error TS7030: Not all code paths return a value.
+Error: src/controllers/chatwoot.controller.ts(75,16): error TS7030: Not all code paths return a value.
+Error: src/controllers/chatwoot.controller.ts(102,14): error TS7030: Not all code paths return a value.
+Error: src/controllers/chatwoot.controller.ts(136,54): error TS6133: 'next' is declared but its value is never read.
+Error: src/controllers/company.controller.ts(6,1): error TS6133: 'AuthRequest' is declared but its value is never read.
+Error: src/controllers/company.controller.ts(49,27): error TS6133: 'req' is declared but its value is never read.
+Error: src/controllers/company.controller.ts(259,72): error TS2345: Argument of type '{ value?: number | undefined; description?: string | undefined; title?: string | undefined; startDate?: string | Date | undefined; endDate?: string | Date | undefined; documentUrl?: string | undefined; }' is not assignable to parameter of type 'Partial<CreateContractData> & { status?: string | undefined; }'.
+  Type '{ value?: number | undefined; description?: string | undefined; title?: string | undefined; startDate?: string | Date | undefined; endDate?: string | Date | undefined; documentUrl?: string | undefined; }' is not assignable to type 'Partial<CreateContractData>'.
+    Types of property 'startDate' are incompatible.
+      Type 'string | Date | undefined' is not assignable to type 'Date | undefined'.
+        Type 'string' is not assignable to type 'Date'.
+Error: src/controllers/employee.controller.ts(6,1): error TS6133: 'AuthRequest' is declared but its value is never read.
+Error: src/controllers/example.controller.ts(6,***): error TS6133: 'req' is declared but its value is never read.
+Error: src/controllers/integration.controller.ts(34,***): error TS7030: Not all code paths return a value.
+Error: src/controllers/integration.controller.ts(61,27): error TS6133: 'req' is declared but its value is never read.
+Error: src/controllers/integration.controller.ts(74,23): error TS7030: Not all code paths return a value.
+Error: src/controllers/integration.controller.ts(95,***): error TS7030: Not all code paths return a value.
+Error: src/controllers/integration.controller.ts(120,***): error TS7030: Not all code paths return a value.
+Error: src/controllers/lead.controller.ts(48,51): error TS2339: Property 'roleName' does not exist on type '{ id: string; email: string; roleId: number; companyId: number; role?: { name: string; } | undefined; }'.
+Error: src/controllers/leadCategory.controller.ts(29,25): error TS6133: 'req' is declared but its value is never read.
+Error: src/controllers/leadInterest.controller.ts(29,24): error TS6133: 'req' is declared but its value is never read.
+Error: src/controllers/product.controller.ts(6,1): error TS6133: 'Currency' is declared but its value is never read.
+Error: src/controllers/product.controller.ts(9,1): error TS6133: 'path' is declared but its value is never read.
+Error: src/controllers/product.controller.ts(215,40): error TS6133: 'reject' is declared but its value is never read.
+Error: src/controllers/product.controller.ts(216,36): error TS7030: Not all code paths return a value.
+Error: src/controllers/project.controller.ts(1,10): error TS6133: 'Request' is declared but its value is never read.
+Error: src/controllers/review.controller.ts(28,9): error TS7030: Not all code paths return a value.
+Error: src/controllers/review.controller.ts(41,9): error TS7030: Not all code paths return a value.
+Error: src/controllers/review.controller.ts(58,9): error TS7030: Not all code paths return a value.
+Error: src/controllers/service.controller.ts(1,10): error TS6133: 'Request' is declared but its value is never read.
+Error: src/controllers/social.controller.ts(11,26): error TS7030: Not all code paths return a value.
+Error: src/controllers/social.controller.ts(11,56): error TS6133: 'next' is declared but its value is never read.
+Error: src/controllers/social.controller.ts(54,62): error TS6133: 'next' is declared but its value is never read.
+Error: src/controllers/social.controller.ts(139,29): error TS7030: Not all code paths return a value.
+Error: src/controllers/social.controller.ts(159,35): error TS7030: Not all code paths return a value.
+Error: src/controllers/social.controller.ts(179,28): error TS7030: Not all code paths return a value.
+Error: src/controllers/social.controller.ts(201,14): error TS7030: Not all code paths return a value.
+Error: src/controllers/utils.controller.ts(3,1): error TS6133: 'integrationService' is declared but its value is never read.
+Error: src/controllers/utils.controller.ts(11,23): error TS6133: 'req' is declared but its value is never read.
+Error: src/controllers/utils.controller.ts(25,23): error TS18046: 'ngrokData' is of type 'unknown'.
+Error: src/middleware/authMiddleware.ts(10,31): error TS7030: Not all code paths return a value.
+Error: src/middleware/authMiddleware.ts(70,10): error TS7030: Not all code paths return a value.
+Error: src/middleware/errorHandler.ts(18,3): error TS6133: 'req' is declared but its value is never read.
+Error: src/middleware/errorHandler.ts(20,3): error TS6133: 'next' is declared but its value is never read.
+Error: src/middleware/upload.ts(13,17): error TS6133: 'req' is declared but its value is never read.
+Error: src/middleware/upload.ts(13,***): error TS6133: 'file' is declared but its value is never read.
+Error: src/middleware/upload.ts(16,14): error TS6133: 'req' is declared but its value is never read.
+Error: src/middleware/upload.ts(26,21): error TS6133: 'req' is declared but its value is never read.
+Error: src/routes/auth.routes.ts(8,26): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: Request, res: Response) => Promise<Response<any, Record<string, any>>>' is not assignable to parameter of type 'Application<Record<string, any>>'.
+      Type '(req: Request, res: Response<any, Record<string, any>>) => Promise<Response<any, Record<string, any>>>' is missing the following properties from type 'Application<Record<string, any>>': init, defaultConfiguration, engine, set, and 63 more.
+Error: src/routes/auth.routes.ts(9,33): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: Request, res: Response) => Promise<Response<any, Record<string, any>>>' is not assignable to parameter of type 'Application<Record<string, any>>'.
+      Type '(req: Request, res: Response<any, Record<string, any>>) => Promise<Response<any, Record<string, any>>>' is missing the following properties from type 'Application<Record<string, any>>': init, defaultConfiguration, engine, set, and 63 more.
+Error: src/routes/auth.routes.ts(10,23): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: Request, res: Response) => Promise<Response<any, Record<string, any>>>' is not assignable to parameter of type 'Application<Record<string, any>>'.
+      Type '(req: Request, res: Response<any, Record<string, any>>) => Promise<Response<any, Record<string, any>>>' is missing the following properties from type 'Application<Record<string, any>>': init, defaultConfiguration, engine, set, and 63 more.
+Error: src/routes/public.routes.ts(16,38): error TS6133: 'req' is declared but its value is never read.
+Error: src/routes/public.routes.ts(119,40): error TS6133: 'req' is declared but its value is never read.
+Error: src/routes/public.routes.ts(***4,35): error TS7030: Not all code paths return a value.
+Error: src/routes/public.routes.ts(***8,11): error TS6133: 'signedRequest' is declared but its value is never read.
+Error: src/services/auth.service.ts(347,16): error TS2769: No overload matches this call.
+  Overload 1 of 5, '(payload: string | object | Buffer<ArrayBufferLike>, secretOrPrivateKey: null, options?: (SignOptions & { algorithm: "none"; }) | undefined): string', gave the following error.
+    Argument of type 'string' is not assignable to parameter of type 'null'.
+  Overload 2 of 5, '(payload: string | object | Buffer<ArrayBufferLike>, secretOrPrivateKey: Buffer<ArrayBufferLike> | Secret | PrivateKeyInput | JsonWebKeyInput, options?: SignOptions | undefined): string', gave the following error.
+    Type 'string' is not assignable to type 'number | StringValue | undefined'.
+  Overload 3 of 5, '(payload: string | object | Buffer<ArrayBufferLike>, secretOrPrivateKey: Buffer<ArrayBufferLike> | Secret | PrivateKeyInput | JsonWebKeyInput, callback: SignCallback): void', gave the following error.
+    Object literal may only specify known properties, and 'expiresIn' does not exist in type 'SignCallback'.
+Error: src/services/budget.service.ts(88,30): error TS6133: 'budgetId' is declared but its value is never read.
+Error: src/services/campaign.service.ts(425,7): error TS2448: Block-scoped variable 'updateData' used before its declaration.
+Error: src/services/campaign.service.ts(466,11): error TS6133: 'updatedCampaign' is declared but its value is never read.
+Error: src/services/company.service.ts(68,13): error TS2353: Object literal may only specify known properties, and 'leads' does not exist in type 'CompanyCountOutputTypeSelect<DefaultArgs>'.
+Error: src/services/company.service.ts(230,7): error TS23***: Type 'Partial<CreateContractData> & { status?: string | undefined; }' is not assignable to type '(Without<ContractUpdateInput, ContractUncheckedUpdateInput> & ContractUncheckedUpdateInput) | (Without<...> & ContractUpdateInput)'.
+  Type 'Partial<CreateContractData> & { status?: string | undefined; }' is not assignable to type 'Without<ContractUncheckedUpdateInput, ContractUpdateInput> & ContractUpdateInput'.
+    Types of property 'status' are incompatible.
+      Type 'string | undefined' is not assignable to type 'ContractStatus | EnumContractStatusFieldUpdateOperationsInput | undefined'.
+        Type 'string' is not assignable to type 'ContractStatus | EnumContractStatusFieldUpdateOperationsInput | undefined'.
+Error: src/services/company.service.ts(241,38): error TS2353: Object literal may only specify known properties, and 'mode' does not exist in type 'StringFilter<"Company">'.
+Error: src/services/company.service.ts(242,39): error TS2353: Object literal may only specify known properties, and 'mode' does not exist in type 'StringNullableFilter<"Company">'.
+Error: src/services/company.service.ts(243,42): error TS2353: Object literal may only specify known properties, and 'mode' does not exist in type 'StringNullableFilter<"Company">'.
+Error: src/services/employee.service.ts(292,11): error TS2353: Object literal may only specify known properties, and 'companyId' does not exist in type 'LeadWhereInput'.
+Error: src/services/employee.service.ts(305,44): error TS2365: Operator '+' cannot be applied to types 'number' and 'boolean | { id?: number | undefined; createdBy?: number | undefined; title?: number | undefined; description?: number | undefined; source?: number | undefined; status?: number | undefined; ... 10 more ...; _all?: number | undefined; }'.
+Error: src/services/employee.service.ts(305,50): error TS18048: 'l._count' is possibly 'undefined'.
+Error: src/services/employee.service.ts(306,62): error TS18048: 'l._sum' is possibly 'undefined'.
+Error: src/services/employeeGroup.service.ts(97,19): error TS2353: Object literal may only specify known properties, and 'company' does not exist in type 'UserDefaultArgs<DefaultArgs>'.
+Error: src/services/employeeGroup.service.ts(344,13): error TS2353: Object literal may only specify known properties, and 'designation' does not exist in type 'EmployeeInclude<DefaultArgs>'.
+Error: src/services/employeeGroup.service.ts(351,33): error TS2551: Property 'employee' does not exist on type '{ id: number; createdAt: Date; groupId: number; employeeId: number; }'. Did you mean 'employeeId'?
+Error: src/services/integration.service.ts(148,9): error TS2353: Object literal may only specify known properties, and 'provider_pageId' does not exist in type 'IntegrationWhereUniqueInput'.
+Error: src/services/invoice.service.ts(366,7): error TS23***: Type 'number' is not assignable to type 'Decimal'.
+Error: src/services/lead.service.ts(70,13): error TS6133: 'searchTerm' is declared but its value is never read.
+Error: src/services/lead.service.ts(129,7): error TS1117: An object literal cannot have multiple properties with the same name.
+Error: src/services/lead.service.ts(140,9): error TS2353: Object literal may only specify known properties, and 'companyId' does not exist in type 'LeadWhereInput'.
+Error: src/services/lead.service.ts(502,9): error TS2353: Object literal may only specify known properties, and 'companyId' does not exist in type 'LeadWhereInput'.
+Error: src/services/lead.service.ts(620,9): error TS2353: Object literal may only specify known properties, and 'companyId' does not exist in type 'LeadWhereInput'.
+Error: src/services/lead.service.ts(680,9): error TS2353: Object literal may only specify known properties, and 'companyId' does not exist in type 'LeadWhereInput'.
+Error: src/services/lead.service.ts(704,9): error TS2353: Object literal may only specify known properties, and 'companyId' does not exist in type 'LeadWhereInput'.
+Error: src/services/lead.service.ts(731,16): error TS2551: Property 'conversation' does not exist on type '{ id: number; phone: string | null; createdAt: Date; updatedAt: Date; value: Decimal | null; status: LeadStatus; conversationId: number | null; description: string | null; ... 7 more ...; campaignId: number | null; }'. Did you mean 'conversationId'?
+Error: src/services/lead.service.ts(732,37): error TS2551: Property 'conversation' does not exist on type '{ id: number; phone: string | null; createdAt: Date; updatedAt: Date; value: Decimal | null; status: LeadStatus; conversationId: number | null; description: string | null; ... 7 more ...; campaignId: number | null; }'. Did you mean 'conversationId'?
+Error: src/services/lead.service.ts(733,43): error TS2551: Property 'conversation' does not exist on type '{ id: number; phone: string | null; createdAt: Date; updatedAt: Date; value: Decimal | null; status: LeadStatus; conversationId: number | null; description: string | null; ... 7 more ...; campaignId: number | null; }'. Did you mean 'conversationId'?
+Error: src/services/lead.service.ts(734,45): error TS2551: Property 'conversation' does not exist on type '{ id: number; phone: string | null; createdAt: Date; updatedAt: Date; value: Decimal | null; status: LeadStatus; conversationId: number | null; description: string | null; ... 7 more ...; campaignId: number | null; }'. Did you mean 'conversationId'?
+Error: src/services/lead.service.ts(768,16): error TS2353: Object literal may only specify known properties, and 'companyId' does not exist in type 'LeadWhereInput'.
+Error: src/services/lead.service.ts(778,26): error TS18048: 'lead._sum' is possibly 'undefined'.
+Error: src/services/paymentGateway.service.ts(96,11): error TS6133: 'existing' is declared but its value is never read.
+Error: src/services/project.service.ts(245,11): error TS6133: 'project' is declared but its value is never read.
+Error: src/services/service.service.ts(57,9): error TS23***: Type 'ServiceAttributes' is not assignable to type 'JsonNull | InputJsonValue'.
+  Type 'ServiceAttributes' is not assignable to type 'InputJsonObject'.
+    Index signature for type 'string' is missing in type 'ServiceAttributes'.
+Error: src/services/service.service.ts(165,9): error TS23***: Type 'ServiceAttributes | undefined' is not assignable to type 'JsonNull | InputJsonValue | undefined'.
+  Type 'ServiceAttributes' is not assignable to type 'JsonNull | InputJsonValue | undefined'.
+    Type 'ServiceAttributes' is not assignable to type 'InputJsonObject'.
+      Index signature for type 'string' is missing in type 'ServiceAttributes'.
+Error: src/services/social.service.ts(88,13): error TS6133: 'timestampDate' is declared but its value is never read.
+Error: src/services/social.service.ts(109,11): error TS23***: Type '{ platform: "facebook"; externalUserId: string; externalUserName: string; status: "Open"; lastMessageAt: Date; }' is not assignable to type '(Without<SocialConversationCreateInput, SocialConversationUncheckedCreateInput> & SocialConversationUncheckedCreateInput) | (Without<...> & SocialConversationCreateInput)'.
+  Type '{ platform: "facebook"; externalUserId: string; externalUserName: string; status: "Open"; lastMessageAt: Date; }' is not assignable to type 'Without<SocialConversationUncheckedCreateInput, SocialConversationCreateInput> & SocialConversationCreateInput'.
+    Property 'company' is missing in type '{ platform: "facebook"; externalUserId: string; externalUserName: string; status: "Open"; lastMessageAt: Date; }' but required in type 'SocialConversationCreateInput'.
+Error: src/services/social.service.ts(203,15): error TS23***: Type '{ platform: "facebook"; externalUserId: string; externalUserName: null; status: "Open"; lastMessageAt: Date; }' is not assignable to type '(Without<SocialConversationCreateInput, SocialConversationUncheckedCreateInput> & SocialConversationUncheckedCreateInput) | (Without<...> & SocialConversationCreateInput)'.
+  Type '{ platform: "facebook"; externalUserId: string; externalUserName: null; status: "Open"; lastMessageAt: Date; }' is not assignable to type 'Without<SocialConversationUncheckedCreateInput, SocialConversationCreateInput> & SocialConversationCreateInput'.
+    Property 'company' is missing in type '{ platform: "facebook"; externalUserId: string; externalUserName: null; status: "Open"; lastMessageAt: Date; }' but required in type 'SocialConversationCreateInput'.
+Error: src/services/social.service.ts(388,60): error TS6133: 'agentId' is declared but its value is never read.
+Error: src/services/social.service.ts(531,11): error TS6133: 'chatwootMessage' is declared but its value is never read.
+Error: src/services/social.service.ts(637,61): error TS2339: Property 'synced' does not exist on type '{ success: boolean; synced: number; created: number; updated: number; integrationId: number; error?: undefined; } | { integrationId: number; success: boolean; error: any; }'.
+  Property 'synced' does not exist on type '{ integrationId: number; success: boolean; error: any; }'.
+Error: src/services/social.service.ts(638,62): error TS2339: Property 'created' does not exist on type '{ success: boolean; synced: number; created: number; updated: number; integrationId: number; error?: undefined; } | { integrationId: number; success: boolean; error: any; }'.
+  Property 'created' does not exist on type '{ integrationId: number; success: boolean; error: any; }'.
+Error: src/services/social.service.ts(639,62): error TS2339: Property 'updated' does not exist on type '{ success: boolean; synced: number; created: number; updated: number; integrationId: number; error?: undefined; } | { integrationId: number; success: boolean; error: any; }'.
+  Property 'updated' does not exist on type '{ integrationId: number; success: boolean; error: any; }'.
+Error: src/utils/pdfGenerator.ts(1,25): error TS2307: Cannot find module 'pdfkit' or its corresponding type declarations.
+Error: Process completed with exit code 2.
