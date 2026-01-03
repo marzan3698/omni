@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { socialApi, type SocialConversation, type SocialMessage } from '@/lib/social';
 import { leadApi, leadCategoryApi, leadInterestApi, campaignApi, productApi } from '@/lib/api';
@@ -6,10 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { MessageSquare, Send, User, Bot, Target, X, Zap, Package } from 'lucide-react';
+import { MessageSquare, Send, User, Bot, Target, X, Zap, Package, Image as ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { PermissionGuard } from '@/components/PermissionGuard';
+import { ErrorAlert } from '@/components/ErrorAlert';
 
 // Predefined quick reply greeting messages
 const QUICK_REPLIES = [
@@ -43,6 +44,10 @@ export function Inbox() {
     campaignId: '',
   });
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [error, setError] = useState<any | null>(null);
   const queryClient = useQueryClient();
 
   // Fetch conversations with auto-refresh every 10 seconds
@@ -130,14 +135,61 @@ export function Inbox() {
 
   // Send reply mutation
   const sendReplyMutation = useMutation({
-    mutationFn: (content: string) => socialApi.sendReply(selectedConversationId!, content),
+    mutationFn: ({ content, image }: { content: string; image?: File }) =>
+      socialApi.sendReply(selectedConversationId!, content, image),
     onSuccess: () => {
       setMessageText('');
+      setSelectedImage(null);
+      if (imagePreview) {
+        URL.revokeObjectURL(imagePreview);
+      }
+      setImagePreview(null);
+      // Clear file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
       // Refetch conversations and messages
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
       queryClient.invalidateQueries({ queryKey: ['conversation', selectedConversationId] });
     },
+    onError: (error: any) => {
+      console.error('❌ Error sending message:', error);
+      setError(error);
+    },
   });
+
+  // Handle image selection
+  const handleImageSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        alert('Please select an image file');
+        return;
+      }
+      // Validate file size (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Image size must be less than 5MB');
+        return;
+      }
+      setSelectedImage(file);
+      // Create preview URL
+      const previewUrl = URL.createObjectURL(file);
+      setImagePreview(previewUrl);
+    }
+  }, []);
+
+  // Remove image preview
+  const handleRemoveImage = useCallback(() => {
+    if (imagePreview) {
+      URL.revokeObjectURL(imagePreview);
+    }
+    setSelectedImage(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  }, [imagePreview]);
 
   // Create lead from conversation mutation
   const createLeadMutation = useMutation({
@@ -243,11 +295,26 @@ export function Inbox() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [selectedConversation?.messages]);
 
+  // Cleanup image preview URL on unmount
+  useEffect(() => {
+    return () => {
+      if (imagePreview) {
+        URL.revokeObjectURL(imagePreview);
+      }
+    };
+  }, [imagePreview]);
+
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!messageText.trim() || !selectedConversationId) return;
+    if (!selectedConversationId) return;
 
-    sendReplyMutation.mutate(messageText.trim());
+    // Must have either text or image
+    if (!messageText.trim() && !selectedImage) return;
+
+    sendReplyMutation.mutate({
+      content: messageText.trim(),
+      image: selectedImage || undefined,
+    });
   };
 
   const handleQuickReplyClick = (message: string) => {
@@ -452,16 +519,49 @@ export function Inbox() {
                         )}
                         <div
                           className={cn(
-                            'max-w-[70%] rounded-lg px-4 py-2',
+                            'max-w-[70%] rounded-lg',
+                            message.imageUrl ? 'p-0 overflow-hidden' : 'px-4 py-2',
                             isAgent
-                              ? 'bg-indigo-600 text-white'
-                              : 'bg-gray-100 text-slate-900'
+                              ? message.imageUrl ? 'bg-transparent' : 'bg-indigo-600 text-white'
+                              : message.imageUrl ? 'bg-transparent' : 'bg-gray-100 text-slate-900'
                           )}
                         >
-                          <p className="text-sm">{message.content}</p>
+                          {message.imageUrl && (
+                            <div className="mb-2">
+                              <img
+                                src={(() => {
+                                  if (message.imageUrl?.startsWith('http')) {
+                                    return message.imageUrl;
+                                  }
+                                  // Remove /api from base URL if present, since /uploads is served directly
+                                  const baseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5001').replace('/api', '');
+                                  return `${baseUrl}${message.imageUrl}`;
+                                })()}
+                                alt="Message attachment"
+                                className="max-w-full max-h-[300px] rounded-lg object-contain cursor-pointer hover:opacity-90 transition-opacity"
+                                onClick={() => {
+                                  const fullUrl = message.imageUrl?.startsWith('http')
+                                    ? message.imageUrl
+                                    : (() => {
+                                      const baseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5001').replace('/api', '');
+                                      return `${baseUrl}${message.imageUrl}`;
+                                    })();
+                                  window.open(fullUrl, '_blank');
+                                }}
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect fill="%23ddd" width="200" height="200"/%3E%3Ctext fill="%23999" font-family="sans-serif" font-size="14" dy="10.5" font-weight="bold" x="50%25" y="50%25" text-anchor="middle"%3EImage not found%3C/text%3E%3C/svg%3E';
+                                }}
+                                loading="lazy"
+                              />
+                            </div>
+                          )}
+                          {message.content && (
+                            <p className={cn('text-sm', message.imageUrl && 'px-4 py-2')}>{message.content}</p>
+                          )}
                           <p
                             className={cn(
                               'text-xs mt-1',
+                              message.imageUrl ? 'px-4 pb-2' : '',
                               isAgent ? 'text-indigo-100' : 'text-slate-500'
                             )}
                           >
@@ -725,30 +825,69 @@ export function Inbox() {
                 </div>
               )}
 
+              {/* Image Preview */}
+              {imagePreview && (
+                <div className="px-4 pt-4 border-t border-gray-200">
+                  <div className="relative inline-block">
+                    <img
+                      src={imagePreview}
+                      alt="Preview"
+                      className="max-h-[200px] max-w-[300px] rounded-lg object-contain"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleRemoveImage}
+                      className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Message Input */}
               <div className="p-4 border-t border-gray-200">
-                <form onSubmit={handleSendMessage} className="flex gap-2">
-                  <Input
-                    type="text"
-                    placeholder="Type a message..."
-                    value={messageText}
-                    onChange={(e) => setMessageText(e.target.value)}
-                    className="flex-1"
-                    disabled={sendReplyMutation.isPending}
-                  />
-                  <Button
-                    type="submit"
-                    disabled={!messageText.trim() || sendReplyMutation.isPending}
-                  >
-                    {sendReplyMutation.isPending ? (
-                      'Sending...'
-                    ) : (
-                      <>
-                        <Send className="w-4 h-4" />
-                        Send
-                      </>
-                    )}
-                  </Button>
+                <form onSubmit={handleSendMessage} className="space-y-2">
+                  <div className="flex gap-2">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageSelect}
+                      className="hidden"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={sendReplyMutation.isPending}
+                      title="Attach image"
+                    >
+                      <ImageIcon className="w-4 h-4" />
+                    </Button>
+                    <Input
+                      type="text"
+                      placeholder="Type a message..."
+                      value={messageText}
+                      onChange={(e) => setMessageText(e.target.value)}
+                      className="flex-1"
+                      disabled={sendReplyMutation.isPending}
+                    />
+                    <Button
+                      type="submit"
+                      disabled={(!messageText.trim() && !selectedImage) || sendReplyMutation.isPending}
+                    >
+                      {sendReplyMutation.isPending ? (
+                        'Sending...'
+                      ) : (
+                        <>
+                          <Send className="w-4 h-4" />
+                          Send
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </form>
               </div>
             </>
@@ -905,6 +1044,14 @@ export function Inbox() {
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {/* Error Alert */}
+      {error && (
+        <ErrorAlert
+          error={error}
+          onClose={() => setError(null)}
+        />
       )}
     </div>
   );

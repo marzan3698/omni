@@ -44,3 +44,58 @@ export const uploadProductImage = multer({
 // Single file upload middleware
 export const singleProductImage = uploadProductImage.single('image');
 
+// ============================================
+// Social Messages Image Upload
+// ============================================
+
+// Create uploads directory for social messages if it doesn't exist
+const socialUploadsDir = path.join(process.cwd(), 'uploads', 'social');
+if (!fs.existsSync(socialUploadsDir)) {
+  fs.mkdirSync(socialUploadsDir, { recursive: true });
+}
+
+// Configure storage for social messages
+const socialStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, socialUploadsDir);
+  },
+  filename: (req, file, cb) => {
+    // Generate unique filename: timestamp-random-originalname
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    const ext = path.extname(file.originalname);
+    // Sanitize filename - remove special characters
+    const name = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9]/g, '_');
+    cb(null, `${name}-${uniqueSuffix}${ext}`);
+  },
+});
+
+// File filter for social messages - only images
+const socialFileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  console.log('🔍 File filter check:', {
+    filename: file.originalname,
+    mimetype: file.mimetype,
+    fieldname: file.fieldname,
+  });
+
+  const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+  if (allowedMimes.includes(file.mimetype)) {
+    console.log('✅ File type allowed:', file.mimetype);
+    cb(null, true);
+  } else {
+    console.error('❌ File type rejected:', file.mimetype);
+    cb(new Error(`Invalid file type: ${file.mimetype}. Only JPEG, PNG, GIF, and WebP images are allowed.`));
+  }
+};
+
+// Configure multer for social messages
+export const uploadSocialImage = multer({
+  storage: socialStorage,
+  fileFilter: socialFileFilter,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+});
+
+// Single file upload middleware for social messages
+export const singleSocialImage = uploadSocialImage.single('image');
+

@@ -55,7 +55,8 @@ export const chatwootController = {
   getConversations: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const status = req.query.status as 'Open' | 'Closed' | undefined;
-      const conversations = await socialService.getConversations(status);
+      const companyId = (req as any).user?.companyId;
+      const conversations = await socialService.getConversations(status, companyId);
       
       // Filter Chatwoot conversations only
       const chatwootConversations = conversations.filter(
@@ -75,12 +76,13 @@ export const chatwootController = {
   getMessages: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const conversationId = parseInt(req.params.id, 10);
+      const companyId = (req as any).user?.companyId;
 
       if (isNaN(conversationId)) {
         return sendError(res, 'Invalid conversation ID', 400);
       }
 
-      const conversation = await socialService.getConversationMessages(conversationId);
+      const conversation = await socialService.getConversationMessages(conversationId, companyId);
 
       if (conversation.platform !== 'chatwoot') {
         return sendError(res, 'Conversation is not a Chatwoot conversation', 400);
@@ -120,6 +122,53 @@ export const chatwootController = {
       // Use social service which handles Chatwoot API calls
       const message = await socialService.sendReply(conversationId, content.trim(), agentId);
       return sendSuccess(res, message, 'Message sent successfully', 201);
+    } catch (error) {
+      if (error instanceof AppError) {
+        return sendError(res, error.message, error.statusCode);
+      }
+      next(error);
+    }
+  },
+
+  /**
+   * Get webhook test URL and status
+   * GET /api/chatwoot/webhooks/test
+   * Returns the webhook URL that should be configured in Chatwoot
+   */
+  getWebhookTest: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { getChatwootWebhookUrl } = await import('../utils/webhook.js');
+      const webhookUrl = await getChatwootWebhookUrl();
+      
+      // Get active Chatwoot integrations
+      const integrations = await integrationService.getIntegrations();
+      const chatwootIntegrations = integrations.filter(
+        (i) => i.provider === 'chatwoot' && i.isActive
+      );
+
+      return sendSuccess(
+        res,
+        {
+          webhookUrl,
+          integrations: chatwootIntegrations.map((i) => ({
+            id: i.id,
+            accountId: i.accountId,
+            pageId: i.pageId,
+            isActive: i.isActive,
+            isWebhookActive: i.isWebhookActive,
+            webhookMode: i.webhookMode,
+          })),
+          instructions: [
+            '1. Copy the webhookUrl above',
+            '2. Go to Chatwoot Dashboard → Settings → Integrations → Webhooks',
+            '3. Paste the URL in the webhook URL field',
+            '4. Select event: message_created',
+            '5. Save the webhook',
+            '6. Make sure isWebhookActive is true in your integration',
+          ],
+        },
+        'Webhook test information retrieved successfully'
+      );
     } catch (error) {
       if (error instanceof AppError) {
         return sendError(res, error.message, error.statusCode);

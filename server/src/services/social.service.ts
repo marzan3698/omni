@@ -132,6 +132,7 @@ export const socialService = {
           conversationId: conversation.id,
           senderType: 'customer',
           content: messageText,
+          imageUrl: null, // Test webhook doesn't support images
           createdAt: timestamp,
         },
       });
@@ -163,14 +164,54 @@ export const socialService = {
 
           // Handle different message types
           let messageContent = '';
+          let imageUrl: string | null = null;
+
           if (event.message.text) {
             messageContent = event.message.text;
           } else if (event.message.attachments && event.message.attachments.length > 0) {
             // Handle attachments (images, videos, etc.)
             const attachment = event.message.attachments[0];
-            messageContent = `[${attachment.type}] ${attachment.type === 'image' ? 'Image' : attachment.type === 'video' ? 'Video' : attachment.type === 'audio' ? 'Audio' : 'File'} attachment`;
-            if (attachment.payload && attachment.payload.url) {
-              messageContent += `: ${attachment.payload.url}`;
+
+            if (attachment.type === 'image' && attachment.payload && attachment.payload.url) {
+              // Download and save image
+              try {
+                const axios = (await import('axios')).default;
+                const fs = (await import('fs')).default;
+                const path = (await import('path')).default;
+
+                // Download image from Facebook CDN
+                const response = await axios.get(attachment.payload.url, {
+                  responseType: 'arraybuffer',
+                  params: {
+                    access_token: process.env.FACEBOOK_ACCESS_TOKEN, // May need page access token
+                  },
+                });
+
+                // Save to local storage
+                const socialUploadsDir = path.join(process.cwd(), 'uploads', 'social');
+                if (!fs.existsSync(socialUploadsDir)) {
+                  fs.mkdirSync(socialUploadsDir, { recursive: true });
+                }
+
+                const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+                const ext = '.jpg'; // Facebook images are usually JPG
+                const filename = `facebook-${uniqueSuffix}${ext}`;
+                const filePath = path.join(socialUploadsDir, filename);
+
+                fs.writeFileSync(filePath, response.data);
+                imageUrl = `/uploads/social/${filename}`;
+                messageContent = '[Image]';
+                console.log(`✅ Saved Facebook image to: ${imageUrl}`);
+              } catch (imageError: any) {
+                console.error('Error downloading/saving Facebook image:', imageError.message);
+                // Fallback to URL in content
+                messageContent = `[Image] ${attachment.payload.url}`;
+              }
+            } else {
+              messageContent = `[${attachment.type}] ${attachment.type === 'image' ? 'Image' : attachment.type === 'video' ? 'Video' : attachment.type === 'audio' ? 'Audio' : 'File'} attachment`;
+              if (attachment.payload && attachment.payload.url) {
+                messageContent += `: ${attachment.payload.url}`;
+              }
             }
           } else if (event.message.sticker_id) {
             messageContent = '[Sticker]';
@@ -226,6 +267,7 @@ export const socialService = {
               conversationId: conversation.id,
               senderType: 'customer',
               content: messageContent,
+              imageUrl: imageUrl || null,
               createdAt: timestamp,
             },
           });
@@ -363,9 +405,14 @@ export const socialService = {
   /**
    * Get messages for a specific conversation
    */
-  async getConversationMessages(conversationId: number) {
-    const conversation = await prisma.socialConversation.findUnique({
-      where: { id: conversationId },
+  async getConversationMessages(conversationId: number, companyId?: number) {
+    const where: any = { id: conversationId };
+    if (companyId) {
+      where.companyId = companyId;
+    }
+
+    const conversation = await prisma.socialConversation.findFirst({
+      where,
       include: {
         messages: {
           orderBy: {
@@ -385,15 +432,20 @@ export const socialService = {
   /**
    * Send a reply message (agent response)
    */
-  async sendReply(conversationId: number, content: string, agentId: string) {
+  async sendReply(conversationId: number, content: string, agentId: string, imageUrl?: string | null) {
+    console.log('🔵 sendReply called:', { conversationId, hasContent: !!content, hasImage: !!imageUrl, imageUrl });
+
     // Verify conversation exists
     const conversation = await prisma.socialConversation.findUnique({
       where: { id: conversationId },
     });
 
     if (!conversation) {
+      console.error('❌ Conversation not found:', conversationId);
       throw new AppError('Conversation not found', 404);
     }
+
+    console.log('✅ Conversation found:', { id: conversation.id, platform: conversation.platform, externalUserId: conversation.externalUserId });
 
     // If Chatwoot platform, send via Chatwoot API
     if (conversation.platform === 'chatwoot') {
@@ -530,17 +582,88 @@ export const socialService = {
       // Send message via Chatwoot API first
       let chatwootMessage;
       try {
+        // Prepare attachments if image is provided
+        let attachments: Array<{ type: string; data_url: string }> | undefined;
+        if (imageUrl) {
+          try {
+            // Chatwoot requires base64 data URL, not HTTP URL
+            // Read the image file and convert to base64
+            const fs = (await import('fs')).default;
+            const path = (await import('path')).default;
+
+            // Get the local file path
+            const localFilePath = imageUrl.startsWith('/')
+              ? path.join(process.cwd(), imageUrl)
+              : path.join(process.cwd(), 'uploads', 'social', path.basename(imageUrl));
+
+            console.log('📁 Reading image file:', localFilePath);
+
+            // Check if file exists
+            if (!fs.existsSync(localFilePath)) {
+              throw new AppError(`Image file not found: ${localFilePath}`, 404);
+            }
+
+            // Read file and convert to base64
+            const imageBuffer = fs.readFileSync(localFilePath);
+            const base64Image = imageBuffer.toString('base64');
+
+            // Determine MIME type from file extension
+            const ext = path.extname(localFilePath).toLowerCase();
+            const mimeTypes: Record<string, string> = {
+              '.jpg': 'image/jpeg',
+              '.jpeg': 'image/jpeg',
+              '.png': 'image/png',
+              '.gif': 'image/gif',
+              '.webp': 'image/webp',
+            };
+            const mimeType = mimeTypes[ext] || 'image/png';
+
+            // Create data URL format: data:image/png;base64,{base64String}
+            const dataUrl = `data:${mimeType};base64,${base64Image}`;
+
+            attachments = [{
+              type: 'image',
+              data_url: dataUrl,
+            }];
+
+            console.log(`✅ Image converted to base64 (${(imageBuffer.length / 1024).toFixed(2)}KB)`);
+          } catch (imageError: any) {
+            console.error('❌ Error processing image for Chatwoot:', imageError.message);
+            throw new AppError(`Failed to process image: ${imageError.message}`, 500);
+          }
+        }
+
+        console.log('📤 Calling Chatwoot API:', {
+          accountId: integration.accountId,
+          conversationId: chatwootConversationId,
+          hasContent: !!content,
+          hasAttachments: !!attachments,
+          attachmentCount: attachments?.length || 0,
+        });
+
         chatwootMessage = await chatwootService.sendChatwootMessage(
           integration.accountId,
           chatwootConversationId,
-          content,
+          content || '', // Chatwoot requires content, even if empty
           integration.accessToken,
-          integration.baseUrl
+          integration.baseUrl,
+          attachments // Pass attachments
         );
-        console.log(`✅ Message sent to Chatwoot conversation ${chatwootConversationId}`);
+        console.log(`✅ Message sent to Chatwoot conversation ${chatwootConversationId}`, {
+          messageId: chatwootMessage?.id,
+          hasAttachments: !!attachments,
+        });
       } catch (error: any) {
-        console.error('Error sending Chatwoot message via API:', error);
-        throw new AppError(`Failed to send message to Chatwoot: ${error.message}`, error.statusCode || 500);
+        console.error('❌ Error sending Chatwoot message via API:', {
+          error: error.message,
+          response: error.response?.data,
+          status: error.response?.status,
+          statusCode: error.statusCode,
+        });
+        throw new AppError(
+          `Failed to send message to Chatwoot: ${error.response?.data?.error || error.message}`,
+          error.response?.status || error.statusCode || 500
+        );
       }
 
       // Save agent message locally after successful API send
@@ -548,7 +671,8 @@ export const socialService = {
         data: {
           conversationId,
           senderType: 'agent',
-          content,
+          content: content || '', // Allow empty content if only image
+          imageUrl: imageUrl || null,
           createdAt: new Date(),
         },
       });
@@ -564,13 +688,174 @@ export const socialService = {
       return message;
     }
 
-    // For Facebook and other platforms, save locally only
-    // Save agent message
+    // For Facebook platform, send via Facebook Messenger API
+    console.log('🔍 Checking conversation platform:', {
+      conversationId: conversation.id,
+      platform: conversation.platform,
+      externalUserId: conversation.externalUserId,
+      hasImage: !!imageUrl,
+      hasContent: !!content,
+    });
+
+    if (conversation.platform === 'facebook') {
+      console.log('✅ Facebook platform detected, sending via Facebook Messenger API');
+
+      // Get Facebook integration
+      const integration = await prisma.integration.findFirst({
+        where: {
+          provider: 'facebook',
+          isActive: true,
+          companyId: conversation.companyId,
+        },
+      });
+
+      if (!integration || !integration.accessToken) {
+        console.error('❌ Facebook integration not found or not configured');
+        throw new AppError('Facebook integration not found or not configured', 400);
+      }
+
+      console.log('✅ Facebook integration found:', {
+        integrationId: integration.id,
+        hasAccessToken: !!integration.accessToken,
+      });
+
+      // Get recipient PSID from externalUserId
+      const recipientId = conversation.externalUserId;
+      if (!recipientId) {
+        console.error('❌ Recipient ID not found for conversation:', conversation.id);
+        throw new AppError('Recipient ID not found for this conversation', 400);
+      }
+
+      console.log('📤 Preparing to send to Facebook PSID:', recipientId);
+
+      // Send message via Facebook Messenger API
+      try {
+        const axios = (await import('axios')).default;
+        const apiVersion = 'v18.0';
+        const apiUrl = `https://graph.facebook.com/${apiVersion}/me/messages`;
+
+        // Prepare message payload
+        const messagePayload: any = {
+          recipient: {
+            id: recipientId,
+          },
+        };
+
+        if (imageUrl) {
+          // Construct full image URL (must be publicly accessible for Facebook)
+          // Priority: NGROK_URL > PUBLIC_URL > API_URL > SERVER_URL > localhost
+          const baseUrl = process.env.NGROK_URL
+            || process.env.PUBLIC_URL
+            || process.env.API_URL
+            || process.env.SERVER_URL
+            || 'http://localhost:5001';
+
+          const fullImageUrl = imageUrl.startsWith('http')
+            ? imageUrl
+            : `${baseUrl}${imageUrl}`;
+
+          console.log(`📤 Sending image to Facebook: ${fullImageUrl}`);
+
+          // Send image with optional text
+          messagePayload.message = {
+            attachment: {
+              type: 'image',
+              payload: {
+                url: fullImageUrl,
+                is_reusable: false,
+              },
+            },
+          };
+
+          // If there's text content, add it as a separate text message first
+          if (content && content.trim()) {
+            // Send text message first
+            await axios.post(apiUrl, {
+              recipient: { id: recipientId },
+              message: { text: content.trim() },
+            }, {
+              params: {
+                access_token: integration.accessToken,
+              },
+            });
+            console.log(`✅ Text message sent to Facebook PSID ${recipientId}`);
+          }
+
+          // Send image message
+          console.log('📤 Sending image to Facebook API:', {
+            recipientId,
+            imageUrl: fullImageUrl,
+            hasText: !!(content && content.trim()),
+          });
+
+          const imageResponse = await axios.post(apiUrl, messagePayload, {
+            params: {
+              access_token: integration.accessToken,
+            },
+          });
+          console.log(`✅ Image message sent to Facebook PSID ${recipientId}`, {
+            messageId: imageResponse.data?.message_id,
+          });
+        } else if (content && content.trim()) {
+          // Send text message only
+          messagePayload.message = {
+            text: content.trim(),
+          };
+
+          console.log('📤 Sending text to Facebook API:', { recipientId, content: content.trim() });
+
+          const textResponse = await axios.post(apiUrl, messagePayload, {
+            params: {
+              access_token: integration.accessToken,
+            },
+          });
+          console.log(`✅ Text message sent to Facebook PSID ${recipientId}`, {
+            messageId: textResponse.data?.message_id,
+          });
+        } else {
+          throw new AppError('Message content or image is required', 400);
+        }
+      } catch (error: any) {
+        console.error('❌ Error sending Facebook message:', {
+          error: error.message,
+          response: error.response?.data,
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          recipientId,
+          hasImage: !!imageUrl,
+          imageUrl: imageUrl,
+          hasContent: !!content,
+          content: content,
+          fullError: JSON.stringify(error.response?.data || error, null, 2),
+        });
+
+        // Don't throw error - save message to DB anyway so user can see it in inbox
+        // But log the error clearly
+        console.error('⚠️ Facebook API call failed, but message will be saved to database');
+
+        // Still throw error so frontend knows it failed
+        throw new AppError(
+          `Failed to send message to Facebook: ${error.response?.data?.error?.message || error.message}`,
+          error.response?.status || 500
+        );
+      }
+    } else {
+      console.log('⚠️ Conversation platform is not Facebook:', conversation.platform);
+      console.log('💡 If this is a Facebook conversation, check the conversation platform in database');
+      console.log('💡 Conversation details:', {
+        id: conversation.id,
+        platform: conversation.platform,
+        externalUserId: conversation.externalUserId,
+      });
+    }
+
+    // Save agent message locally
     const message = await prisma.socialMessage.create({
       data: {
         conversationId,
         senderType: 'agent',
-        content,
+        content: content || '', // Allow empty content if only image
+        imageUrl: imageUrl || null,
         createdAt: new Date(),
       },
     });

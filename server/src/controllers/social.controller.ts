@@ -179,12 +179,13 @@ export const socialController = {
   getConversationMessages: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const conversationId = parseInt(req.params.id, 10);
+      const companyId = (req as any).user?.companyId;
 
       if (isNaN(conversationId)) {
         return sendError(res, 'Invalid conversation ID', 400);
       }
 
-      const conversation = await socialService.getConversationMessages(conversationId);
+      const conversation = await socialService.getConversationMessages(conversationId, companyId);
       sendSuccess(res, conversation, 'Messages retrieved successfully');
     } catch (error) {
       if (error instanceof AppError) {
@@ -196,32 +197,96 @@ export const socialController = {
 
   /**
    * Send a reply message
-   * POST /api/social/conversations/:id/reply
+   * POST /api/conversations/:id/reply
+   * Supports both JSON (text only) and multipart/form-data (text + image)
    */
   sendReply: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const conversationId = parseInt(req.params.id, 10);
-      const { content } = req.body;
       const agentId = (req as any).user?.id;
+
+      console.log('📨 Send reply request:', {
+        conversationId,
+        hasFile: !!req.file,
+        fileName: req.file?.filename,
+        fileSize: req.file?.size,
+        fileMimetype: req.file?.mimetype,
+        contentType: req.headers['content-type'],
+        bodyContent: req.body.content,
+        bodyKeys: Object.keys(req.body),
+      });
 
       if (isNaN(conversationId)) {
         return sendError(res, 'Invalid conversation ID', 400);
-      }
-
-      if (!content || typeof content !== 'string' || content.trim().length === 0) {
-        return sendError(res, 'Message content is required', 400);
       }
 
       if (!agentId) {
         return sendError(res, 'User not authenticated', 401);
       }
 
-      const message = await socialService.sendReply(conversationId, content.trim(), agentId);
+      // Handle multipart/form-data (with image) or JSON (text only)
+      let content = '';
+      let imageUrl: string | null = null;
+
+      if (req.file) {
+        // Multipart/form-data request with image
+        content = (req.body.content as string) || '';
+        // Construct image URL from uploaded file
+        imageUrl = `/uploads/social/${req.file.filename}`;
+        console.log('✅ Image uploaded:', imageUrl);
+      } else {
+        // JSON request (text only)
+        content = req.body.content || '';
+      }
+
+      // Validate: must have either content or image
+      if (!content.trim() && !imageUrl) {
+        console.warn('⚠️ No content or image provided');
+        return sendError(res, 'Message content or image is required', 400);
+      }
+
+      console.log('📤 Sending message:', { conversationId, hasContent: !!content.trim(), hasImage: !!imageUrl });
+
+      const message = await socialService.sendReply(
+        conversationId,
+        content.trim(),
+        agentId,
+        imageUrl
+      );
+
+      console.log('✅ Message sent successfully:', message.id);
       sendSuccess(res, message, 'Message sent successfully', 201);
-    } catch (error) {
+    } catch (error: any) {
+      console.error('❌ Error in sendReply:', {
+        error: error.message,
+        code: error.code,
+        stack: error.stack,
+        name: error.name,
+      });
+
       if (error instanceof AppError) {
         return sendError(res, error.message, error.statusCode);
       }
+
+      // Handle multer errors
+      if (error.code === 'LIMIT_FILE_SIZE') {
+        return sendError(res, 'File size too large. Maximum size is 5MB.', 400);
+      }
+      if (error.code === 'LIMIT_UNEXPECTED_FILE') {
+        return sendError(res, 'Unexpected file field. Use "image" as the field name.', 400);
+      }
+      if (error.message && error.message.includes('Invalid file type')) {
+        return sendError(res, error.message, 400);
+      }
+      if (error.name === 'MulterError') {
+        return sendError(res, `File upload error: ${error.message}`, 400);
+      }
+
+      // If it's a validation error (422), return it as is
+      if (error.statusCode === 422 || error.status === 422) {
+        return sendError(res, error.message || 'Validation error', 422);
+      }
+
       next(error);
     }
   },

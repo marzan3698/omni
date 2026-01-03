@@ -4,7 +4,8 @@ import { authMiddleware } from '../middleware/authMiddleware.js';
 
 const router = Router();
 
-// Webhook endpoint (public - no auth required for Chatwoot webhooks)
+// Webhook endpoints (public - no auth required for Chatwoot webhooks)
+router.get('/webhooks/test', chatwootController.getWebhookTest);
 router.post('/webhooks/chatwoot', chatwootController.handleWebhook);
 
 // All other Chatwoot endpoints require authentication

@@ -684,12 +684,14 @@ model SocialMessage {
   conversationId Int        @map("conversation_id")
   senderType     SenderType @map("sender_type")
   content        String     @db.Text
+  imageUrl       String?    @map("image_url") @db.VarChar(500)
   createdAt      DateTime   @default(now()) @map("created_at")
 
   conversation SocialConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   @@index([conversationId])
   @@index([createdAt])
+  @@index([imageUrl])
   @@map("social_messages")
 }
 

@@ -128,3 +128,4 @@ cd ~/public_html/api && npx prisma migrate deploy
 
 **Quick Tip:** Keep this checklist handy during deployment!
 
+

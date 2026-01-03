@@ -20,6 +20,7 @@ export interface SocialMessage {
   conversationId: number;
   senderType: 'customer' | 'agent';
   content: string;
+  imageUrl?: string | null;
   createdAt: string;
 }
 
@@ -73,18 +74,51 @@ export const socialApi = {
 
   /**
    * Send a reply message
+   * @param conversationId - Conversation ID
+   * @param content - Text content (optional if image is provided)
+   * @param image - Optional image file
    */
-  async sendReply(conversationId: number, content: string): Promise<SocialMessage> {
-    const response = await apiClient.post<ApiResponse<SocialMessage>>(
-      `/conversations/${conversationId}/reply`,
-      { content }
-    );
+  async sendReply(conversationId: number, content: string, image?: File): Promise<SocialMessage> {
+    if (image) {
+      // Use FormData for multipart upload
+      const formData = new FormData();
+      if (content) {
+        formData.append('content', content);
+      }
+      formData.append('image', image);
 
-    if (response.data.success && response.data.data) {
-      return response.data.data;
+      console.log('📤 Sending image message:', {
+        conversationId,
+        hasContent: !!content,
+        imageName: image.name,
+        imageSize: image.size,
+        imageType: image.type,
+      });
+
+      const response = await apiClient.post<ApiResponse<SocialMessage>>(
+        `/conversations/${conversationId}/reply`,
+        formData
+        // Note: Don't set Content-Type header - apiClient will handle it
+      );
+
+      if (response.data.success && response.data.data) {
+        return response.data.data;
+      }
+
+      throw new Error(response.data.message || 'Failed to send message');
+    } else {
+      // Regular JSON request for text-only messages
+      const response = await apiClient.post<ApiResponse<SocialMessage>>(
+        `/conversations/${conversationId}/reply`,
+        { content }
+      );
+
+      if (response.data.success && response.data.data) {
+        return response.data.data;
+      }
+
+      throw new Error(response.data.message || 'Failed to send message');
     }
-
-    throw new Error(response.data.message || 'Failed to send message');
   },
 
   /**

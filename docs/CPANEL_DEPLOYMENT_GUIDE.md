@@ -538,3 +538,4 @@ Configure email settings if your app sends emails:
 **Last Updated:** 2024
 **Version:** 1.0
 
+

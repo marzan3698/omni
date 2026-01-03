@@ -103,9 +103,19 @@ app.use('/api/payments', paymentRoutes);
 // app.use('/api/users', userRoutes);
 
 // Global error handling middleware
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-  console.error('Error:', err);
-  res.status(500).json({
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+  console.error('Global error handler:', {
+    message: err.message,
+    code: err.code,
+    statusCode: err.statusCode,
+    status: err.status,
+    name: err.name,
+  });
+  
+  // Use statusCode from error if available, otherwise default to 500
+  const statusCode = err.statusCode || err.status || 500;
+  
+  res.status(statusCode).json({
     success: false,
     message: err.message || 'Internal server error',
   });
