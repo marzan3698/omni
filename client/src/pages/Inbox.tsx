@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { MessageSquare, Send, User, Bot, Target, X, Zap, Package, Image as ImageIcon } from 'lucide-react';
+import { MessageSquare, Send, User, Bot, Target, X, Zap, Package, Image as ImageIcon, Check, CheckCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { PermissionGuard } from '@/components/PermissionGuard';
@@ -48,6 +48,8 @@ export function Inbox() {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [error, setError] = useState<any | null>(null);
+  const [isTyping, setIsTyping] = useState(false);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const queryClient = useQueryClient();
 
   // Fetch conversations with auto-refresh every 10 seconds
@@ -63,6 +65,29 @@ export function Inbox() {
     queryFn: () => socialApi.getConversationMessages(selectedConversationId!),
     enabled: !!selectedConversationId,
     refetchInterval: 5000, // Refresh every 5 seconds when conversation is selected
+  });
+
+  // Fetch typing indicator status
+  const { data: typingStatus } = useQuery({
+    queryKey: ['typing-status', selectedConversationId],
+    queryFn: () => socialApi.getTypingStatus(selectedConversationId!),
+    enabled: !!selectedConversationId,
+    refetchInterval: 2000, // Poll every 2 seconds
+  });
+
+  // Mark conversation as read mutation
+  const markAsReadMutation = useMutation({
+    mutationFn: (conversationId: number) => socialApi.markConversationAsRead(conversationId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      queryClient.invalidateQueries({ queryKey: ['conversation', selectedConversationId] });
+    },
+  });
+
+  // Update typing status mutation
+  const updateTypingMutation = useMutation({
+    mutationFn: ({ conversationId, isTyping }: { conversationId: number; isTyping: boolean }) =>
+      socialApi.updateTypingStatus(conversationId, isTyping),
   });
 
   // Fetch lead categories
@@ -354,6 +379,80 @@ export function Inbox() {
     return null;
   };
 
+  // Calculate unread count for a conversation (use backend-provided count or calculate from messages)
+  const getUnreadCount = (conversation: SocialConversation): number => {
+    // Use unreadCount from backend if available
+    if (conversation.unreadCount !== undefined) {
+      return conversation.unreadCount;
+    }
+    // Fallback: calculate from messages array (for compatibility)
+    if (!conversation.messages) return 0;
+    return conversation.messages.filter(
+      (msg) => msg.senderType === 'customer' && !msg.isRead
+    ).length;
+  };
+
+  // Handle conversation selection and auto-mark as read
+  const handleConversationSelect = (conversationId: number) => {
+    setSelectedConversationId(conversationId);
+    // Mark as read when conversation is selected
+    markAsReadMutation.mutate(conversationId);
+  };
+
+  // Handle typing detection
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setMessageText(value);
+
+    if (!selectedConversationId) return;
+
+    // Clear existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    // Send typing indicator if there's text
+    if (value.trim().length > 0) {
+      updateTypingMutation.mutate({
+        conversationId: selectedConversationId,
+        isTyping: true,
+      });
+      setIsTyping(true);
+
+      // Stop typing after 2 seconds of inactivity
+      typingTimeoutRef.current = setTimeout(() => {
+        updateTypingMutation.mutate({
+          conversationId: selectedConversationId,
+          isTyping: false,
+        });
+        setIsTyping(false);
+      }, 2000);
+    } else {
+      // Stop typing immediately if input is empty
+      updateTypingMutation.mutate({
+        conversationId: selectedConversationId,
+        isTyping: false,
+      });
+      setIsTyping(false);
+    }
+  };
+
+  // Cleanup typing timeout on unmount or conversation change
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      // Stop typing when conversation changes or component unmounts
+      if (selectedConversationId && isTyping) {
+        updateTypingMutation.mutate({
+          conversationId: selectedConversationId,
+          isTyping: false,
+        });
+      }
+    };
+  }, [selectedConversationId]);
+
   return (
     <div className="h-[calc(100vh-8rem)] flex flex-col">
       <div className="mb-4">
@@ -388,7 +487,7 @@ export function Inbox() {
                   return (
                     <button
                       key={conversation.id}
-                      onClick={() => setSelectedConversationId(conversation.id)}
+                      onClick={() => handleConversationSelect(conversation.id)}
                       className={cn(
                         'w-full p-4 text-left hover:bg-gray-50 transition-colors',
                         isSelected && 'bg-indigo-50 border-l-4 border-indigo-600'
@@ -409,9 +508,19 @@ export function Inbox() {
                             <p className="text-sm font-medium text-slate-900 truncate">
                               {conversation.externalUserName || `User ${conversation.externalUserId.slice(0, 8)}`}
                             </p>
-                            {conversation.status === 'Open' && (
-                              <span className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></span>
-                            )}
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              {conversation.status === 'Open' && (
+                                <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                              )}
+                              {(() => {
+                                const unreadCount = getUnreadCount(conversation);
+                                return unreadCount > 0 ? (
+                                  <span className="bg-indigo-600 text-white text-xs font-medium rounded-full px-2 py-0.5 min-w-[20px] text-center">
+                                    {unreadCount > 99 ? '99+' : unreadCount}
+                                  </span>
+                                ) : null;
+                              })()}
+                            </div>
                           </div>
                           {lastMessage && (
                             <p className="text-xs text-slate-500 truncate mb-1">
@@ -558,15 +667,36 @@ export function Inbox() {
                           {message.content && (
                             <p className={cn('text-sm', message.imageUrl && 'px-4 py-2')}>{message.content}</p>
                           )}
-                          <p
+                          <div
                             className={cn(
-                              'text-xs mt-1',
+                              'flex items-center gap-2 mt-1',
                               message.imageUrl ? 'px-4 pb-2' : '',
-                              isAgent ? 'text-indigo-100' : 'text-slate-500'
+                              isAgent ? 'justify-end' : 'justify-start'
                             )}
                           >
-                            {formatTime(message.createdAt)}
-                          </p>
+                            <p
+                              className={cn(
+                                'text-xs',
+                                isAgent ? 'text-indigo-100' : 'text-slate-500'
+                              )}
+                            >
+                              {formatTime(message.createdAt)}
+                            </p>
+                            {/* Read/Seen receipts */}
+                            {isAgent && (
+                              <span
+                                className={cn(
+                                  'text-xs',
+                                  message.isSeen ? 'text-indigo-100' : 'text-indigo-200/70'
+                                )}
+                              >
+                                {message.isSeen ? 'seen' : 'unseen'}
+                              </span>
+                            )}
+                            {!isAgent && message.isRead && (
+                              <CheckCheck className="w-3 h-3 text-slate-400" title="Read" />
+                            )}
+                          </div>
                         </div>
                         {isAgent && (
                           <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
@@ -579,6 +709,21 @@ export function Inbox() {
                 ) : (
                   <div className="text-center text-slate-500 py-8">
                     No messages yet. Start the conversation!
+                  </div>
+                )}
+                {/* Typing Indicator */}
+                {typingStatus?.isTyping && (
+                  <div className="flex gap-3 justify-start">
+                    <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
+                      <User className="w-4 h-4 text-white" />
+                    </div>
+                    <div className="bg-gray-100 text-slate-900 rounded-lg px-4 py-2">
+                      <div className="flex gap-1">
+                        <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                        <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                        <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                      </div>
+                    </div>
                   </div>
                 )}
                 <div ref={messagesEndRef} />
@@ -870,7 +1015,7 @@ export function Inbox() {
                       type="text"
                       placeholder="Type a message..."
                       value={messageText}
-                      onChange={(e) => setMessageText(e.target.value)}
+                      onChange={handleInputChange}
                       className="flex-1"
                       disabled={sendReplyMutation.isPending}
                     />

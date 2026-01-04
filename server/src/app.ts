@@ -11,19 +11,19 @@ const app: Express = express();
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   const allowedOrigins = [process.env.CLIENT_URL || 'http://localhost:5173'];
-  
+
   if (origin && allowedOrigins.includes(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
   }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
-  
+
   // Handle preflight requests
   if (req.method === 'OPTIONS') {
     return res.sendStatus(200);
   }
-  
+
   next();
 });
 
@@ -113,10 +113,10 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
     status: err.status,
     name: err.name,
   });
-  
+
   // Use statusCode from error if available, otherwise default to 500
   const statusCode = err.statusCode || err.status || 500;
-  
+
   res.status(statusCode).json({
     success: false,
     message: err.message || 'Internal server error',

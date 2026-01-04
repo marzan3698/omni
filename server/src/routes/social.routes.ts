@@ -14,6 +14,10 @@ router.get('/conversations/analytics/public', socialController.getPublicConversa
 router.get('/conversations', authMiddleware, socialController.getConversations);
 router.get('/conversations/analytics', authMiddleware, socialController.getConversationAnalytics);
 router.get('/conversations/:id/messages', authMiddleware, socialController.getConversationMessages);
+router.post('/conversations/:id/mark-read', authMiddleware, socialController.markConversationAsRead);
+router.post('/conversations/:id/messages/:messageId/mark-read', authMiddleware, socialController.markMessageAsRead);
+router.post('/conversations/:id/typing', authMiddleware, socialController.updateTypingStatus);
+router.get('/conversations/:id/typing', authMiddleware, socialController.getTypingStatus);
 // Reply endpoint with image upload support
 // Note: singleSocialImage middleware handles file upload, errors are caught in controller
 router.post('/conversations/:id/reply', authMiddleware, (req, res, next) => {

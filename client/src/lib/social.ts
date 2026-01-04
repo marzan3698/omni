@@ -13,6 +13,7 @@ export interface SocialConversation {
   _count?: {
     messages: number;
   };
+  unreadCount?: number;
 }
 
 export interface SocialMessage {
@@ -21,6 +22,10 @@ export interface SocialMessage {
   senderType: 'customer' | 'agent';
   content: string;
   imageUrl?: string | null;
+  isRead?: boolean;
+  readAt?: string | null;
+  isSeen?: boolean;
+  seenAt?: string | null;
   createdAt: string;
 }
 
@@ -149,6 +154,63 @@ export const socialApi = {
     }
 
     throw new Error(response.data.message || 'Failed to fetch analytics');
+  },
+
+  /**
+   * Mark conversation messages as read
+   */
+  async markConversationAsRead(conversationId: number): Promise<void> {
+    const response = await apiClient.post<ApiResponse<{ markedCount: number }>>(
+      `/conversations/${conversationId}/mark-read`
+    );
+
+    if (!response.data.success) {
+      throw new Error(response.data.message || 'Failed to mark messages as read');
+    }
+  },
+
+  /**
+   * Mark a single message as read
+   */
+  async markMessageAsRead(conversationId: number, messageId: number): Promise<SocialMessage> {
+    const response = await apiClient.post<ApiResponse<SocialMessage>>(
+      `/conversations/${conversationId}/messages/${messageId}/mark-read`
+    );
+
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+
+    throw new Error(response.data.message || 'Failed to mark message as read');
+  },
+
+  /**
+   * Update typing indicator status
+   */
+  async updateTypingStatus(conversationId: number, isTyping: boolean): Promise<void> {
+    const response = await apiClient.post<ApiResponse<{ isTyping: boolean }>>(
+      `/conversations/${conversationId}/typing`,
+      { isTyping }
+    );
+
+    if (!response.data.success) {
+      throw new Error(response.data.message || 'Failed to update typing status');
+    }
+  },
+
+  /**
+   * Get typing indicator status
+   */
+  async getTypingStatus(conversationId: number): Promise<{ isTyping: boolean; userId?: string }> {
+    const response = await apiClient.get<ApiResponse<{ isTyping: boolean; userId?: string }>>(
+      `/conversations/${conversationId}/typing`
+    );
+
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+
+    throw new Error(response.data.message || 'Failed to fetch typing status');
   },
 };
 

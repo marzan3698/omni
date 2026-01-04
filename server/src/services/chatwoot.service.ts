@@ -680,6 +680,26 @@ export const chatwootService = {
             },
           });
           console.log(`${logPrefix} ✅ Saved message ID: ${message.id} in conversation ${conversation.id}`);
+          
+          // If customer message, mark all unseen agent messages as seen (customer replied, so they saw the messages)
+          if (senderType === SenderType.customer) {
+            const now = new Date();
+            const seenUpdate = await prisma.socialMessage.updateMany({
+              where: {
+                conversationId: conversation.id,
+                senderType: SenderType.agent,
+                isSeen: false,
+              },
+              data: {
+                isSeen: true,
+                seenAt: now,
+              },
+            });
+            if (seenUpdate.count > 0) {
+              console.log(`${logPrefix} ✅ Marked ${seenUpdate.count} agent messages as seen`);
+            }
+          }
+          
           console.log(`${logPrefix} ========== Webhook Processing Complete ==========`);
         } catch (messageError: any) {
           console.error(`${logPrefix} ❌ Error saving message:`, messageError);

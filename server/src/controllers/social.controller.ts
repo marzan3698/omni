@@ -290,5 +290,115 @@ export const socialController = {
       next(error);
     }
   },
+
+  /**
+   * Mark conversation messages as read
+   * POST /api/conversations/:id/mark-read
+   */
+  markConversationAsRead: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const conversationId = parseInt(req.params.id, 10);
+      const userId = (req as any).user?.id;
+      const companyId = (req as any).user?.companyId;
+
+      if (isNaN(conversationId)) {
+        return sendError(res, 'Invalid conversation ID', 400);
+      }
+
+      if (!userId || !companyId) {
+        return sendError(res, 'User not authenticated', 401);
+      }
+
+      const result = await socialService.markMessagesAsRead(conversationId, userId, companyId);
+      sendSuccess(res, result, 'Messages marked as read successfully');
+    } catch (error) {
+      if (error instanceof AppError) {
+        return sendError(res, error.message, error.statusCode);
+      }
+      next(error);
+    }
+  },
+
+  /**
+   * Mark a single message as read
+   * POST /api/conversations/:id/messages/:messageId/mark-read
+   */
+  markMessageAsRead: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const messageId = parseInt(req.params.messageId, 10);
+      const userId = (req as any).user?.id;
+      const companyId = (req as any).user?.companyId;
+
+      if (isNaN(messageId)) {
+        return sendError(res, 'Invalid message ID', 400);
+      }
+
+      if (!userId || !companyId) {
+        return sendError(res, 'User not authenticated', 401);
+      }
+
+      const message = await socialService.markMessageAsRead(messageId, userId, companyId);
+      sendSuccess(res, message, 'Message marked as read successfully');
+    } catch (error) {
+      if (error instanceof AppError) {
+        return sendError(res, error.message, error.statusCode);
+      }
+      next(error);
+    }
+  },
+
+  /**
+   * Update typing indicator status
+   * POST /api/conversations/:id/typing
+   */
+  updateTypingStatus: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const conversationId = parseInt(req.params.id, 10);
+      const userId = (req as any).user?.id;
+      const { isTyping } = req.body;
+
+      if (isNaN(conversationId)) {
+        return sendError(res, 'Invalid conversation ID', 400);
+      }
+
+      if (!userId) {
+        return sendError(res, 'User not authenticated', 401);
+      }
+
+      if (typeof isTyping !== 'boolean') {
+        return sendError(res, 'isTyping must be a boolean', 400);
+      }
+
+      const result = socialService.updateTypingStatus(conversationId, userId, isTyping);
+      sendSuccess(res, result, 'Typing status updated successfully');
+    } catch (error) {
+      if (error instanceof AppError) {
+        return sendError(res, error.message, error.statusCode);
+      }
+      next(error);
+    }
+  },
+
+  /**
+   * Get typing indicator status
+   * GET /api/conversations/:id/typing
+   */
+  getTypingStatus: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const conversationId = parseInt(req.params.id, 10);
+
+      if (isNaN(conversationId)) {
+        return sendError(res, 'Invalid conversation ID', 400);
+      }
+
+      const status = socialService.getTypingStatus(conversationId);
+      sendSuccess(res, status || { isTyping: false }, 'Typing status retrieved successfully');
+    } catch (error) {
+      if (error instanceof AppError) {
+        return sendError(res, error.message, error.statusCode);
+      }
+      next(error);
+    }
+  },
 };
 

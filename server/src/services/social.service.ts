@@ -2,6 +2,21 @@ import { prisma } from '../lib/prisma.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { chatwootService } from './chatwoot.service.js';
 
+// In-memory storage for typing indicators
+// Key: conversationId, Value: { userId: string, isTyping: boolean, updatedAt: Date }
+const typingIndicators = new Map<number, { userId: string; isTyping: boolean; updatedAt: Date }>();
+
+// Clean up old typing indicators (older than 5 seconds)
+setInterval(() => {
+  const now = new Date();
+  for (const [conversationId, data] of typingIndicators.entries()) {
+    const diffMs = now.getTime() - data.updatedAt.getTime();
+    if (diffMs > 5000) {
+      typingIndicators.delete(conversationId);
+    }
+  }
+}, 3000); // Run cleanup every 3 seconds
+
 interface FacebookWebhookEntry {
   id: string;
   time: number;
@@ -137,6 +152,24 @@ export const socialService = {
         },
       });
       console.log(`Saved message: ${message.id}`);
+      
+      // Mark all unseen agent messages as seen (customer replied, so they saw the messages)
+      const now = new Date();
+      const seenUpdate = await prisma.socialMessage.updateMany({
+        where: {
+          conversationId: conversation.id,
+          senderType: 'agent',
+          isSeen: false,
+        },
+        data: {
+          isSeen: true,
+          seenAt: now,
+        },
+      });
+      if (seenUpdate.count > 0) {
+        console.log(`✅ Marked ${seenUpdate.count} agent messages as seen`);
+      }
+      
       return { success: true };
     }
 
@@ -272,6 +305,23 @@ export const socialService = {
             },
           });
           console.log(`✅ Saved message ID: ${message.id} in conversation ${conversation.id}`);
+          
+          // Mark all unseen agent messages as seen (customer replied, so they saw the messages)
+          const now = new Date();
+          const seenUpdate = await prisma.socialMessage.updateMany({
+            where: {
+              conversationId: conversation.id,
+              senderType: 'agent',
+              isSeen: false,
+            },
+            data: {
+              isSeen: true,
+              seenAt: now,
+            },
+          });
+          if (seenUpdate.count > 0) {
+            console.log(`✅ Marked ${seenUpdate.count} agent messages as seen`);
+          }
         }
       } else {
         console.log('Entry has no messaging array:', JSON.stringify(entry, null, 2));
@@ -313,7 +363,24 @@ export const socialService = {
       },
     });
 
-    return conversations;
+    // Calculate unread count for each conversation
+    const conversationsWithUnreadCount = await Promise.all(
+      conversations.map(async (conversation) => {
+        const unreadCount = await prisma.socialMessage.count({
+          where: {
+            conversationId: conversation.id,
+            senderType: 'customer',
+            isRead: false,
+          },
+        });
+        return {
+          ...conversation,
+          unreadCount,
+        };
+      })
+    );
+
+    return conversationsWithUnreadCount;
   },
 
   /**
@@ -930,6 +997,162 @@ export const socialService = {
       totalSynced,
       totalCreated,
       totalUpdated,
+    };
+  },
+
+  /**
+   * Mark all unread messages in a conversation as read
+   */
+  async markMessagesAsRead(conversationId: number, userId: string, companyId: number) {
+    // Verify conversation exists and belongs to company
+    const conversation = await prisma.socialConversation.findFirst({
+      where: {
+        id: conversationId,
+        companyId,
+      },
+    });
+
+    if (!conversation) {
+      throw new AppError('Conversation not found', 404);
+    }
+
+    // Mark all unread agent messages as read (customer messages are not marked as read by agent)
+    const now = new Date();
+    const result = await prisma.socialMessage.updateMany({
+      where: {
+        conversationId,
+        senderType: 'customer', // Only customer messages can be read by agent
+        isRead: false,
+      },
+      data: {
+        isRead: true,
+        readAt: now,
+      },
+    });
+
+    return {
+      success: true,
+      markedCount: result.count,
+    };
+  },
+
+  /**
+   * Mark a single message as read
+   */
+  async markMessageAsRead(messageId: number, userId: string, companyId: number) {
+    // Verify message exists and belongs to company
+    const message = await prisma.socialMessage.findFirst({
+      where: {
+        id: messageId,
+        conversation: {
+          companyId,
+        },
+      },
+      include: {
+        conversation: true,
+      },
+    });
+
+    if (!message) {
+      throw new AppError('Message not found', 404);
+    }
+
+    // Only customer messages can be marked as read by agent
+    if (message.senderType !== 'customer') {
+      throw new AppError('Only customer messages can be marked as read', 400);
+    }
+
+    const now = new Date();
+    const updated = await prisma.socialMessage.update({
+      where: { id: messageId },
+      data: {
+        isRead: true,
+        readAt: now,
+      },
+    });
+
+    return updated;
+  },
+
+  /**
+   * Update seen status for messages (from Facebook read receipts)
+   */
+  async updateSeenStatus(conversationId: number, messageIds: number[], companyId: number) {
+    // Verify conversation exists and belongs to company
+    const conversation = await prisma.socialConversation.findFirst({
+      where: {
+        id: conversationId,
+        companyId,
+      },
+    });
+
+    if (!conversation) {
+      throw new AppError('Conversation not found', 404);
+    }
+
+    // Mark messages as seen (only agent messages can be seen by customer)
+    const now = new Date();
+    const result = await prisma.socialMessage.updateMany({
+      where: {
+        id: {
+          in: messageIds,
+        },
+        conversationId,
+        senderType: 'agent', // Only agent messages can be seen by customer
+        isSeen: false,
+      },
+      data: {
+        isSeen: true,
+        seenAt: now,
+      },
+    });
+
+    return {
+      success: true,
+      markedCount: result.count,
+    };
+  },
+
+  /**
+   * Update typing indicator status
+   */
+  updateTypingStatus(conversationId: number, userId: string, isTyping: boolean) {
+    if (isTyping) {
+      typingIndicators.set(conversationId, {
+        userId,
+        isTyping: true,
+        updatedAt: new Date(),
+      });
+    } else {
+      typingIndicators.delete(conversationId);
+    }
+
+    return {
+      success: true,
+      isTyping,
+    };
+  },
+
+  /**
+   * Get typing indicator status for a conversation
+   */
+  getTypingStatus(conversationId: number): { isTyping: boolean; userId?: string } | null {
+    const data = typingIndicators.get(conversationId);
+    if (!data) {
+      return { isTyping: false };
+    }
+
+    // Check if indicator is still valid (not older than 5 seconds)
+    const now = new Date();
+    const diffMs = now.getTime() - data.updatedAt.getTime();
+    if (diffMs > 5000) {
+      typingIndicators.delete(conversationId);
+      return { isTyping: false };
+    }
+
+    return {
+      isTyping: data.isTyping,
+      userId: data.userId,
     };
   },
 };
