@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import {
   LayoutDashboard,
   Users,
@@ -23,11 +24,13 @@ import {
   Plus,
   Eye,
   Package,
-  CreditCard
+  CreditCard,
+  Palette
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { PermissionGuard } from './PermissionGuard';
+import { themeApi } from '@/lib/api';
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -145,6 +148,7 @@ const menuSections: MenuSection[] = [
         permission: 'can_manage_root_items',
         submenu: [
           { label: 'General Settings', path: '/system-settings', icon: Cog },
+          { label: 'Theme Design', path: '/theme-design', icon: Palette },
           { label: 'Integrations', path: '/integrations', icon: Plug },
           { label: 'Task Configuration', path: '/task-config', icon: ListChecks },
           { label: 'Settings', path: '/settings', icon: Settings },
@@ -158,6 +162,25 @@ export function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
   const location = useLocation();
   const { user, logout } = useAuth();
   const [openDropdowns, setOpenDropdowns] = useState<Record<string, boolean>>({});
+
+  // Fetch theme settings
+  const { data: themeSettings } = useQuery({
+    queryKey: ['theme-settings'],
+    queryFn: async () => {
+      try {
+        const response = await themeApi.getThemeSettings();
+        return response.data.data;
+      } catch (error) {
+        return null;
+      }
+    },
+    retry: false,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+
+  const siteLogo = themeSettings?.siteLogo || null;
+  const siteName = themeSettings?.siteName || 'Omni CRM';
+  const apiBaseUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5001';
 
   // Auto-expand dropdowns with active submenu items
   useEffect(() => {
@@ -200,10 +223,18 @@ export function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
         {/* Header */}
         <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200 flex-shrink-0">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-indigo-600 rounded-md flex items-center justify-center">
-              <span className="text-white font-bold text-sm">O</span>
-            </div>
-            <span className="font-semibold text-slate-900 text-lg">Omni CRM</span>
+            {siteLogo ? (
+              <img
+                src={siteLogo.startsWith('/') ? `${apiBaseUrl}${siteLogo}` : siteLogo}
+                alt={siteName}
+                className="h-8 w-auto object-contain"
+              />
+            ) : (
+              <div className="w-8 h-8 bg-indigo-600 rounded-md flex items-center justify-center">
+                <span className="text-white font-bold text-sm">O</span>
+              </div>
+            )}
+            <span className="font-semibold text-slate-900 text-lg">{siteName}</span>
           </div>
           <button
             onClick={onToggle}

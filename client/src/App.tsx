@@ -25,6 +25,7 @@ import { Leads } from './pages/Leads';
 import Users from './pages/Users';
 import LeadConfig from './pages/LeadConfig';
 import SystemSettings from './pages/SystemSettings';
+import ThemeDesign from './pages/ThemeDesign';
 import PaymentSettings from './pages/PaymentSettings';
 import PaymentManagement from './pages/PaymentManagement';
 import Roles from './pages/Roles';
@@ -204,6 +205,18 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <SystemSettings />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/theme-design"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <PermissionGuard permission="can_manage_root_items">
+                    <ThemeDesign />
+                  </PermissionGuard>
                 </Layout>
               </ProtectedRoute>
             }

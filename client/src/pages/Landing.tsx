@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { CheckCircle, ArrowRight, Users, Briefcase, Target, BarChart3, MessageSquare, Star, Newspaper, TrendingUp, LineChart } from 'lucide-react';
 import { socialApi } from '@/lib/social';
 import { contentApi } from '@/lib/content';
+import { themeApi } from '@/lib/api';
 import { PublicHeader } from '@/components/PublicHeader';
 
 export function Landing() {
@@ -13,6 +14,23 @@ export function Landing() {
     queryKey: ['public-conversation-analytics'],
     queryFn: () => socialApi.getPublicAnalytics(30),
   });
+
+  // Fetch theme settings for site name
+  const { data: themeSettings } = useQuery({
+    queryKey: ['theme-settings-public'],
+    queryFn: async () => {
+      try {
+        const response = await themeApi.getThemeSettings();
+        return response.data.data;
+      } catch (error) {
+        return null;
+      }
+    },
+    retry: false,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+
+  const siteName = themeSettings?.siteName || 'Omni CRM';
 
   const { data: reviews = [] } = useQuery({
     queryKey: ['public-reviews'],
@@ -357,10 +375,10 @@ export function Landing() {
               <div className="w-8 h-8 bg-indigo-600 rounded-md flex items-center justify-center">
                 <span className="text-white font-bold text-lg">O</span>
               </div>
-              <span className="text-slate-900 font-semibold">Omni</span>
+              <span className="text-slate-900 font-semibold">{siteName}</span>
             </div>
             <div className="flex flex-wrap items-center gap-4">
-              <span>&copy; {new Date().getFullYear()} Omni CRM. All rights reserved.</span>
+              <span>&copy; {new Date().getFullYear()} {siteName}. All rights reserved.</span>
               <span className="hidden md:inline-block text-slate-300">|</span>
               <span className="hover:text-slate-900 cursor-pointer">Privacy Policy</span>
               <span className="hover:text-slate-900 cursor-pointer">Terms of Service</span>

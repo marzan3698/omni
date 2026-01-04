@@ -142,6 +142,26 @@ export const systemSettingApi = {
     apiClientInstance.delete<ApiResponse>(`/system-settings/${key}`, { params: { companyId } }),
 };
 
+// Theme API (SuperAdmin only)
+export const themeApi = {
+  getThemeSettings: () => apiClientInstance.get<ApiResponse>('/theme/settings'),
+  updateThemeSettings: (data: {
+    siteName?: string;
+    contactEmail?: string;
+    contactPhone?: string;
+    contactAddress?: string;
+  }) => apiClientInstance.post<ApiResponse>('/theme/settings', data),
+  uploadLogo: (file: File) => {
+    const formData = new FormData();
+    formData.append('logo', file);
+    return apiClientInstance.post<ApiResponse>('/theme/logo', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+};
+
 // Role API (SuperAdmin only)
 export const roleApi = {
   getAll: () => apiClientInstance.get<ApiResponse>('/roles'),

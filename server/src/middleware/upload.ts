@@ -99,3 +99,48 @@ export const uploadSocialImage = multer({
 // Single file upload middleware for social messages
 export const singleSocialImage = uploadSocialImage.single('image');
 
+// ============================================
+// Theme Logo Upload
+// ============================================
+
+// Create uploads directory for theme logo if it doesn't exist
+const themeUploadsDir = path.join(process.cwd(), 'uploads', 'theme');
+if (!fs.existsSync(themeUploadsDir)) {
+  fs.mkdirSync(themeUploadsDir, { recursive: true });
+}
+
+// Configure storage for theme logo
+const themeStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, themeUploadsDir);
+  },
+  filename: (req, file, cb) => {
+    // Generate unique filename: logo-timestamp-random.ext
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    const ext = path.extname(file.originalname);
+    cb(null, `logo-${uniqueSuffix}${ext}`);
+  },
+});
+
+// File filter for theme logo - only images (including SVG)
+const themeFileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+  if (allowedMimes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Invalid file type. Only JPEG, PNG, GIF, WebP, and SVG images are allowed.'));
+  }
+};
+
+// Configure multer for theme logo
+export const uploadThemeLogo = multer({
+  storage: themeStorage,
+  fileFilter: themeFileFilter,
+  limits: {
+    fileSize: 2 * 1024 * 1024, // 2MB limit
+  },
+});
+
+// Single file upload middleware for theme logo
+export const singleThemeLogo = uploadThemeLogo.single('logo');
+
