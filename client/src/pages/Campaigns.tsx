@@ -155,7 +155,7 @@ export default function Campaigns() {
                           </td>
                           <td className="py-3 px-4">
                             <span className="font-medium text-green-600">
-                              ${Number(campaign.budget).toLocaleString()}
+                              ৳{Number(campaign.budget).toLocaleString()}
                             </span>
                           </td>
                           <td className="py-3 px-4">

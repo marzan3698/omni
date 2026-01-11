@@ -224,7 +224,7 @@ export default function CampaignDetail() {
                 <div>
                   <p className="text-sm text-slate-600">Budget</p>
                   <p className="text-2xl font-bold text-slate-900">
-                    ${Number(campaign.budget).toLocaleString()}
+                    ৳{Number(campaign.budget).toLocaleString()}
                   </p>
                 </div>
               </div>
@@ -392,7 +392,7 @@ export default function CampaignDetail() {
                               Invoice #{ci.invoice.invoiceNumber}
                             </p>
                             <p className="text-sm text-slate-600">
-                              ${Number(ci.invoice.totalAmount).toLocaleString()}
+                              ৳{Number(ci.invoice.totalAmount).toLocaleString()}
                             </p>
                           </div>
                           <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(ci.invoice.status)}`}>
@@ -415,7 +415,7 @@ export default function CampaignDetail() {
                       <div className="flex justify-between items-center">
                         <span className="font-medium text-slate-700">Total Invoice Amount:</span>
                         <span className="text-xl font-bold text-green-600">
-                          ${totalInvoiceAmount.toLocaleString()}
+                          ৳{totalInvoiceAmount.toLocaleString()}
                         </span>
                       </div>
                     </div>
@@ -442,7 +442,7 @@ export default function CampaignDetail() {
                             )}
                           </div>
                           <p className="font-medium text-green-600">
-                            ${Number(cp.product.salePrice).toLocaleString()}
+                            ৳{Number(cp.product.salePrice).toLocaleString()}
                           </p>
                         </div>
                       </div>
@@ -517,19 +517,19 @@ export default function CampaignDetail() {
                 <div className="flex justify-between">
                   <span className="text-slate-600">Budget</span>
                   <span className="font-medium text-slate-900">
-                    ${Number(campaign.budget).toLocaleString()}
+                    ৳{Number(campaign.budget).toLocaleString()}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-600">Total Invoices</span>
                   <span className="font-medium text-slate-900">
-                    ${totalInvoiceAmount.toLocaleString()}
+                    ৳{totalInvoiceAmount.toLocaleString()}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-600">Total Leads Value</span>
                   <span className="font-medium text-green-600">
-                    ${totalLeadsValue.toLocaleString()}
+                    ৳{totalLeadsValue.toLocaleString()}
                   </span>
                 </div>
                 <div className="pt-4 border-t border-slate-200">
@@ -540,7 +540,7 @@ export default function CampaignDetail() {
                         ? 'text-green-600' 
                         : 'text-red-600'
                     }`}>
-                      ${(Number(campaign.budget) - totalInvoiceAmount).toLocaleString()}
+                      ৳{(Number(campaign.budget) - totalInvoiceAmount).toLocaleString()}
                     </span>
                   </div>
                 </div>

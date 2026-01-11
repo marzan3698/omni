@@ -29,13 +29,9 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSidebar } from '@/contexts/SidebarContext';
 import { PermissionGuard } from './PermissionGuard';
 import { themeApi } from '@/lib/api';
-
-interface SidebarProps {
-  isOpen?: boolean;
-  onToggle?: () => void;
-}
 
 interface SubMenuItem {
   label: string;
@@ -158,8 +154,9 @@ const menuSections: MenuSection[] = [
   },
 ];
 
-export function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
+export function Sidebar() {
   const location = useLocation();
+  const { isOpen, setIsOpen } = useSidebar();
   const { user, logout } = useAuth();
   const [openDropdowns, setOpenDropdowns] = useState<Record<string, boolean>>({});
 
@@ -208,7 +205,7 @@ export function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
       {isOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={onToggle}
+          onClick={() => setIsOpen(false)}
         />
       )}
 
@@ -216,7 +213,6 @@ export function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
       <aside
         className={cn(
           "fixed left-0 top-0 z-50 h-full w-64 bg-white border-r border-gray-200 transition-transform duration-300 ease-in-out flex flex-col",
-          "lg:translate-x-0",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
@@ -237,7 +233,7 @@ export function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
             <span className="font-semibold text-slate-900 text-lg">{siteName}</span>
           </div>
           <button
-            onClick={onToggle}
+            onClick={() => setIsOpen(false)}
             className="lg:hidden p-2 hover:bg-gray-100 rounded-md transition-colors"
             aria-label="Close sidebar"
           >
@@ -248,8 +244,16 @@ export function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-4 min-h-0">
           {menuSections.map((section, sectionIndex) => {
-            // Filter items by permission
+            // Filter items by permission and role
             const visibleItems = section.items.filter(item => {
+              // Hide Tasks menu for Client role
+              if (item.path === '/tasks' && user?.roleName === 'Client') {
+                return false;
+              }
+              // Show Tasks menu for all non-Client roles (users can see their own tasks)
+              if (item.path === '/tasks' && user?.roleName !== 'Client') {
+                return true;
+              }
               const hasPermission = !item.permission || user?.permissions?.[item.permission] || user?.roleName === 'SuperAdmin';
               return hasPermission;
             });
@@ -318,8 +322,8 @@ export function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
                                     <Link
                                       to={subItem.path}
                                       onClick={() => {
-                                        if (window.innerWidth < 1024 && onToggle) {
-                                          onToggle();
+                                        if (window.innerWidth < 1024) {
+                                          setIsOpen(false);
                                         }
                                       }}
                                       className={cn(
@@ -348,9 +352,14 @@ export function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
                         <Link
                           to={item.path!}
                           onClick={() => {
-                            // Close sidebar on mobile when navigating
-                            if (window.innerWidth < 1024 && onToggle) {
-                              onToggle();
+                            // Close sidebar when clicking Inbox menu item (all screen sizes)
+                            if (item.path === '/inbox') {
+                              setIsOpen(false);
+                            } else {
+                              // Close sidebar on mobile when navigating to other pages
+                              if (window.innerWidth < 1024) {
+                                setIsOpen(false);
+                              }
                             }
                           }}
                           className={cn(

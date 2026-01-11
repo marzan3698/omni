@@ -1,30 +1,103 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
-import { Menu, Bell, Search, User, LogOut } from 'lucide-react';
+import { Menu, Bell, Search, User, LogOut, Maximize2, Minimize2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSidebar } from '@/contexts/SidebarContext';
+import { cn } from '@/lib/utils';
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
 export function Layout({ children }: LayoutProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const location = useLocation();
+  const { isOpen, setIsOpen } = useSidebar();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const { user, logout } = useAuth();
+
+  // Auto-hide sidebar when on /inbox route, show when navigating away
+  useEffect(() => {
+    if (location.pathname === '/inbox') {
+      setIsOpen(false);
+    } else {
+      // Only auto-show if we're coming from inbox (to avoid interfering with manual toggles)
+      // We'll track this with a ref or just always show when not on inbox
+      setIsOpen(true);
+    }
+  }, [location.pathname, setIsOpen]);
+
+  // Check fullscreen status
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
+    };
+  }, []);
+
+  // Toggle fullscreen
+  const toggleFullscreen = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        // Enter fullscreen
+        if (document.documentElement.requestFullscreen) {
+          await document.documentElement.requestFullscreen();
+        } else if ((document.documentElement as any).webkitRequestFullscreen) {
+          await (document.documentElement as any).webkitRequestFullscreen();
+        } else if ((document.documentElement as any).mozRequestFullScreen) {
+          await (document.documentElement as any).mozRequestFullScreen();
+        } else if ((document.documentElement as any).msRequestFullscreen) {
+          await (document.documentElement as any).msRequestFullscreen();
+        }
+      } else {
+        // Exit fullscreen
+        if (document.exitFullscreen) {
+          await document.exitFullscreen();
+        } else if ((document as any).webkitExitFullscreen) {
+          await (document as any).webkitExitFullscreen();
+        } else if ((document as any).mozCancelFullScreen) {
+          await (document as any).mozCancelFullScreen();
+        } else if ((document as any).msExitFullscreen) {
+          await (document as any).msExitFullscreen();
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling fullscreen:', error);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Sidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
+      <Sidebar />
 
       {/* Main content area */}
-      <div className="lg:pl-64 transition-all duration-300">
+      <div className={cn(
+        "transition-all duration-300",
+        isOpen ? "lg:pl-64" : "lg:pl-0"
+      )}>
         {/* Topbar */}
         <header className="sticky top-0 z-30 h-16 bg-white border-b border-gray-200 shadow-sm">
           <div className="flex items-center justify-between h-full px-4 md:px-6">
-            {/* Left: Mobile menu button */}
+            {/* Left: Menu button */}
+            {/* Show on mobile always, or on desktop when sidebar is hidden and on /inbox */}
             <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="lg:hidden p-2 hover:bg-gray-100 rounded-md transition-colors"
+              onClick={() => setIsOpen(!isOpen)}
+              className={cn(
+                "p-2 hover:bg-gray-100 rounded-md transition-colors",
+                location.pathname === '/inbox' && !isOpen ? "" : "lg:hidden"
+              )}
               aria-label="Toggle sidebar"
             >
               <Menu className="w-5 h-5 text-slate-600" />
@@ -44,6 +117,20 @@ export function Layout({ children }: LayoutProps) {
 
             {/* Right: Actions */}
             <div className="flex items-center gap-2 md:gap-4">
+              {/* Fullscreen button */}
+              <button
+                onClick={toggleFullscreen}
+                className="p-2 hover:bg-gray-100 rounded-md transition-colors"
+                aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+                title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+              >
+                {isFullscreen ? (
+                  <Minimize2 className="w-5 h-5 text-slate-600" />
+                ) : (
+                  <Maximize2 className="w-5 h-5 text-slate-600" />
+                )}
+              </button>
+
               {/* Notifications */}
               <button
                 className="relative p-2 hover:bg-gray-100 rounded-md transition-colors"

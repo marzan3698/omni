@@ -424,7 +424,7 @@ export function UserDetail() {
                       <div>
                         <Label className="text-sm font-medium text-slate-600">Salary</Label>
                         <p className="text-slate-900 mt-1 font-medium">
-                          ${Number(user.employee.salary).toLocaleString()}
+                          ৳{Number(user.employee.salary).toLocaleString()}
                         </p>
                       </div>
                     )}
@@ -444,7 +444,7 @@ export function UserDetail() {
                       <div>
                         <Label className="text-sm font-medium text-slate-600">Bonus</Label>
                         <p className="text-slate-900 mt-1 font-medium">
-                          ${Number(user.employee.bonus).toLocaleString()}
+                          ৳{Number(user.employee.bonus).toLocaleString()}
                         </p>
                       </div>
                     )}

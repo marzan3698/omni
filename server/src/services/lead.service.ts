@@ -17,6 +17,10 @@ interface CreateLeadData {
   categoryId?: number;
   interestId?: number;
   campaignId?: number;
+  productId?: number;
+  purchasePrice?: number;
+  salePrice?: number;
+  profit?: number;
 }
 
 interface UpdateLeadData {
@@ -125,6 +129,14 @@ export const leadService = {
             type: true,
           },
         },
+        product: {
+          select: {
+            id: true,
+            name: true,
+            purchasePrice: true,
+            salePrice: true,
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -177,6 +189,44 @@ export const leadService = {
             name: true,
           },
         },
+        campaign: {
+          select: {
+            id: true,
+            name: true,
+            type: true,
+            description: true,
+            startDate: true,
+            endDate: true,
+            budget: true,
+          },
+        },
+        product: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            purchasePrice: true,
+            salePrice: true,
+            currency: true,
+            imageUrl: true,
+            productCompany: true,
+          },
+        },
+        createdByUser: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            profileImage: true,
+            role: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -199,7 +249,11 @@ export const leadService = {
     phone?: string;
     categoryId: number;
     interestId: number;
-    campaignId?: number;
+    campaignId: number;
+    productId?: number;
+    purchasePrice?: number;
+    salePrice?: number;
+    profit?: number;
   }) {
     // Verify conversation exists
     const conversation = await prisma.socialConversation.findFirst({
@@ -268,33 +322,57 @@ export const leadService = {
       throw new AppError('Lead interest not found', 404);
     }
 
-    // Verify campaign if provided
-    if (data.campaignId) {
-      const campaign = await prisma.campaign.findFirst({
-        where: {
-          id: data.campaignId,
-        },
-        include: {
-          company: {
-            select: {
-              id: true,
-            },
+    // Verify campaign (required)
+    if (!data.campaignId || data.campaignId <= 0) {
+      throw new AppError('Campaign is required', 400);
+    }
+    const campaign = await prisma.campaign.findFirst({
+      where: {
+        id: data.campaignId,
+      },
+      include: {
+        company: {
+          select: {
+            id: true,
           },
         },
+      },
+    });
+    if (!campaign) {
+      throw new AppError('Campaign not found', 404);
+    }
+    // Verify campaign is active (startDate <= now <= endDate)
+    const now = new Date();
+    if (campaign.startDate > now || campaign.endDate < now) {
+      throw new AppError('Campaign is not active', 400);
+    }
+
+    // Verify product if provided
+    if (data.productId) {
+      const product = await prisma.product.findFirst({
+        where: {
+          id: data.productId,
+        },
       });
-      if (!campaign) {
-        throw new AppError('Campaign not found', 404);
+      if (!product) {
+        throw new AppError('Product not found', 404);
       }
-      // Verify campaign is active (startDate <= now <= endDate)
-      const now = new Date();
-      if (campaign.startDate > now || campaign.endDate < now) {
-        throw new AppError('Campaign is not active', 400);
-      }
+    }
+
+    // Calculate profit if purchasePrice and salePrice are provided
+    let calculatedProfit: Prisma.Decimal | null = null;
+    if (data.purchasePrice !== undefined && data.salePrice !== undefined && 
+        data.purchasePrice !== null && data.salePrice !== null) {
+      calculatedProfit = new Prisma.Decimal(data.salePrice).minus(new Prisma.Decimal(data.purchasePrice));
+    } else if (data.profit !== undefined && data.profit !== null) {
+      // Use provided profit if calculation wasn't possible
+      calculatedProfit = new Prisma.Decimal(data.profit);
     }
 
     // Create lead
     return await prisma.lead.create({
       data: {
+        companyId: conversation.companyId,
         createdBy: userId,
         title: data.title,
         description: data.description || null,
@@ -307,7 +385,11 @@ export const leadService = {
         phone: data.phone || null,
         categoryId: data.categoryId,
         interestId: data.interestId,
-        campaignId: data.campaignId || null,
+        campaignId: data.campaignId,
+        productId: data.productId || null,
+        purchasePrice: data.purchasePrice !== undefined && data.purchasePrice !== null ? new Prisma.Decimal(data.purchasePrice) : null,
+        salePrice: data.salePrice !== undefined && data.salePrice !== null ? new Prisma.Decimal(data.salePrice) : null,
+        profit: calculatedProfit,
       },
       include: {
         createdByUser: {
@@ -434,6 +516,29 @@ export const leadService = {
       }
     }
 
+    // Verify product if provided
+    if (data.productId) {
+      const product = await prisma.product.findFirst({
+        where: {
+          id: data.productId,
+          companyId: data.companyId,
+        },
+      });
+      if (!product) {
+        throw new AppError('Product not found', 404);
+      }
+    }
+
+    // Calculate profit if purchasePrice and salePrice are provided
+    let calculatedProfit: Prisma.Decimal | null = null;
+    if (data.purchasePrice !== undefined && data.salePrice !== undefined && 
+        data.purchasePrice !== null && data.salePrice !== null) {
+      calculatedProfit = new Prisma.Decimal(data.salePrice).minus(new Prisma.Decimal(data.purchasePrice));
+    } else if (data.profit !== undefined && data.profit !== null) {
+      // Use provided profit if calculation wasn't possible
+      calculatedProfit = new Prisma.Decimal(data.profit);
+    }
+
     return await prisma.lead.create({
       data: {
         createdBy: data.createdBy,
@@ -449,6 +554,10 @@ export const leadService = {
         categoryId: data.categoryId,
         interestId: data.interestId,
         campaignId: data.campaignId || null,
+        productId: data.productId || null,
+        purchasePrice: data.purchasePrice !== undefined && data.purchasePrice !== null ? new Prisma.Decimal(data.purchasePrice) : null,
+        salePrice: data.salePrice !== undefined && data.salePrice !== null ? new Prisma.Decimal(data.salePrice) : null,
+        profit: calculatedProfit,
       },
       include: {
         assignedEmployee: {
@@ -486,6 +595,14 @@ export const leadService = {
             id: true,
             name: true,
             type: true,
+          },
+        },
+        product: {
+          select: {
+            id: true,
+            name: true,
+            purchasePrice: true,
+            salePrice: true,
           },
         },
       },

@@ -6,11 +6,23 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { MessageSquare, Send, User, Bot, Target, X, Zap, Package, Image as ImageIcon, Check, CheckCheck } from 'lucide-react';
+import { MessageSquare, Send, User, Bot, Target, X, Zap, Package, Image as ImageIcon, Check, CheckCheck, Clock, ShoppingCart, Users, Search, BarChart3, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { PermissionGuard } from '@/components/PermissionGuard';
 import { ErrorAlert } from '@/components/ErrorAlert';
+
+// Facebook Icon Component
+const FacebookIcon = ({ className }: { className?: string }) => (
+  <svg
+    className={className}
+    fill="currentColor"
+    viewBox="0 0 24 24"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+  </svg>
+);
 
 // Predefined quick reply greeting messages
 const QUICK_REPLIES = [
@@ -26,12 +38,21 @@ const QUICK_REPLIES = [
 
 export function Inbox() {
   const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState<'inbox' | 'taken' | 'complete'>('inbox');
   const [selectedConversationId, setSelectedConversationId] = useState<number | null>(null);
   const [messageText, setMessageText] = useState('');
   const [showLeadModal, setShowLeadModal] = useState(false);
   const [showQuickReplies, setShowQuickReplies] = useState(false);
+  const [showReleaseHistoryModal, setShowReleaseHistoryModal] = useState(false);
+  const [releaseHistoryConversationId, setReleaseHistoryConversationId] = useState<number | null>(null);
   const [quickReplyTab, setQuickReplyTab] = useState<'default' | 'campaign' | 'all'>('default');
   const [selectedCampaignId, setSelectedCampaignId] = useState<number | ''>('');
+  
+  // Multi-step lead form state
+  const [leadType, setLeadType] = useState<'sales' | 'connection' | 'research' | null>(null);
+  const [currentStep, setCurrentStep] = useState(1);
+  const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
+  
   const [leadFormData, setLeadFormData] = useState({
     title: '',
     description: '',
@@ -54,8 +75,8 @@ export function Inbox() {
 
   // Fetch conversations with auto-refresh every 10 seconds
   const { data: conversations = [], isLoading: conversationsLoading } = useQuery({
-    queryKey: ['conversations'],
-    queryFn: () => socialApi.getConversations(),
+    queryKey: ['conversations', activeTab],
+    queryFn: () => socialApi.getConversations(activeTab),
     refetchInterval: 10000, // Refresh every 10 seconds
   });
 
@@ -108,6 +129,17 @@ export function Inbox() {
       return response.data.data || [];
     },
     enabled: !!user?.companyId && showLeadModal,
+  });
+
+  // Fetch products for Sales Lead product selection
+  const { data: products = [] } = useQuery({
+    queryKey: ['products', user?.companyId],
+    queryFn: async () => {
+      if (!user?.companyId) return [];
+      const response = await productApi.getAll(user.companyId);
+      return response.data.data || [];
+    },
+    enabled: !!user?.companyId && showLeadModal && leadType === 'sales' && currentStep >= 2,
   });
 
   // Fetch active campaigns for quick replies
@@ -226,7 +258,10 @@ export function Inbox() {
     },
     onSuccess: () => {
       setShowLeadModal(false);
-      setLeadFormData({ title: '', description: '', value: '', assignedTo: '', customerName: '', phone: '', categoryId: '', interestId: '', campaignId: '' });
+      setLeadFormData({ title: '', description: '', customerName: '', phone: '', categoryId: '', interestId: '', campaignId: '' });
+      setLeadType(null);
+      setCurrentStep(1);
+      setSelectedProductId(null);
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       alert('Lead created successfully!');
     },
@@ -235,8 +270,70 @@ export function Inbox() {
     },
   });
 
+  // Assign conversation mutation
+  const assignConversationMutation = useMutation({
+    mutationFn: (conversationId: number) => socialApi.assignConversation(conversationId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conversations', activeTab] });
+      queryClient.invalidateQueries({ queryKey: ['conversations', 'inbox'] });
+      queryClient.invalidateQueries({ queryKey: ['conversations', 'taken'] });
+    },
+    onError: (error: any) => {
+      alert(error.response?.data?.message || 'Failed to assign conversation');
+    },
+  });
+
+  // Unassign conversation mutation
+  const unassignConversationMutation = useMutation({
+    mutationFn: (conversationId: number) => socialApi.unassignConversation(conversationId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conversations', activeTab] });
+      queryClient.invalidateQueries({ queryKey: ['conversations', 'inbox'] });
+      queryClient.invalidateQueries({ queryKey: ['conversations', 'taken'] });
+    },
+    onError: (error: any) => {
+      alert(error.response?.data?.message || 'Failed to unassign conversation');
+    },
+  });
+
+  // Complete conversation mutation
+  const completeConversationMutation = useMutation({
+    mutationFn: (conversationId: number) => socialApi.completeConversation(conversationId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conversations', activeTab] });
+      queryClient.invalidateQueries({ queryKey: ['conversations', 'inbox'] });
+      queryClient.invalidateQueries({ queryKey: ['conversations', 'taken'] });
+      queryClient.invalidateQueries({ queryKey: ['conversations', 'complete'] });
+      queryClient.invalidateQueries({ queryKey: ['conversation', selectedConversationId] });
+    },
+    onError: (error: any) => {
+      alert(error.response?.data?.message || 'Failed to complete conversation');
+    },
+  });
+
+  // Fetch release history
+  const { data: releaseHistory = [], isLoading: releaseHistoryLoading } = useQuery({
+    queryKey: ['conversation-release-history', releaseHistoryConversationId],
+    queryFn: async () => {
+      if (!releaseHistoryConversationId) return [];
+      return await socialApi.getConversationReleaseHistory(releaseHistoryConversationId);
+    },
+    enabled: !!releaseHistoryConversationId && showReleaseHistoryModal,
+  });
+
+  const handleShowReleaseHistory = (conversationId: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setReleaseHistoryConversationId(conversationId);
+    setShowReleaseHistoryModal(true);
+  };
+
   const handleCreateLead = () => {
     if (!selectedConversation) return;
+
+    // Reset multi-step form state
+    setLeadType(null);
+    setCurrentStep(1);
+    setSelectedProductId(null);
 
     // Pre-fill form with conversation data
     const defaultTitle = selectedConversation.externalUserName
@@ -246,8 +343,6 @@ export function Inbox() {
     setLeadFormData({
       title: defaultTitle,
       description: selectedConversation.messages?.[0]?.content || '',
-      value: '',
-      assignedTo: '',
       customerName: selectedConversation.externalUserName || '',
       phone: '',
       categoryId: '',
@@ -255,6 +350,35 @@ export function Inbox() {
       campaignId: '',
     });
     setShowLeadModal(true);
+  };
+
+  // Calculate total steps based on lead type
+  const getTotalSteps = () => {
+    if (!leadType) return 1;
+    if (leadType === 'sales') return 4; // Type → Product → Customer → Details
+    return 3; // Type → Basic Info → Additional Details (Connection/Research)
+  };
+
+  const totalSteps = getTotalSteps();
+
+  // Get modal title based on current step and lead type
+  const getModalTitle = () => {
+    if (currentStep === 1) return 'Select Lead Type';
+    if (!leadType) return 'Create Lead from Conversation';
+    
+    if (leadType === 'sales') {
+      if (currentStep === 2) return 'Product Selection';
+      if (currentStep === 3) return 'Customer Information';
+      if (currentStep === 4) return 'Lead Details';
+    } else if (leadType === 'connection') {
+      if (currentStep === 2) return 'Basic Information';
+      if (currentStep === 3) return 'Additional Details';
+    } else if (leadType === 'research') {
+      if (currentStep === 2) return 'Basic Information';
+      if (currentStep === 3) return 'Research Details';
+    }
+    
+    return 'Create Lead from Conversation';
   };
 
   const handleSubmitLead = (e: React.FormEvent) => {
@@ -298,20 +422,79 @@ export function Inbox() {
       return;
     }
 
+    // Campaign is now required
+    if (!leadFormData.campaignId || leadFormData.campaignId === '') {
+      alert('Campaign is required');
+      return;
+    }
+
     const campaignIdNum = leadFormData.campaignId && leadFormData.campaignId !== ''
       ? parseInt(leadFormData.campaignId, 10)
-      : undefined;
+      : null;
 
-    createLeadMutation.mutate({
-      title: leadFormData.title,
+    if (!campaignIdNum || isNaN(campaignIdNum)) {
+      alert('Please select a valid campaign');
+      return;
+    }
+
+    // For Sales Lead, validate product selection
+    if (leadType === 'sales' && !selectedProductId) {
+      alert('Please select a product');
+      return;
+    }
+
+    // Auto-generate title for Sales Lead if not provided
+    let finalTitle = leadFormData.title;
+    if (leadType === 'sales' && selectedProductId) {
+      const selectedProduct = products.find((p: any) => p.id === selectedProductId);
+      if (selectedProduct && !leadFormData.title.includes(selectedProduct.name)) {
+        finalTitle = `${selectedProduct.name} - ${leadFormData.customerName}`;
+      }
+    }
+
+    // Prepare lead data
+    const leadData: any = {
+      title: finalTitle,
       description: leadFormData.description || undefined,
-      value: leadFormData.value ? parseFloat(leadFormData.value) : undefined,
-      assignedTo: leadFormData.assignedTo ? parseInt(leadFormData.assignedTo, 10) : undefined,
       customerName: leadFormData.customerName || undefined,
       phone: leadFormData.phone || undefined,
       categoryId: categoryIdNum,
       interestId: interestIdNum,
-      campaignId: campaignIdNum,
+      campaignId: campaignIdNum, // Required field
+    };
+
+    // For Sales Lead, add product pricing information
+    if (leadType === 'sales' && selectedProductId) {
+      const selectedProduct = products.find((p: any) => p.id === selectedProductId);
+      if (selectedProduct) {
+        const purchasePrice = parseFloat(selectedProduct.purchasePrice) || 0;
+        const salePrice = parseFloat(selectedProduct.salePrice) || 0;
+        const profit = salePrice - purchasePrice;
+        
+        leadData.productId = selectedProductId;
+        leadData.purchasePrice = purchasePrice;
+        leadData.salePrice = salePrice;
+        leadData.profit = profit;
+      }
+    }
+
+    createLeadMutation.mutate(leadData, {
+      onSuccess: () => {
+        // Reset form state
+        setShowLeadModal(false);
+        setLeadType(null);
+        setCurrentStep(1);
+        setSelectedProductId(null);
+        setLeadFormData({
+          title: '',
+          description: '',
+          customerName: '',
+          phone: '',
+          categoryId: '',
+          interestId: '',
+          campaignId: '',
+        });
+      }
     });
   };
 
@@ -455,11 +638,6 @@ export function Inbox() {
 
   return (
     <div className="h-[calc(100vh-8rem)] flex flex-col">
-      <div className="mb-4">
-        <h1 className="text-3xl font-bold text-slate-900">Inbox</h1>
-        <p className="text-slate-600 mt-1">Manage your social media conversations</p>
-      </div>
-
       <div className="flex-1 flex gap-4 overflow-hidden">
         {/* Left Column: Conversation List */}
         <Card className="w-80 flex flex-col shadow-sm border-gray-200">
@@ -468,6 +646,42 @@ export function Inbox() {
             <p className="text-xs text-slate-500 mt-1">
               {conversations.length} {conversations.length === 1 ? 'conversation' : 'conversations'}
             </p>
+            {/* Tabs */}
+            <div className="flex gap-2 mt-3">
+              <button
+                onClick={() => setActiveTab('inbox')}
+                className={cn(
+                  'flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
+                  activeTab === 'inbox'
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-gray-100 text-slate-700 hover:bg-gray-200'
+                )}
+              >
+                Inbox
+              </button>
+              <button
+                onClick={() => setActiveTab('taken')}
+                className={cn(
+                  'flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
+                  activeTab === 'taken'
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-gray-100 text-slate-700 hover:bg-gray-200'
+                )}
+              >
+                Taken
+              </button>
+              <button
+                onClick={() => setActiveTab('complete')}
+                className={cn(
+                  'flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
+                  activeTab === 'complete'
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-gray-100 text-slate-700 hover:bg-gray-200'
+                )}
+              >
+                Complete
+              </button>
+            </div>
           </div>
 
           <div className="flex-1 overflow-y-auto">
@@ -483,15 +697,21 @@ export function Inbox() {
                 {conversations.map((conversation) => {
                   const lastMessage = getLastMessage(conversation);
                   const isSelected = selectedConversationId === conversation.id;
+                  const isAssigned = conversation.assignedTo !== null && conversation.assignedTo !== undefined;
+                  const isAssigning = assignConversationMutation.isPending;
+                  const isUnassigning = unassignConversationMutation.isPending;
 
                   return (
-                    <button
+                    <div
                       key={conversation.id}
-                      onClick={() => handleConversationSelect(conversation.id)}
                       className={cn(
-                        'w-full p-4 text-left hover:bg-gray-50 transition-colors',
+                        'w-full hover:bg-gray-50 transition-colors',
                         isSelected && 'bg-indigo-50 border-l-4 border-indigo-600'
                       )}
+                    >
+                      <button
+                        onClick={() => handleConversationSelect(conversation.id)}
+                        className="w-full p-4 text-left"
                     >
                       <div className="flex items-start gap-3">
                         <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
@@ -505,13 +725,30 @@ export function Inbox() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between mb-1">
+                              <div className="flex items-center gap-2 flex-1 min-w-0">
+                                {conversation.platform === 'facebook' && (
+                                  <FacebookIcon className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                                )}
                             <p className="text-sm font-medium text-slate-900 truncate">
                               {conversation.externalUserName || `User ${conversation.externalUserId.slice(0, 8)}`}
                             </p>
+                              </div>
                             <div className="flex items-center gap-2 flex-shrink-0">
                               {conversation.status === 'Open' && (
                                 <span className="w-2 h-2 bg-green-500 rounded-full"></span>
                               )}
+                                {(() => {
+                                  const releaseCount = conversation._count?.releases || 0;
+                                  return releaseCount > 0 ? (
+                                    <button
+                                      onClick={(e) => handleShowReleaseHistory(conversation.id, e)}
+                                      className="bg-orange-100 text-orange-700 text-xs font-medium rounded-full px-2 py-0.5 border border-orange-300 hover:bg-orange-200 transition-colors cursor-pointer"
+                                      title="Click to view release history"
+                                    >
+                                      Released
+                                    </button>
+                                  ) : null;
+                                })()}
                               {(() => {
                                 const unreadCount = getUnreadCount(conversation);
                                 return unreadCount > 0 ? (
@@ -535,6 +772,37 @@ export function Inbox() {
                         </div>
                       </div>
                     </button>
+                      {/* Action buttons */}
+                      <div className="px-4 pb-3">
+                        {activeTab === 'inbox' && !isAssigned && (
+                          <Button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              assignConversationMutation.mutate(conversation.id);
+                            }}
+                            disabled={isAssigning || isUnassigning}
+                            size="sm"
+                            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"
+                          >
+                            {isAssigning ? 'Taking...' : 'Take'}
+                          </Button>
+                        )}
+                        {activeTab === 'taken' && isAssigned && (
+                          <Button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              unassignConversationMutation.mutate(conversation.id);
+                            }}
+                            disabled={isAssigning || isUnassigning}
+                            size="sm"
+                            variant="outline"
+                            className="w-full border-red-300 text-red-600 hover:bg-red-50"
+                          >
+                            {isUnassigning ? 'Releasing...' : 'Release'}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
                   );
                 })}
               </div>
@@ -604,6 +872,22 @@ export function Inbox() {
                       Create Lead
                     </Button>
                   </PermissionGuard>
+                  {selectedConversation.status === 'Open' && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        if (selectedConversationId) {
+                          completeConversationMutation.mutate(selectedConversationId);
+                        }
+                      }}
+                      disabled={completeConversationMutation.isPending}
+                      className="ml-2"
+                    >
+                      <Check className="w-4 h-4 mr-2" />
+                      {completeConversationMutation.isPending ? 'Completing...' : 'Complete'}
+                    </Button>
+                  )}
                 </div>
               </div>
 
@@ -1043,25 +1327,231 @@ export function Inbox() {
       {/* Create Lead Modal */}
       {showLeadModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <Card className="w-full max-w-md shadow-lg">
-            <CardHeader>
+          <Card className="w-full max-w-2xl shadow-lg max-h-[90vh] overflow-hidden flex flex-col">
+            <CardHeader className="flex-shrink-0">
               <div className="flex items-center justify-between">
-                <CardTitle>Create Lead from Conversation</CardTitle>
+                <CardTitle>{getModalTitle()}</CardTitle>
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => setShowLeadModal(false)}
+                  onClick={() => {
+                    setShowLeadModal(false);
+                    setLeadType(null);
+                    setCurrentStep(1);
+                    setSelectedProductId(null);
+                  }}
                 >
                   <X className="w-4 h-4" />
                 </Button>
               </div>
+              
+              {/* Progress Bar */}
+              {leadType && (
+                <div className="mt-4">
+                  <div className="flex items-center justify-between mb-2">
+                    {Array.from({ length: totalSteps }, (_, i) => i + 1).map((step) => {
+                      const stepNum = step;
+                      const isCompleted = stepNum < currentStep;
+                      const isCurrent = stepNum === currentStep;
+                      
+                      return (
+                        <div key={stepNum} className="flex items-center flex-1">
+                          <div className="flex items-center justify-center flex-1">
+                            <div
+                              className={cn(
+                                "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300",
+                                isCompleted
+                                  ? "bg-green-500 text-white"
+                                  : isCurrent
+                                  ? "bg-indigo-600 text-white ring-4 ring-indigo-200"
+                                  : "bg-gray-200 text-gray-600"
+                              )}
+                            >
+                              {isCompleted ? (
+                                <Check className="w-4 h-4" />
+                              ) : (
+                                stepNum
+                              )}
+                            </div>
+                          </div>
+                          {stepNum < totalSteps && (
+                            <div
+                              className={cn(
+                                "h-1 flex-1 mx-2 transition-all duration-300",
+                                isCompleted ? "bg-green-500" : "bg-gray-200"
+                              )}
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                    <div
+                      className="bg-indigo-600 h-full transition-all duration-300 ease-in-out"
+                      style={{ width: `${(currentStep / totalSteps) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              )}
             </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmitLead} className="space-y-4">
+            <CardContent className="flex-1 overflow-y-auto">
+              {/* Step 1: Lead Type Selection */}
+              {currentStep === 1 && !leadType && (
+                <div className="space-y-4">
+                  <p className="text-sm text-slate-600 mb-4">Select the type of lead you want to create:</p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Sales Lead */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLeadType('sales');
+                        setCurrentStep(2);
+                      }}
+                      className={cn(
+                        "p-6 border-2 rounded-lg text-left transition-all duration-200 hover:shadow-lg hover:scale-105",
+                        "border-gray-200 hover:border-indigo-500 bg-white"
+                      )}
+                    >
+                      <div className="flex flex-col items-center text-center">
+                        <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center mb-3">
+                          <ShoppingCart className="w-6 h-6 text-indigo-600" />
+                        </div>
+                        <h3 className="font-semibold text-slate-900 mb-1">Sales Lead</h3>
+                        <p className="text-xs text-slate-600">Create a lead for product sales</p>
+                      </div>
+                    </button>
+
+                    {/* Connection Lead */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLeadType('connection');
+                        setCurrentStep(2);
+                      }}
+                      className={cn(
+                        "p-6 border-2 rounded-lg text-left transition-all duration-200 hover:shadow-lg hover:scale-105",
+                        "border-gray-200 hover:border-indigo-500 bg-white"
+                      )}
+                    >
+                      <div className="flex flex-col items-center text-center">
+                        <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center mb-3">
+                          <Users className="w-6 h-6 text-indigo-600" />
+                        </div>
+                        <h3 className="font-semibold text-slate-900 mb-1">Connection Lead</h3>
+                        <p className="text-xs text-slate-600">Create a lead for networking/partnerships</p>
+                      </div>
+                    </button>
+
+                    {/* Research Lead */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLeadType('research');
+                        setCurrentStep(2);
+                      }}
+                      className={cn(
+                        "p-6 border-2 rounded-lg text-left transition-all duration-200 hover:shadow-lg hover:scale-105",
+                        "border-gray-200 hover:border-indigo-500 bg-white"
+                      )}
+                    >
+                      <div className="flex flex-col items-center text-center">
+                        <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center mb-3">
+                          <BarChart3 className="w-6 h-6 text-indigo-600" />
+                        </div>
+                        <h3 className="font-semibold text-slate-900 mb-1">Research Lead</h3>
+                        <p className="text-xs text-slate-600">Create a lead for market research</p>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Sales Lead - Step 2: Product Selection */}
+              {leadType === 'sales' && currentStep === 2 && (
+                <div className="space-y-4">
+                  <p className="text-sm text-slate-600 mb-4">Select a product for this sales lead:</p>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
+                    {products.map((product: any) => (
+                      <button
+                        key={product.id}
+                        type="button"
+                        onClick={() => setSelectedProductId(product.id)}
+                        className={cn(
+                          "p-4 border-2 rounded-lg text-left transition-all duration-200 hover:shadow-md",
+                          selectedProductId === product.id
+                            ? "border-indigo-500 bg-indigo-50 ring-2 ring-indigo-200"
+                            : "border-gray-200 hover:border-indigo-300 bg-white"
+                        )}
+                      >
+                        {product.imageUrl && (
+                          <img
+                            src={product.imageUrl}
+                            alt={product.name}
+                            className="w-full h-24 object-cover rounded-md mb-2"
+                          />
+                        )}
+                        {!product.imageUrl && (
+                          <div className="w-full h-24 bg-gray-100 rounded-md mb-2 flex items-center justify-center">
+                            <Package className="w-8 h-8 text-gray-400" />
+                          </div>
+                        )}
+                        <h4 className="font-medium text-slate-900 text-sm mb-1 truncate">{product.name}</h4>
+                        {product.price && (
+                          <p className="text-xs text-slate-600">৳{parseFloat(product.price).toFixed(2)}</p>
+                        )}
+                        {selectedProductId === product.id && (
+                          <div className="mt-2 flex items-center text-indigo-600 text-xs">
+                            <Check className="w-4 h-4 mr-1" />
+                            Selected
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                  {products.length === 0 && (
+                    <div className="text-center py-8 text-slate-500">
+                      <Package className="w-12 h-12 mx-auto mb-2 text-slate-300" />
+                      <p>No products available</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Sales Lead - Step 3: Customer Information */}
+              {leadType === 'sales' && currentStep === 3 && (
+                <div className="space-y-4">
                 <div>
-                  <Label htmlFor="lead-title">Lead Title *</Label>
+                    <Label htmlFor="sales-customer-name">Customer Name *</Label>
                   <Input
-                    id="lead-title"
+                      id="sales-customer-name"
+                      value={leadFormData.customerName}
+                      onChange={(e) => setLeadFormData({ ...leadFormData, customerName: e.target.value })}
+                      placeholder="Enter customer name"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="sales-phone">Phone *</Label>
+                    <Input
+                      id="sales-phone"
+                      type="tel"
+                      value={leadFormData.phone}
+                      onChange={(e) => setLeadFormData({ ...leadFormData, phone: e.target.value })}
+                      placeholder="Enter phone number"
+                      required
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Sales Lead - Step 4: Lead Details */}
+              {leadType === 'sales' && currentStep === 4 && (
+                <form id="sales-lead-form" onSubmit={handleSubmitLead} className="space-y-4">
+                  <div>
+                    <Label htmlFor="sales-lead-title">Lead Title *</Label>
+                    <Input
+                      id="sales-lead-title"
                     value={leadFormData.title}
                     onChange={(e) => setLeadFormData({ ...leadFormData, title: e.target.value })}
                     placeholder="Enter lead title"
@@ -1069,9 +1559,114 @@ export function Inbox() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="lead-customer-name">Customer Name *</Label>
+                    <Label htmlFor="sales-lead-category">Category *</Label>
+                    <select
+                      id="sales-lead-category"
+                      value={leadFormData.categoryId}
+                      onChange={(e) => setLeadFormData({ ...leadFormData, categoryId: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      required
+                    >
+                      <option value="">Select category</option>
+                      {categories.map((cat: any) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <Label htmlFor="sales-lead-interest">Interest *</Label>
+                    <select
+                      id="sales-lead-interest"
+                      value={leadFormData.interestId}
+                      onChange={(e) => setLeadFormData({ ...leadFormData, interestId: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      required
+                    >
+                      <option value="">Select interest</option>
+                      {interests.map((int: any) => (
+                        <option key={int.id} value={int.id}>
+                          {int.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <Label htmlFor="sales-lead-campaign">Select Campaign *</Label>
+                    <select
+                      id="sales-lead-campaign"
+                      value={leadFormData.campaignId}
+                      onChange={(e) => setLeadFormData({ ...leadFormData, campaignId: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      required
+                    >
+                      <option value="">Select campaign</option>
+                      {campaigns.map((campaign: any) => (
+                        <option key={campaign.id} value={campaign.id}>
+                          {campaign.name} - {campaign.type.charAt(0).toUpperCase() + campaign.type.slice(1)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <Label htmlFor="sales-lead-description">Description</Label>
+                    <textarea
+                      id="sales-lead-description"
+                      value={leadFormData.description}
+                      onChange={(e) => setLeadFormData({ ...leadFormData, description: e.target.value })}
+                      placeholder="Enter lead description"
+                      className="w-full min-h-[100px] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                  {/* Product Pricing Summary for Sales Lead */}
+                  {selectedProductId && (() => {
+                    const selectedProduct = products.find((p: any) => p.id === selectedProductId);
+                    if (selectedProduct) {
+                      const purchasePrice = parseFloat(selectedProduct.purchasePrice) || 0;
+                      const salePrice = parseFloat(selectedProduct.salePrice) || 0;
+                      const profit = salePrice - purchasePrice;
+                      return (
+                        <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-lg space-y-2">
+                          <h4 className="font-semibold text-slate-900 text-sm mb-3">Product Pricing Summary</h4>
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <span className="text-slate-600">Product:</span>
+                              <p className="font-medium text-slate-900">{selectedProduct.name}</p>
+                            </div>
+                            <div>
+                              <span className="text-slate-600">Purchase Price:</span>
+                              <p className="font-medium text-slate-900">৳{purchasePrice.toFixed(2)}</p>
+                            </div>
+                            <div>
+                              <span className="text-slate-600">Sale Price:</span>
+                              <p className="font-medium text-slate-900">৳{salePrice.toFixed(2)}</p>
+                            </div>
+                            <div>
+                              <span className="text-slate-600">Profit:</span>
+                              <p className={cn(
+                                "font-medium",
+                                profit > 0 ? "text-green-600" : profit < 0 ? "text-red-600" : "text-slate-600"
+                              )}>
+                                ৳{profit.toFixed(2)}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+                </form>
+              )}
+
+              {/* Connection Lead - Step 2: Basic Information */}
+              {leadType === 'connection' && currentStep === 2 && (
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="connection-customer-name">Customer Name *</Label>
                   <Input
-                    id="lead-customer-name"
+                      id="connection-customer-name"
                     value={leadFormData.customerName}
                     onChange={(e) => setLeadFormData({ ...leadFormData, customerName: e.target.value })}
                     placeholder="Enter customer name"
@@ -1079,9 +1674,9 @@ export function Inbox() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="lead-phone">Phone *</Label>
+                    <Label htmlFor="connection-phone">Phone *</Label>
                   <Input
-                    id="lead-phone"
+                      id="connection-phone"
                     type="tel"
                     value={leadFormData.phone}
                     onChange={(e) => setLeadFormData({ ...leadFormData, phone: e.target.value })}
@@ -1090,9 +1685,35 @@ export function Inbox() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="lead-category">Category *</Label>
+                    <Label htmlFor="connection-title">Lead Title *</Label>
+                    <Input
+                      id="connection-title"
+                      value={leadFormData.title}
+                      onChange={(e) => setLeadFormData({ ...leadFormData, title: e.target.value })}
+                      placeholder="Enter lead title"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="connection-description">Description</Label>
+                    <textarea
+                      id="connection-description"
+                      value={leadFormData.description}
+                      onChange={(e) => setLeadFormData({ ...leadFormData, description: e.target.value })}
+                      placeholder="Enter lead description"
+                      className="w-full min-h-[100px] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Connection Lead - Step 3: Additional Details */}
+              {leadType === 'connection' && currentStep === 3 && (
+                <form id="connection-lead-form" onSubmit={handleSubmitLead} className="space-y-4">
+                  <div>
+                    <Label htmlFor="connection-category">Category *</Label>
                   <select
-                    id="lead-category"
+                      id="connection-category"
                     value={leadFormData.categoryId}
                     onChange={(e) => setLeadFormData({ ...leadFormData, categoryId: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -1107,9 +1728,9 @@ export function Inbox() {
                   </select>
                 </div>
                 <div>
-                  <Label htmlFor="lead-interest">Interest *</Label>
+                    <Label htmlFor="connection-interest">Interest *</Label>
                   <select
-                    id="lead-interest"
+                      id="connection-interest"
                     value={leadFormData.interestId}
                     onChange={(e) => setLeadFormData({ ...leadFormData, interestId: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -1124,14 +1745,15 @@ export function Inbox() {
                   </select>
                 </div>
                 <div>
-                  <Label htmlFor="lead-campaign">Select Campaign</Label>
+                    <Label htmlFor="connection-campaign">Select Campaign *</Label>
                   <select
-                    id="lead-campaign"
+                      id="connection-campaign"
                     value={leadFormData.campaignId}
                     onChange={(e) => setLeadFormData({ ...leadFormData, campaignId: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      required
                   >
-                    <option value="">No campaign (optional)</option>
+                      <option value="">Select campaign</option>
                     {campaigns.map((campaign: any) => (
                       <option key={campaign.id} value={campaign.id}>
                         {campaign.name} - {campaign.type.charAt(0).toUpperCase() + campaign.type.slice(1)}
@@ -1139,53 +1761,276 @@ export function Inbox() {
                     ))}
                   </select>
                 </div>
+                </form>
+              )}
+
+              {/* Research Lead - Step 2: Basic Information */}
+              {leadType === 'research' && currentStep === 2 && (
+                <div className="space-y-4">
                 <div>
-                  <Label htmlFor="lead-description">Description</Label>
+                    <Label htmlFor="research-customer-name">Customer Name *</Label>
+                    <Input
+                      id="research-customer-name"
+                      value={leadFormData.customerName}
+                      onChange={(e) => setLeadFormData({ ...leadFormData, customerName: e.target.value })}
+                      placeholder="Enter customer name"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="research-phone">Phone *</Label>
+                    <Input
+                      id="research-phone"
+                      type="tel"
+                      value={leadFormData.phone}
+                      onChange={(e) => setLeadFormData({ ...leadFormData, phone: e.target.value })}
+                      placeholder="Enter phone number"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="research-title">Lead Title *</Label>
+                    <Input
+                      id="research-title"
+                      value={leadFormData.title}
+                      onChange={(e) => setLeadFormData({ ...leadFormData, title: e.target.value })}
+                      placeholder="Enter lead title"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="research-description">Description</Label>
                   <textarea
-                    id="lead-description"
+                      id="research-description"
                     value={leadFormData.description}
                     onChange={(e) => setLeadFormData({ ...leadFormData, description: e.target.value })}
                     placeholder="Enter lead description"
                     className="w-full min-h-[100px] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
+                </div>
+              )}
+
+              {/* Research Lead - Step 3: Research Details */}
+              {leadType === 'research' && currentStep === 3 && (
+                <form id="research-lead-form" onSubmit={handleSubmitLead} className="space-y-4">
                 <div>
-                  <Label htmlFor="lead-value">Estimated Value</Label>
-                  <Input
-                    id="lead-value"
-                    type="number"
-                    step="0.01"
-                    value={leadFormData.value}
-                    onChange={(e) => setLeadFormData({ ...leadFormData, value: e.target.value })}
-                    placeholder="0.00"
-                  />
+                    <Label htmlFor="research-category">Category *</Label>
+                    <select
+                      id="research-category"
+                      value={leadFormData.categoryId}
+                      onChange={(e) => setLeadFormData({ ...leadFormData, categoryId: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      required
+                    >
+                      <option value="">Select category</option>
+                      {categories.map((cat: any) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </option>
+                      ))}
+                    </select>
                 </div>
                 <div>
-                  <Label htmlFor="lead-assigned">Assign To (Employee ID)</Label>
-                  <Input
-                    id="lead-assigned"
-                    type="number"
-                    value={leadFormData.assignedTo}
-                    onChange={(e) => setLeadFormData({ ...leadFormData, assignedTo: e.target.value })}
-                    placeholder="Optional"
-                  />
+                    <Label htmlFor="research-interest">Interest *</Label>
+                    <select
+                      id="research-interest"
+                      value={leadFormData.interestId}
+                      onChange={(e) => setLeadFormData({ ...leadFormData, interestId: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      required
+                    >
+                      <option value="">Select interest</option>
+                      {interests.map((int: any) => (
+                        <option key={int.id} value={int.id}>
+                          {int.name}
+                        </option>
+                      ))}
+                    </select>
                 </div>
-                <div className="flex gap-2 justify-end">
+                  <div>
+                    <Label htmlFor="research-campaign">Select Campaign *</Label>
+                    <select
+                      id="research-campaign"
+                      value={leadFormData.campaignId}
+                      onChange={(e) => setLeadFormData({ ...leadFormData, campaignId: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      required
+                    >
+                      <option value="">Select campaign</option>
+                      {campaigns.map((campaign: any) => (
+                        <option key={campaign.id} value={campaign.id}>
+                          {campaign.name} - {campaign.type.charAt(0).toUpperCase() + campaign.type.slice(1)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </form>
+              )}
+
+              {/* Navigation Buttons */}
+              <div className="flex gap-2 justify-between mt-6 pt-4 border-t border-gray-200">
+                <div>
+                  {currentStep > 1 && (
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setShowLeadModal(false)}
+                      onClick={() => {
+                        if (currentStep === 2 && leadType) {
+                          setLeadType(null);
+                          setCurrentStep(1);
+                          setSelectedProductId(null);
+                        } else {
+                          setCurrentStep(currentStep - 1);
+                        }
+                      }}
+                    >
+                      <ChevronLeft className="w-4 h-4 mr-1" />
+                      Back
+                    </Button>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setShowLeadModal(false);
+                      setLeadType(null);
+                      setCurrentStep(1);
+                      setSelectedProductId(null);
+                    }}
                   >
                     Cancel
                   </Button>
+                  {currentStep === 1 && !leadType ? null : (
+                    currentStep < totalSteps ? (
                   <Button
-                    type="submit"
+                        type="button"
+                        onClick={() => {
+                          if (leadType === 'sales' && currentStep === 2) {
+                            if (!selectedProductId) {
+                              alert('Please select a product');
+                              return;
+                            }
+                          } else if (leadType === 'sales' && currentStep === 3) {
+                            if (!leadFormData.customerName?.trim() || !leadFormData.phone?.trim()) {
+                              alert('Please fill in all required fields');
+                              return;
+                            }
+                          } else if ((leadType === 'connection' || leadType === 'research') && currentStep === 2) {
+                            if (!leadFormData.customerName?.trim() || !leadFormData.phone?.trim() || !leadFormData.title?.trim()) {
+                              alert('Please fill in all required fields');
+                              return;
+                            }
+                          }
+                          setCurrentStep(currentStep + 1);
+                        }}
+                      >
+                        Next
+                        <ChevronRight className="w-4 h-4 ml-1" />
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        onClick={(e) => {
+                          if (leadType === 'sales' && !selectedProductId) {
+                            alert('Please select a product');
+                            return;
+                          }
+                          // Find and submit the appropriate form
+                          const formId = leadType === 'sales' ? 'sales-lead-form' : 
+                                        leadType === 'connection' ? 'connection-lead-form' : 
+                                        'research-lead-form';
+                          const form = document.getElementById(formId) as HTMLFormElement;
+                          if (form) {
+                            form.requestSubmit();
+                          } else {
+                            handleSubmitLead(e as any);
+                          }
+                        }}
                     disabled={createLeadMutation.isPending}
                   >
                     {createLeadMutation.isPending ? 'Creating...' : 'Create Lead'}
                   </Button>
+                    )
+                  )}
                 </div>
-              </form>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Release History Modal */}
+      {showReleaseHistoryModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <Card className="w-full max-w-2xl shadow-lg max-h-[80vh] flex flex-col">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-orange-600" />
+                  Release History
+                </CardTitle>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    setShowReleaseHistoryModal(false);
+                    setReleaseHistoryConversationId(null);
+                  }}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="flex-1 overflow-y-auto">
+              {releaseHistoryLoading ? (
+                <div className="text-center py-8 text-slate-500">Loading release history...</div>
+              ) : releaseHistory.length === 0 ? (
+                <div className="text-center py-8 text-slate-500">
+                  <Clock className="w-12 h-12 mx-auto mb-2 text-slate-300" />
+                  <p>No release history found</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {releaseHistory.map((release) => {
+                    const releaseDate = new Date(release.releasedAt);
+                    const formattedDate = releaseDate.toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    });
+                    
+                    return (
+                      <div
+                        key={release.id}
+                        className="p-4 border border-gray-200 rounded-lg bg-gray-50"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <User className="w-4 h-4 text-slate-500" />
+                              <span className="font-medium text-slate-900">
+                                {release.employee.user.name || release.employee.user.email}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-slate-600">
+                              <Clock className="w-4 h-4" />
+                              <span>{formattedDate}</span>
+                            </div>
+                          </div>
+                          <span className="bg-orange-100 text-orange-700 text-xs font-medium rounded-full px-2 py-1">
+                            Released
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

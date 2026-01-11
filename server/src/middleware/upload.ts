@@ -144,3 +144,105 @@ export const uploadThemeLogo = multer({
 // Single file upload middleware for theme logo
 export const singleThemeLogo = uploadThemeLogo.single('logo');
 
+// ============================================
+// Task Attachments Upload (Images, PDFs, Videos, Audio)
+// ============================================
+
+// Create uploads directory for task attachments if it doesn't exist
+const taskUploadsBaseDir = path.join(process.cwd(), 'uploads', 'tasks');
+if (!fs.existsSync(taskUploadsBaseDir)) {
+  fs.mkdirSync(taskUploadsBaseDir, { recursive: true });
+}
+
+// Configure storage for task attachments
+// Note: Destination will be set dynamically based on taskId or subTaskId in the request
+const taskStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    // Get taskId or subTaskId from request body/params
+    // Note: route uses :id, so check req.params.id first, then req.params.taskId
+    const taskId = (req.params?.id || req.body?.taskId || req.params?.taskId || req.query?.taskId) as string | undefined;
+    const subTaskId = (req.body?.subTaskId || req.params?.subTaskId || req.query?.subTaskId) as string | undefined;
+    
+    let uploadDir: string;
+    
+    if (taskId) {
+      uploadDir = path.join(taskUploadsBaseDir, `task-${taskId}`, 'attachments');
+    } else if (subTaskId) {
+      uploadDir = path.join(taskUploadsBaseDir, `subtask-${subTaskId}`, 'attachments');
+    } else {
+      // Fallback to a temporary directory if no task/subtask ID provided
+      uploadDir = path.join(taskUploadsBaseDir, 'temp');
+    }
+    
+    // Create directory if it doesn't exist
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    // Generate unique filename: timestamp-random-sanitized-originalname
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    const ext = path.extname(file.originalname);
+    // Sanitize filename - remove special characters but keep spaces and hyphens
+    const name = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9\s-_]/g, '_');
+    cb(null, `${name}-${uniqueSuffix}${ext}`);
+  },
+});
+
+// File filter for task attachments - supports images, PDFs, videos, and audio
+const taskFileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  // Define allowed MIME types for task attachments
+  const allowedMimes = [
+    // Images
+    'image/jpeg',
+    'image/jpg',
+    'image/png',
+    'image/gif',
+    'image/webp',
+    // PDFs
+    'application/pdf',
+    // Videos
+    'video/mp4',
+    'video/mpeg',
+    'video/quicktime',
+    'video/x-msvideo',
+    'video/webm',
+    // Audio
+    'audio/mpeg',
+    'audio/mp3',
+    'audio/wav',
+    'audio/x-wav',
+    'audio/ogg',
+    'audio/webm',
+    'audio/aac',
+    'audio/flac',
+  ];
+
+  if (allowedMimes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(
+      new Error(
+        `Invalid file type: ${file.mimetype}. Allowed types: Images (JPEG, PNG, GIF, WebP), PDFs, Videos (MP4, WebM, AVI, MOV), Audio (MP3, WAV, OGG, WebM, AAC, FLAC).`
+      )
+    );
+  }
+};
+
+// Configure multer for task attachments
+export const uploadTaskAttachment = multer({
+  storage: taskStorage,
+  fileFilter: taskFileFilter,
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB limit (for videos)
+  },
+});
+
+// Single file upload middleware for task attachments
+export const singleTaskAttachment = uploadTaskAttachment.single('file');
+
+// Multiple files upload middleware for task attachments
+export const multipleTaskAttachments = uploadTaskAttachment.array('files', 10); // Max 10 files at once
+

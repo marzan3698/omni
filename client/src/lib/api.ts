@@ -40,8 +40,11 @@ export const taskApi = {
     apiClientInstance.get<ApiResponse>('/tasks', { params: { companyId, ...filters } }),
   getById: (id: number, companyId: number) => 
     apiClientInstance.get<ApiResponse>(`/tasks/${id}`, { params: { companyId } }),
+  getDetail: (id: number, companyId: number) => 
+    apiClientInstance.get<ApiResponse>(`/tasks/${id}/detail`, { params: { companyId } }),
   create: (data: any) => apiClientInstance.post<ApiResponse>('/tasks', data),
-  update: (id: number, data: any) => apiClientInstance.put<ApiResponse>(`/tasks/${id}`, data),
+  update: (id: number, data: any, companyId?: number) => 
+    apiClientInstance.put<ApiResponse>(`/tasks/${id}`, data, { params: { companyId: companyId || data.companyId } }),
   delete: (id: number, companyId: number) => 
     apiClientInstance.delete<ApiResponse>(`/tasks/${id}`, { params: { companyId } }),
   updateStatus: (id: number, status: string, companyId: number) => 
@@ -50,6 +53,60 @@ export const taskApi = {
     apiClientInstance.get<ApiResponse>(`/tasks/user/${userId}`, { params: { companyId } }),
   assignToUser: (taskId: number, employeeId: number, companyId: number) => 
     apiClientInstance.put<ApiResponse>(`/tasks/${taskId}/assign`, { employeeId }, { params: { companyId } }),
+  
+  // Sub-task methods
+  getSubTasks: (taskId: number, companyId: number) => 
+    apiClientInstance.get<ApiResponse>(`/tasks/${taskId}/sub-tasks`, { params: { companyId } }),
+  createSubTask: (taskId: number, data: any, companyId: number) => 
+    apiClientInstance.post<ApiResponse>(`/tasks/${taskId}/sub-tasks`, { ...data, companyId }),
+  updateSubTask: (id: number, data: any, companyId: number) => 
+    apiClientInstance.put<ApiResponse>(`/tasks/sub-tasks/${id}`, { ...data, companyId }),
+  deleteSubTask: (id: number, companyId: number) => 
+    apiClientInstance.delete<ApiResponse>(`/tasks/sub-tasks/${id}`, { params: { companyId } }),
+  
+  // Attachment methods
+  uploadAttachment: (taskId: number, file: File, companyId: number, subTaskId?: number) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('taskId', taskId.toString());
+    formData.append('companyId', companyId.toString());
+    if (subTaskId) {
+      formData.append('subTaskId', subTaskId.toString());
+    }
+    return apiClientInstance.post<ApiResponse>(`/tasks/${taskId}/attachments`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  addLinkAttachment: (data: any) => 
+    apiClientInstance.post<ApiResponse>('/tasks/attachments/link', data),
+  deleteAttachment: (id: number, companyId: number) => 
+    apiClientInstance.delete<ApiResponse>(`/tasks/attachments/${id}`, { params: { companyId } }),
+  
+  // Audio upload
+  uploadAudio: (taskId: number, audioBlob: Blob, mimeType: string, duration: number, companyId: number, subTaskId?: number) => {
+    const formData = new FormData();
+    formData.append('file', audioBlob, 'audio.webm');
+    formData.append('taskId', taskId.toString());
+    formData.append('companyId', companyId.toString());
+    formData.append('mimeType', mimeType);
+    formData.append('duration', duration.toString());
+    if (subTaskId) {
+      formData.append('subTaskId', subTaskId.toString());
+    }
+    return apiClientInstance.post<ApiResponse>('/tasks/audio/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  
+  // Conversation and message methods
+  getMessages: (taskId: number, companyId: number, page: number = 1, limit: number = 50) => 
+    apiClientInstance.get<ApiResponse>(`/tasks/${taskId}/messages`, { params: { companyId, page, limit } }),
+  sendMessage: (taskId: number, data: any, companyId: number) => 
+    apiClientInstance.post<ApiResponse>(`/tasks/${taskId}/messages`, { ...data, companyId }),
+  markMessageAsRead: (messageId: number, companyId: number) => 
+    apiClientInstance.put<ApiResponse>(`/tasks/messages/${messageId}/read`, {}, { params: { companyId } }),
+  getUnreadCount: (taskId: number, companyId: number) => 
+    apiClientInstance.get<ApiResponse>(`/tasks/${taskId}/messages/unread-count`, { params: { companyId } }),
 };
 
 // Finance API

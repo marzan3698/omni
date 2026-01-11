@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { SidebarProvider } from './contexts/SidebarContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { PermissionGuard } from './components/PermissionGuard';
 import { Layout } from './components/Layout';
@@ -20,8 +21,10 @@ import { Employees } from './pages/Employees';
 import EmployeeGroups from './pages/EmployeeGroups';
 import { UserDetail } from './pages/UserDetail';
 import { Tasks } from './pages/Tasks';
+import { TaskDetail } from './pages/TaskDetail';
 import { Finance } from './pages/Finance';
 import { Leads } from './pages/Leads';
+import { LeadDetail } from './pages/LeadDetail';
 import Users from './pages/Users';
 import LeadConfig from './pages/LeadConfig';
 import SystemSettings from './pages/SystemSettings';
@@ -54,8 +57,9 @@ import Sitemap from './pages/public/Sitemap';
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
+      <SidebarProvider>
+        <BrowserRouter>
+          <Routes>
           <Route path="/login" element={<Login />} />
           <Route
             path="/dashboard"
@@ -149,6 +153,16 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/tasks/:id"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <TaskDetail />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
                   <Route
                     path="/finance"
                     element={
@@ -175,6 +189,16 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <Leads />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/leads/:id"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <LeadDetail />
                 </Layout>
               </ProtectedRoute>
             }
@@ -499,8 +523,9 @@ function App() {
 
           {/* Default redirect - will be handled by AuthContext based on role */}
           <Route path="/home" element={<Navigate to="/dashboard" replace />} />
-        </Routes>
-      </BrowserRouter>
+          </Routes>
+        </BrowserRouter>
+      </SidebarProvider>
     </AuthProvider>
   );
 }

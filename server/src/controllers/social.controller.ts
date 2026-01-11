@@ -124,8 +124,23 @@ export const socialController = {
   getConversations: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const status = req.query.status as 'Open' | 'Closed' | undefined;
+      const tab = req.query.tab as 'inbox' | 'taken' | 'complete' | undefined;
       const companyId = (req as any).user?.companyId;
-      const conversations = await socialService.getConversations(status, companyId);
+      const userId = (req as any).user?.id;
+
+      // Get employee ID if tab is 'taken' or 'complete'
+      let assignedToEmployeeId: number | undefined;
+      if ((tab === 'taken' || tab === 'complete') && userId) {
+        const { prisma } = await import('../lib/prisma.js');
+        const employee = await prisma.employee.findUnique({
+          where: { userId },
+        });
+        if (employee) {
+          assignedToEmployeeId = employee.id;
+        }
+      }
+
+      const conversations = await socialService.getConversations(status, companyId, tab, assignedToEmployeeId);
       sendSuccess(res, conversations, 'Conversations retrieved successfully');
     } catch (error) {
       next(error);
@@ -393,6 +408,166 @@ export const socialController = {
 
       const status = socialService.getTypingStatus(conversationId);
       sendSuccess(res, status || { isTyping: false }, 'Typing status retrieved successfully');
+    } catch (error) {
+      if (error instanceof AppError) {
+        return sendError(res, error.message, error.statusCode);
+      }
+      next(error);
+    }
+  },
+
+  /**
+   * Assign a conversation to an employee
+   * POST /api/conversations/:id/assign
+   */
+  assignConversation: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const conversationId = parseInt(req.params.id, 10);
+      const companyId = (req as any).user?.companyId;
+      const userId = (req as any).user?.id;
+
+      if (isNaN(conversationId)) {
+        return sendError(res, 'Invalid conversation ID', 400);
+      }
+
+      if (!userId || !companyId) {
+        return sendError(res, 'User not authenticated', 401);
+      }
+
+      // Get employee ID from user ID
+      const { prisma } = await import('../lib/prisma.js');
+      const employee = await prisma.employee.findUnique({
+        where: { userId },
+      });
+
+      if (!employee) {
+        return sendError(res, 'User is not an employee', 403);
+      }
+
+      const updatedConversation = await socialService.assignConversation(
+        conversationId,
+        employee.id,
+        companyId
+      );
+
+      sendSuccess(res, updatedConversation, 'Conversation assigned successfully');
+    } catch (error) {
+      if (error instanceof AppError) {
+        return sendError(res, error.message, error.statusCode);
+      }
+      next(error);
+    }
+  },
+
+  /**
+   * Unassign a conversation (remove assignment)
+   * POST /api/conversations/:id/unassign
+   */
+  unassignConversation: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const conversationId = parseInt(req.params.id, 10);
+      const companyId = (req as any).user?.companyId;
+      const userId = (req as any).user?.id;
+
+      if (isNaN(conversationId)) {
+        return sendError(res, 'Invalid conversation ID', 400);
+      }
+
+      if (!userId || !companyId) {
+        return sendError(res, 'User not authenticated', 401);
+      }
+
+      // Get employee ID from user ID
+      const { prisma } = await import('../lib/prisma.js');
+      const employee = await prisma.employee.findUnique({
+        where: { userId },
+      });
+
+      if (!employee) {
+        return sendError(res, 'User is not an employee', 403);
+      }
+
+      const updatedConversation = await socialService.unassignConversation(conversationId, companyId, employee.id);
+
+      sendSuccess(res, updatedConversation, 'Conversation unassigned successfully');
+    } catch (error) {
+      if (error instanceof AppError) {
+        return sendError(res, error.message, error.statusCode);
+      }
+      next(error);
+    }
+  },
+
+  /**
+   * Mark conversation as complete (status: 'Closed')
+   * POST /api/conversations/:id/complete
+   */
+  completeConversation: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const conversationId = parseInt(req.params.id, 10);
+      const companyId = (req as any).user?.companyId;
+
+      if (isNaN(conversationId)) {
+        return sendError(res, 'Invalid conversation ID', 400);
+      }
+
+      if (!companyId) {
+        return sendError(res, 'User not authenticated', 401);
+      }
+
+      const updatedConversation = await socialService.completeConversation(conversationId, companyId);
+
+      sendSuccess(res, updatedConversation, 'Conversation marked as complete');
+    } catch (error) {
+      if (error instanceof AppError) {
+        return sendError(res, error.message, error.statusCode);
+      }
+      next(error);
+    }
+  },
+
+  /**
+   * Get conversation statistics (for dashboard)
+   * GET /api/conversations/stats
+   */
+  getConversationStats: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const companyId = (req as any).user?.companyId;
+
+      if (!companyId) {
+        return sendError(res, 'User not authenticated', 401);
+      }
+
+      const stats = await socialService.getConversationStats(companyId);
+
+      sendSuccess(res, stats, 'Conversation statistics retrieved successfully');
+    } catch (error) {
+      if (error instanceof AppError) {
+        return sendError(res, error.message, error.statusCode);
+      }
+      next(error);
+    }
+  },
+
+  /**
+   * Get release history for a conversation
+   * GET /api/conversations/:id/releases
+   */
+  getConversationReleaseHistory: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const conversationId = parseInt(req.params.id, 10);
+      const companyId = (req as any).user?.companyId;
+
+      if (isNaN(conversationId)) {
+        return sendError(res, 'Invalid conversation ID', 400);
+      }
+
+      if (!companyId) {
+        return sendError(res, 'User not authenticated', 401);
+      }
+
+      const releases = await socialService.getConversationReleaseHistory(conversationId, companyId);
+      sendSuccess(res, releases, 'Release history retrieved successfully');
     } catch (error) {
       if (error instanceof AppError) {
         return sendError(res, error.message, error.statusCode);

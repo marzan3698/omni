@@ -42,6 +42,7 @@ model Company {
   integrations       Integration[]
   socialConversations SocialConversation[]
   expenseCategories  ExpenseCategory[]
+  leads              Lead[]
   leadCategories     LeadCategory[]
   leadInterests      LeadInterest[]
   systemSettings    SystemSetting[]
@@ -55,6 +56,10 @@ model Company {
   paymentGateways    PaymentGateway[]
   payments           Payment[]
   employeeGroups     EmployeeGroup[]
+  conversationReleases ConversationRelease[]
+  subTasks           SubTask[]
+  taskAttachments    TaskAttachment[]
+  taskConversations  TaskConversation[]
 
   @@index([name])
   @@index([isActive])
@@ -100,6 +105,8 @@ model User {
   projects Project[]
   campaignClients CampaignClient[]
   createdEmployeeGroups EmployeeGroup[]
+  createdTaskAttachments TaskAttachment[] @relation("UserTaskAttachments")
+  taskMessages TaskMessage[] @relation("UserTaskMessages")
 
   @@unique([email, companyId])
   @@index([email])
@@ -151,9 +158,11 @@ model Employee {
   managedDepartment Department? @relation("DepartmentManager")
 
   // Relations
-  assignedLeads Lead[]
-  assignedTasks Task[]
-  groups EmployeeGroupMember[]
+  assignedLeads       Lead[]
+  assignedTasks       Task[]
+  assignedConversations SocialConversation[] @relation("AssignedConversations")
+  groups              EmployeeGroupMember[]
+  releases            ConversationRelease[]
 
   @@index([userId])
   @@index([companyId])
@@ -255,6 +264,7 @@ enum Currency {
 
 model Lead {
   id             Int        @id @default(autoincrement())
+  companyId      Int        @map("company_id")
   createdBy      String     @map("created_by") // User ID who created the lead
   title          String     @db.VarChar(255)
   description    String?    @db.Text
@@ -268,16 +278,23 @@ model Lead {
   categoryId     Int?       @map("category_id")
   interestId     Int?       @map("interest_id")
   campaignId     Int?       @map("campaign_id")
+  productId      Int?       @map("product_id") // Link to Product for Sales Lead
+  purchasePrice  Decimal?   @map("purchase_price") @db.Decimal(12, 2) // Purchase price from product
+  salePrice      Decimal?   @map("sale_price") @db.Decimal(12, 2) // Sale price from product
+  profit         Decimal?   @db.Decimal(12, 2) // Calculated profit (salePrice - purchasePrice)
   createdAt      DateTime   @default(now()) @map("created_at")
   updatedAt      DateTime   @updatedAt @map("updated_at")
 
-  createdByUser  User            @relation("LeadCreator", fields: [createdBy], references: [id], onDelete: Cascade)
-  assignedEmployee Employee?      @relation(fields: [assignedTo], references: [id], onDelete: SetNull)
+  company          Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdByUser    User            @relation("LeadCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+  assignedEmployee Employee?       @relation(fields: [assignedTo], references: [id], onDelete: SetNull)
   conversation     SocialConversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
   category         LeadCategory?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   interest         LeadInterest?  @relation(fields: [interestId], references: [id], onDelete: SetNull)
   campaign         Campaign?      @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  product          Product?       @relation(fields: [productId], references: [id], onDelete: SetNull)
 
+  @@index([companyId])
   @@index([createdBy])
   @@index([assignedTo])
   @@index([status])
@@ -285,6 +302,7 @@ model Lead {
   @@index([categoryId])
   @@index([interestId])
   @@index([campaignId])
+  @@index([productId])
   @@map("leads")
 }
 
@@ -301,33 +319,47 @@ enum TaskPriority {
 }
 
 enum TaskStatus {
-  Todo
-  InProgress
-  Done
+  Pending
+  StartedWorking
+  Complete
+  Cancel
 
   @@map("task_status")
 }
 
 model Task {
-  id          Int          @id @default(autoincrement())
-  companyId   Int          @map("company_id")
-  title       String       @db.VarChar(255)
-  description String?      @db.Text
-  priority    TaskPriority @default(Medium)
-  dueDate     DateTime?    @map("due_date") @db.DateTime
-  assignedTo  Int?         @map("assigned_to")
-  status      TaskStatus   @default(Todo)
-  createdAt   DateTime     @default(now()) @map("created_at")
-  updatedAt   DateTime     @updatedAt @map("updated_at")
+  id             Int          @id @default(autoincrement())
+  companyId      Int          @map("company_id")
+  title          String       @db.VarChar(255)
+  description    String?      @db.Text
+  priority       TaskPriority @default(Medium)
+  dueDate        DateTime?    @map("due_date") @db.DateTime
+  projectId      Int?         @map("project_id")
+  assignedTo     Int?         @map("assigned_to")
+  groupId        Int?         @map("group_id")
+  status         TaskStatus   @default(Pending)
+  startedAt      DateTime?    @map("started_at") @db.DateTime
+  progress       Decimal?     @default(0) @db.Decimal(5, 2)
+  conversationId Int?         @map("conversation_id")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
 
-  company          Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  assignedEmployee Employee?  @relation(fields: [assignedTo], references: [id], onDelete: SetNull)
+  company          Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  project          Project?           @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  assignedEmployee Employee?          @relation(fields: [assignedTo], references: [id], onDelete: SetNull)
+  group            EmployeeGroup?     @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  conversation     TaskConversation?
   comments         TaskComment[]
+  subTasks         SubTask[]
+  attachments      TaskAttachment[]
 
   @@index([companyId])
   @@index([assignedTo])
+  @@index([projectId])
+  @@index([groupId])
   @@index([status])
   @@index([priority])
+  @@index([conversationId])
   @@map("tasks")
 }
 
@@ -345,6 +377,124 @@ model TaskComment {
   @@index([taskId])
   @@index([userId])
   @@map("task_comments")
+}
+
+enum AttachmentFileType {
+  image
+  pdf
+  video
+  audio
+  link
+
+  @@map("attachment_file_type")
+}
+
+enum TaskMessageType {
+  text
+  image
+  file
+  audio
+  system
+
+  @@map("task_message_type")
+}
+
+model SubTask {
+  id          Int         @id @default(autoincrement())
+  taskId      Int         @map("task_id")
+  companyId   Int         @map("company_id")
+  title       String      @db.VarChar(255)
+  instructions String?    @db.Text
+  weight      Decimal     @default(1) @db.Decimal(5, 2)
+  status      TaskStatus  @default(Pending)
+  order       Int         @default(0)
+  startedAt   DateTime?   @map("started_at") @db.DateTime
+  completedAt DateTime?   @map("completed_at") @db.DateTime
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  task         Task              @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  company      Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  attachments  TaskAttachment[]
+
+  @@index([taskId])
+  @@index([companyId])
+  @@index([status])
+  @@index([order])
+  @@map("sub_tasks")
+}
+
+model TaskAttachment {
+  id             Int              @id @default(autoincrement())
+  taskId         Int?             @map("task_id")
+  subTaskId      Int?             @map("sub_task_id")
+  companyId      Int              @map("company_id")
+  fileType       AttachmentFileType @map("file_type")
+  fileUrl        String?          @map("file_url") @db.VarChar(500)
+  fileName       String?          @map("file_name") @db.VarChar(255)
+  fileSize       BigInt?          @map("file_size")
+  mimeType       String?          @map("mime_type") @db.VarChar(100)
+  linkUrl        String?          @map("link_url") @db.VarChar(1000)
+  linkTitle      String?          @map("link_title") @db.VarChar(255)
+  linkDescription String?         @map("link_description") @db.Text
+  thumbnailUrl   String?          @map("thumbnail_url") @db.VarChar(500)
+  duration       Int?             // Duration in seconds for audio/video
+  createdBy      String           @map("created_by") @db.VarChar(36)
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+
+  task        Task?       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  subTask     SubTask?    @relation(fields: [subTaskId], references: [id], onDelete: Cascade)
+  company     Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  creator     User        @relation("UserTaskAttachments", fields: [createdBy], references: [id], onDelete: Cascade)
+  messages    TaskMessage[]
+
+  @@index([taskId])
+  @@index([subTaskId])
+  @@index([companyId])
+  @@index([fileType])
+  @@index([createdBy])
+  @@map("task_attachments")
+}
+
+model TaskConversation {
+  id        Int      @id @default(autoincrement())
+  taskId    Int      @unique @map("task_id")
+  companyId Int      @map("company_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  task     Task         @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  company  Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  messages TaskMessage[]
+
+  @@index([taskId])
+  @@index([companyId])
+  @@map("task_conversations")
+}
+
+model TaskMessage {
+  id            Int             @id @default(autoincrement())
+  conversationId Int            @map("conversation_id")
+  senderId      String          @map("sender_id") @db.VarChar(36)
+  content       String?         @db.Text
+  messageType   TaskMessageType @default(text) @map("message_type")
+  attachmentId  Int?            @map("attachment_id")
+  isRead        Boolean         @default(false) @map("is_read")
+  readAt        DateTime?       @map("read_at") @db.DateTime
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+
+  conversation TaskConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User             @relation("UserTaskMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  attachment   TaskAttachment?  @relation(fields: [attachmentId], references: [id], onDelete: SetNull)
+
+  @@index([conversationId])
+  @@index([senderId])
+  @@index([attachmentId])
+  @@index([isRead])
+  @@index([createdAt])
+  @@map("task_messages")
 }
 
 // ============================================
@@ -657,18 +807,23 @@ model SocialConversation {
   externalUserName String?            @map("external_user_name") @db.VarChar(255) // Sender's Name
   status           ConversationStatus @default(Open)
   lastMessageAt    DateTime?          @map("last_message_at") @db.DateTime
+  assignedTo       Int?               @map("assigned_to")
+  assignedAt       DateTime?          @map("assigned_at") @db.DateTime
   createdAt        DateTime           @default(now()) @map("created_at")
   updatedAt        DateTime           @updatedAt @map("updated_at")
 
-  company  Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  messages SocialMessage[]
-  leads    Lead[]
+  company         Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  assignedEmployee Employee? @relation("AssignedConversations", fields: [assignedTo], references: [id], onDelete: SetNull)
+  messages        SocialMessage[]
+  leads           Lead[]
+  releases        ConversationRelease[]
 
   @@index([companyId])
   @@index([platform])
   @@index([externalUserId])
   @@index([status])
   @@index([lastMessageAt])
+  @@index([assignedTo])
   @@map("social_conversations")
 }
 
@@ -699,6 +854,25 @@ model SocialMessage {
   @@index([isRead])
   @@index([isSeen])
   @@map("social_messages")
+}
+
+model ConversationRelease {
+  id             Int      @id @default(autoincrement())
+  conversationId Int      @map("conversation_id")
+  employeeId     Int      @map("employee_id")
+  companyId      Int      @map("company_id")
+  releasedAt     DateTime @default(now()) @map("released_at") @db.DateTime
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  conversation SocialConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  employee     Employee           @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  company      Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@index([employeeId])
+  @@index([companyId])
+  @@index([releasedAt])
+  @@map("conversation_releases")
 }
 
 // ============================================
@@ -887,6 +1061,7 @@ model Product {
   company  Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
   category ProductCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   campaigns CampaignProduct[]
+  leads     Lead[]
 
   @@index([companyId])
   @@index([categoryId])
@@ -953,6 +1128,7 @@ model Project {
   invoices Invoice[]
   payments Payment[]
   campaigns Campaign[]
+  tasks Task[]
 
   @@index([companyId])
   @@index([clientId])
@@ -1026,6 +1202,7 @@ model EmployeeGroup {
   creator     User      @relation(fields: [createdById], references: [id], onDelete: Restrict)
   members     EmployeeGroupMember[]
   campaigns   CampaignGroup[]
+  tasks       Task[]
 
   @@index([companyId])
   @@index([createdById])

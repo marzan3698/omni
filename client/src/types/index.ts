@@ -37,3 +37,107 @@ export interface AuthResponse {
   token: string;
 }
 
+// Task types
+export type TaskStatus = 'Pending' | 'StartedWorking' | 'Complete' | 'Cancel';
+export type SubTaskStatus = 'Pending' | 'StartedWorking' | 'Complete' | 'Cancel';
+export type TaskPriority = 'Low' | 'Medium' | 'High';
+export type AttachmentFileType = 'image' | 'pdf' | 'video' | 'audio' | 'link';
+export type TaskMessageType = 'text' | 'image' | 'file' | 'audio' | 'system';
+
+export interface SubTask {
+  id: number;
+  taskId: number;
+  companyId: number;
+  title: string;
+  instructions?: string | null;
+  weight: number;
+  status: SubTaskStatus;
+  order: number;
+  startedAt?: string | null;
+  completedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  attachments?: TaskAttachment[];
+}
+
+export interface TaskAttachment {
+  id: number;
+  taskId?: number | null;
+  subTaskId?: number | null;
+  companyId: number;
+  fileType: AttachmentFileType;
+  fileUrl?: string | null;
+  fileName?: string | null;
+  fileSize?: number | null;
+  mimeType?: string | null;
+  linkUrl?: string | null;
+  linkTitle?: string | null;
+  linkDescription?: string | null;
+  thumbnailUrl?: string | null;
+  duration?: number | null;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  creator?: {
+    id: string;
+    name: string | null;
+    email: string;
+    profileImage?: string | null;
+  };
+}
+
+export interface TaskMessage {
+  id: number;
+  conversationId: number;
+  senderId: string;
+  content?: string | null;
+  messageType: TaskMessageType;
+  attachmentId?: number | null;
+  isRead: boolean;
+  readAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  sender?: User;
+  attachment?: TaskAttachment;
+}
+
+export interface TaskConversation {
+  id: number;
+  taskId: number;
+  companyId: number;
+  createdAt: string;
+  updatedAt: string;
+  messages?: TaskMessage[];
+}
+
+export interface Task {
+  id: number;
+  companyId: number;
+  title: string;
+  description?: string | null;
+  priority: TaskPriority;
+  dueDate?: string | null;
+  projectId?: number | null;
+  assignedTo?: number | null;
+  groupId?: number | null;
+  status: TaskStatus;
+  startedAt?: string | null;
+  progress: number;
+  conversationId?: number | null;
+  createdAt: string;
+  updatedAt: string;
+  project?: { id: number; title: string; status: string };
+  assignedEmployee?: { user?: User };
+  group?: { id: number; name: string; description: string; members?: { employee: { user: User } }[] };
+  comments?: any[];
+  subTasks?: SubTask[];
+  attachments?: TaskAttachment[];
+  conversation?: TaskConversation;
+  _count?: {
+    comments: number;
+    subTasks: number;
+    attachments: number;
+  };
+  unreadMessageCount?: number;
+}
+

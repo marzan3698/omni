@@ -51,7 +51,7 @@ export function Finance() {
               <div className="flex items-center gap-2">
                 <TrendingUp className="w-5 h-5 text-green-600" />
                 <div className="text-2xl font-bold text-slate-900">
-                  ${summary.income?.toLocaleString() || '0'}
+                  ৳{summary.income?.toLocaleString() || '0'}
                 </div>
               </div>
             </CardContent>
@@ -65,7 +65,7 @@ export function Finance() {
               <div className="flex items-center gap-2">
                 <TrendingDown className="w-5 h-5 text-red-600" />
                 <div className="text-2xl font-bold text-slate-900">
-                  ${summary.expenses?.toLocaleString() || '0'}
+                  ৳{summary.expenses?.toLocaleString() || '0'}
                 </div>
               </div>
             </CardContent>
@@ -81,7 +81,7 @@ export function Finance() {
                 <div className={`text-2xl font-bold ${
                   (summary.profit || 0) >= 0 ? 'text-green-600' : 'text-red-600'
                 }`}>
-                  ${summary.profit?.toLocaleString() || '0'}
+                  ৳{summary.profit?.toLocaleString() || '0'}
                 </div>
               </div>
             </CardContent>

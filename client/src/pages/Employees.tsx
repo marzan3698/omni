@@ -252,7 +252,7 @@ export function Employees() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
                         {item.salary ? (
-                          <span className="font-medium">${Number(item.salary).toLocaleString()}</span>
+                          <span className="font-medium">৳{Number(item.salary).toLocaleString()}</span>
                         ) : (
                           <span className="text-slate-400">—</span>
                         )}

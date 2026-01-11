@@ -73,7 +73,7 @@ export function ClientInvoices() {
                         <div className="flex items-center gap-2">
                           <DollarSign className="w-4 h-4 text-indigo-600" />
                           <span className="font-semibold text-indigo-600">
-                            ${Number(invoice.totalAmount).toLocaleString()}
+                            ৳{Number(invoice.totalAmount).toLocaleString()}
                           </span>
                         </div>
                         <div className="flex items-center gap-2">

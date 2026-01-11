@@ -334,13 +334,27 @@ export const socialService = {
   /**
    * Get all conversations
    */
-  async getConversations(status?: 'Open' | 'Closed', companyId?: number) {
+  async getConversations(status?: 'Open' | 'Closed', companyId?: number, tab?: 'inbox' | 'taken' | 'complete', assignedToEmployeeId?: number) {
     const where: any = {};
     if (status) {
       where.status = status;
     }
     if (companyId) {
       where.companyId = companyId;
+    }
+    
+    // Filter by assignment based on tab
+    if (tab === 'inbox') {
+      // Show only unassigned conversations
+      where.assignedTo = null;
+    } else if (tab === 'taken' && assignedToEmployeeId) {
+      // Show only open conversations assigned to this employee
+      where.assignedTo = assignedToEmployeeId;
+      where.status = 'Open';
+    } else if (tab === 'complete' && assignedToEmployeeId) {
+      // Show only closed conversations assigned to this employee
+      where.status = 'Closed';
+      where.assignedTo = assignedToEmployeeId;
     }
 
     const conversations = await prisma.socialConversation.findMany({
@@ -352,9 +366,21 @@ export const socialService = {
           },
           take: 1, // Get last message for preview
         },
+        assignedEmployee: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
         _count: {
           select: {
             messages: true,
+            releases: true, // Count of releases for this conversation
           },
         },
       },
@@ -1154,6 +1180,302 @@ export const socialService = {
       isTyping: data.isTyping,
       userId: data.userId,
     };
+  },
+
+  /**
+   * Assign a conversation to an employee
+   */
+  async assignConversation(conversationId: number, employeeId: number, companyId: number) {
+    // Verify conversation exists and belongs to company
+    const conversation = await prisma.socialConversation.findFirst({
+      where: {
+        id: conversationId,
+        companyId,
+      },
+    });
+
+    if (!conversation) {
+      throw new AppError('Conversation not found', 404);
+    }
+
+    // Verify employee exists and belongs to same company
+    const employee = await prisma.employee.findFirst({
+      where: {
+        id: employeeId,
+        companyId,
+      },
+    });
+
+    if (!employee) {
+      throw new AppError('Employee not found or does not belong to your company', 404);
+    }
+
+    // Assign conversation
+    const updatedConversation = await prisma.socialConversation.update({
+      where: { id: conversationId },
+      data: {
+        assignedTo: employeeId,
+        assignedAt: new Date(),
+      },
+      include: {
+        assignedEmployee: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return updatedConversation;
+  },
+
+  /**
+   * Unassign a conversation (remove assignment)
+   */
+  async unassignConversation(conversationId: number, companyId: number, employeeId: number) {
+    // Verify conversation exists and belongs to company
+    const conversation = await prisma.socialConversation.findFirst({
+      where: {
+        id: conversationId,
+        companyId,
+      },
+    });
+
+    if (!conversation) {
+      throw new AppError('Conversation not found', 404);
+    }
+
+    // Unassign conversation and create release record
+    const [updatedConversation] = await prisma.$transaction([
+      prisma.socialConversation.update({
+        where: { id: conversationId },
+        data: {
+          assignedTo: null,
+          assignedAt: null,
+        },
+      }),
+      prisma.conversationRelease.create({
+        data: {
+          conversationId,
+          employeeId,
+          companyId,
+          releasedAt: new Date(),
+        },
+      }),
+    ]);
+
+    return updatedConversation;
+  },
+
+  /**
+   * Mark conversation as complete (status: 'Closed')
+   */
+  async completeConversation(conversationId: number, companyId: number) {
+    // Verify conversation exists and belongs to company
+    const conversation = await prisma.socialConversation.findFirst({
+      where: {
+        id: conversationId,
+        companyId,
+      },
+    });
+
+    if (!conversation) {
+      throw new AppError('Conversation not found', 404);
+    }
+
+    // Update conversation status to Closed
+    const updatedConversation = await prisma.socialConversation.update({
+      where: { id: conversationId },
+      data: {
+        status: 'Closed',
+      },
+      include: {
+        messages: {
+          orderBy: {
+            createdAt: 'desc',
+          },
+          take: 1,
+        },
+        assignedEmployee: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
+        _count: {
+          select: {
+            messages: true,
+            releases: true,
+          },
+        },
+      },
+    });
+
+    return updatedConversation;
+  },
+
+  /**
+   * Get conversation statistics (for dashboard)
+   */
+  async getConversationStats(companyId: number) {
+    // Get total assigned conversations count
+    const totalAssigned = await prisma.socialConversation.count({
+      where: {
+        companyId,
+        assignedTo: { not: null },
+      },
+    });
+
+    // Get active employees (employees with assigned conversations) with counts
+    const activeEmployeesData = await prisma.socialConversation.groupBy({
+      by: ['assignedTo'],
+      where: {
+        companyId,
+        assignedTo: { not: null },
+      },
+      _count: {
+        assignedTo: true,
+      },
+    });
+
+    // Get employee details
+    const employeeIds = activeEmployeesData.map((item) => item.assignedTo!);
+    const employees = await prisma.employee.findMany({
+      where: {
+        id: { in: employeeIds },
+        companyId,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    // Map employees with their assigned counts
+    const activeEmployees = employees.map((employee) => {
+      const assignedData = activeEmployeesData.find((item) => item.assignedTo === employee.id);
+      return {
+        id: employee.id,
+        name: employee.user.name || employee.user.email,
+        email: employee.user.email,
+        assignedCount: assignedData?._count.assignedTo || 0,
+      };
+    });
+
+    // Get total releases count
+    const totalReleases = await prisma.conversationRelease.count({
+      where: {
+        companyId,
+      },
+    });
+
+    // Get releases by employee
+    const releasesByEmployeeData = await prisma.conversationRelease.groupBy({
+      by: ['employeeId'],
+      where: {
+        companyId,
+      },
+      _count: {
+        employeeId: true,
+      },
+      orderBy: {
+        _count: {
+          employeeId: 'desc',
+        },
+      },
+      take: 10, // Top 10
+    });
+
+    const releaseEmployeeIds = releasesByEmployeeData.map((item) => item.employeeId);
+    const releaseEmployees = await prisma.employee.findMany({
+      where: {
+        id: { in: releaseEmployeeIds },
+        companyId,
+      },
+      include: {
+        user: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    const releasesByEmployee = releaseEmployees.map((employee) => {
+      const releaseData = releasesByEmployeeData.find((item) => item.employeeId === employee.id);
+      return {
+        employeeId: employee.id,
+        employeeName: employee.user.name || employee.user.email,
+        releaseCount: releaseData?._count.employeeId || 0,
+      };
+    });
+
+    return {
+      totalAssigned,
+      activeEmployees,
+      totalReleases,
+      releasesByEmployee,
+    };
+  },
+
+  /**
+   * Get release history for a conversation
+   */
+  async getConversationReleaseHistory(conversationId: number, companyId: number) {
+    // Verify conversation exists and belongs to company
+    const conversation = await prisma.socialConversation.findFirst({
+      where: {
+        id: conversationId,
+        companyId,
+      },
+    });
+
+    if (!conversation) {
+      throw new AppError('Conversation not found', 404);
+    }
+
+    // Get all releases for this conversation
+    const releases = await prisma.conversationRelease.findMany({
+      where: {
+        conversationId,
+        companyId,
+      },
+      include: {
+        employee: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        releasedAt: 'desc',
+      },
+    });
+
+    return releases;
   },
 };
 

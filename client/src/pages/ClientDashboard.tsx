@@ -1,9 +1,17 @@
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { projectApi, clientCampaignsApi } from '@/lib/api';
+import { useNavigate } from 'react-router-dom';
+import { projectApi, clientCampaignsApi, serviceApi, productApi } from '@/lib/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Briefcase, CheckCircle, Clock, Target, TrendingUp } from 'lucide-react';
+import { WelcomePresentationModal } from '@/components/WelcomePresentationModal';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function ClientDashboard() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+
   const { data: statsResponse } = useQuery({
     queryKey: ['project-stats'],
     queryFn: async () => {
@@ -23,6 +31,40 @@ export function ClientDashboard() {
   const stats = statsResponse || { total: 0, active: 0, completed: 0 };
   const campaigns = campaignsResponse || [];
 
+  // Check if we should show welcome modal (when stats are loaded and total is 0)
+  const shouldShowWelcome = stats.total === 0 && statsResponse !== undefined;
+
+  // Fetch services for welcome modal (only when we should show welcome)
+  const { data: servicesResponse } = useQuery({
+    queryKey: ['services', 'active'],
+    queryFn: async () => {
+      const response = await serviceApi.getAll(true);
+      return response.data.data || [];
+    },
+    enabled: shouldShowWelcome,
+  });
+
+  // Fetch products for welcome modal (only when we should show welcome)
+  const { data: productsResponse } = useQuery({
+    queryKey: ['products', user?.companyId],
+    queryFn: async () => {
+      if (!user?.companyId) return [];
+      const response = await productApi.getAll(user.companyId);
+      return response.data.data || [];
+    },
+    enabled: shouldShowWelcome && !!user?.companyId,
+  });
+
+  const services = servicesResponse || [];
+  const products = productsResponse || [];
+
+  // Show welcome modal when stats indicate no projects
+  useEffect(() => {
+    if (shouldShowWelcome && !showWelcomeModal) {
+      setShowWelcomeModal(true);
+    }
+  }, [shouldShowWelcome, showWelcomeModal]);
+
   // Calculate campaign statistics
   const activeCampaigns = campaigns.filter((c: any) => {
     const now = new Date();
@@ -33,8 +75,29 @@ export function ClientDashboard() {
 
   const totalLeads = campaigns.reduce((sum: number, c: any) => sum + (c.leads?.length || 0), 0);
 
+  const handleStartProject = () => {
+    setShowWelcomeModal(false);
+    navigate('/client/projects');
+    // Small delay to ensure navigation completes, then trigger project creation
+    setTimeout(() => {
+      // This will be handled by the ClientProjects component
+      // We can use URL params or a custom event
+      window.dispatchEvent(new CustomEvent('open-project-form'));
+    }, 100);
+  };
+
   return (
     <div className="space-y-6">
+      {/* Welcome Presentation Modal */}
+      {shouldShowWelcome && (
+        <WelcomePresentationModal
+          isOpen={showWelcomeModal}
+          onClose={() => setShowWelcomeModal(false)}
+          services={services}
+          products={products}
+          onStartProject={handleStartProject}
+        />
+      )}
       <div>
         <h1 className="text-3xl font-bold text-slate-900">Dashboard</h1>
         <p className="text-slate-600 mt-1">Overview of your projects and campaigns</p>

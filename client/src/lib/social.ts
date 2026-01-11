@@ -8,10 +8,21 @@ export interface SocialConversation {
   externalUserName: string | null;
   status: 'Open' | 'Closed';
   lastMessageAt: string | null;
+  assignedTo?: number | null;
+  assignedAt?: string | null;
+  assignedEmployee?: {
+    id: number;
+    user: {
+      id: string;
+      name: string | null;
+      email: string;
+    };
+  } | null;
   createdAt: string;
   messages?: SocialMessage[];
   _count?: {
     messages: number;
+    releases?: number; // Count of releases for this conversation
   };
   unreadCount?: number;
 }
@@ -45,15 +56,37 @@ export interface ConversationAnalytics {
   }>;
 }
 
+export interface ConversationStats {
+  totalAssigned: number;
+  activeEmployees: Array<{
+    id: number;
+    name: string;
+    email: string;
+    assignedCount: number;
+  }>;
+  totalReleases: number;
+  releasesByEmployee: Array<{
+    employeeId: number;
+    employeeName: string;
+    releaseCount: number;
+  }>;
+}
+
 export const socialApi = {
   /**
    * Get all conversations
    */
-  async getConversations(status?: 'Open' | 'Closed'): Promise<SocialConversation[]> {
-    const params = status ? `?status=${status}` : '';
-    const response = await apiClient.get<ApiResponse<SocialConversation[]>>(
-      `/conversations${params}`
-    );
+  async getConversations(tab?: 'inbox' | 'taken' | 'complete', status?: 'Open' | 'Closed'): Promise<SocialConversation[]> {
+    const params = new URLSearchParams();
+    if (tab) {
+      params.set('tab', tab);
+    }
+    if (status) {
+      params.set('status', status);
+    }
+    const queryString = params.toString();
+    const url = queryString ? `/conversations?${queryString}` : '/conversations';
+    const response = await apiClient.get<ApiResponse<SocialConversation[]>>(url);
 
     if (response.data.success && response.data.data) {
       return response.data.data;
@@ -211,6 +244,107 @@ export const socialApi = {
     }
 
     throw new Error(response.data.message || 'Failed to fetch typing status');
+  },
+
+  /**
+   * Assign a conversation to current user (employee)
+   */
+  async assignConversation(conversationId: number): Promise<SocialConversation> {
+    const response = await apiClient.post<ApiResponse<SocialConversation>>(
+      `/conversations/${conversationId}/assign`
+    );
+
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+
+    throw new Error(response.data.message || 'Failed to assign conversation');
+  },
+
+  /**
+   * Unassign a conversation (remove assignment)
+   */
+  async unassignConversation(conversationId: number): Promise<SocialConversation> {
+    const response = await apiClient.post<ApiResponse<SocialConversation>>(
+      `/conversations/${conversationId}/unassign`
+    );
+
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+
+    throw new Error(response.data.message || 'Failed to unassign conversation');
+  },
+
+  /**
+   * Mark conversation as complete (status: 'Closed')
+   */
+  async completeConversation(conversationId: number): Promise<SocialConversation> {
+    const response = await apiClient.post<ApiResponse<SocialConversation>>(
+      `/conversations/${conversationId}/complete`
+    );
+
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+
+    throw new Error(response.data.message || 'Failed to complete conversation');
+  },
+
+  /**
+   * Get conversation statistics (for dashboard)
+   */
+  async getConversationStats(): Promise<ConversationStats> {
+    const response = await apiClient.get<ApiResponse<ConversationStats>>(
+      '/conversations/stats'
+    );
+
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+
+    throw new Error(response.data.message || 'Failed to fetch conversation statistics');
+  },
+
+  /**
+   * Get release history for a conversation
+   */
+  async getConversationReleaseHistory(conversationId: number): Promise<Array<{
+    id: number;
+    conversationId: number;
+    employeeId: number;
+    companyId: number;
+    releasedAt: string;
+    createdAt: string;
+    employee: {
+      id: number;
+      user: {
+        id: string;
+        name: string | null;
+        email: string;
+      };
+    };
+  }>> {
+    const response = await apiClient.get<ApiResponse<Array<{
+      id: number;
+      conversationId: number;
+      employeeId: number;
+      companyId: number;
+      releasedAt: string;
+      createdAt: string;
+      employee: {
+        id: number;
+        user: {
+          id: string;
+          name: string | null;
+          email: string;
+        };
+      };
+    }>>>(`/conversations/${conversationId}/releases`);
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error(response.data.message || 'Failed to fetch release history');
   },
 };
 

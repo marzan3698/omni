@@ -188,7 +188,7 @@ export function InvoiceView() {
                         <div className="flex flex-wrap items-center gap-3">
                             <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
                                 <DollarSign className="w-4 h-4 text-indigo-600" />
-                                <span className="text-lg font-semibold text-slate-900">${Number(invoice.totalAmount).toLocaleString()}</span>
+                                <span className="text-lg font-semibold text-slate-900">৳{Number(invoice.totalAmount).toLocaleString()}</span>
                             </div>
                             <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(invoice.status)}`}>
                                 {invoice.status}
@@ -259,9 +259,9 @@ export function InvoiceView() {
                                                 <tr key={idx} className="border-t">
                                                     <td className="p-3 text-sm text-slate-800">{item.description}</td>
                                                     <td className="p-3 text-right text-sm text-slate-700">{Number(item.quantity).toLocaleString()}</td>
-                                                    <td className="p-3 text-right text-sm text-slate-700">${Number(item.unitPrice).toLocaleString()}</td>
+                                                    <td className="p-3 text-right text-sm text-slate-700">৳{Number(item.unitPrice).toLocaleString()}</td>
                                                     <td className="p-3 text-right font-medium text-slate-900">
-                                                        ${Number(item.total).toLocaleString()}
+                                                        ৳{Number(item.total).toLocaleString()}
                                                     </td>
                                                 </tr>
                                             ))}
@@ -319,7 +319,7 @@ export function InvoiceView() {
                                             </p>
                                         )}
                                         <p className="text-slate-600">
-                                            Budget: ${Number(invoice.totalAmount).toLocaleString()}
+                                            Budget: ৳{Number(invoice.totalAmount).toLocaleString()}
                                         </p>
                                     </CardContent>
                                 </Card>
@@ -334,9 +334,9 @@ export function InvoiceView() {
                                             Make Payment
                                         </CardTitle>
                                         <CardDescription>
-                                            Total: ${Number(invoice.totalAmount).toLocaleString()} |
-                                            Paid: ${totalPaid.toLocaleString()} |
-                                            Remaining: ${remainingAmount.toLocaleString()}
+                                            Total: ৳{Number(invoice.totalAmount).toLocaleString()} |
+                                            Paid: ৳{totalPaid.toLocaleString()} |
+                                            Remaining: ৳{remainingAmount.toLocaleString()}
                                         </CardDescription>
                                     </CardHeader>
                                     <CardContent>
@@ -400,7 +400,7 @@ export function InvoiceView() {
                                                     {errors.amount && (
                                                         <p className="text-sm text-red-600 mt-1">{errors.amount.message}</p>
                                                     )}
-                                                    <p className="text-xs text-gray-500 mt-1">Maximum: ${remainingAmount.toLocaleString()}</p>
+                                                    <p className="text-xs text-gray-500 mt-1">Maximum: ৳{remainingAmount.toLocaleString()}</p>
                                                 </div>
 
                                                 <div>
@@ -498,7 +498,7 @@ export function InvoiceView() {
                                                     </span>
                                                 </div>
                                                 <div className="text-xs text-slate-600 space-y-1">
-                                                    <p>Amount: ${Number(payment.amount).toLocaleString()}</p>
+                                                    <p>Amount: ৳{Number(payment.amount).toLocaleString()}</p>
                                                     {payment.transactionId && (
                                                         <p>Transaction ID: {payment.transactionId}</p>
                                                     )}

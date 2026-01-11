@@ -69,6 +69,19 @@ export function ClientProjects() {
     }
   }, [location, navigate, queryClient]);
 
+  // Listen for custom event to open project form (from welcome modal)
+  useEffect(() => {
+    const handleOpenProjectForm = () => {
+      setIsFormOpen(true);
+      setFormStep(1);
+    };
+
+    window.addEventListener('open-project-form', handleOpenProjectForm);
+    return () => {
+      window.removeEventListener('open-project-form', handleOpenProjectForm);
+    };
+  }, []);
+
   // When service is selected, auto-fill form data
   useEffect(() => {
     if (selectedService) {

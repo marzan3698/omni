@@ -28,7 +28,11 @@ const createLeadFromInboxSchema = z.object({
   phone: z.string().min(1, 'Phone is required'),
   categoryId: z.number().int().positive('Category is required'),
   interestId: z.number().int().positive('Interest is required'),
-  campaignId: z.number().int().positive().optional(),
+  campaignId: z.number().int().positive('Campaign is required'),
+  productId: z.number().int().positive().optional(),
+  purchasePrice: z.number().nonnegative().optional(),
+  salePrice: z.number().nonnegative().optional(),
+  profit: z.number().optional(),
 });
 
 const convertLeadSchema = z.object({
@@ -137,6 +141,16 @@ export const leadController = {
         return sendError(res, 'Interest is required', 400);
       }
       
+      // Campaign is now required
+      if (body.campaignId !== undefined && body.campaignId !== null && body.campaignId !== '') {
+        body.campaignId = typeof body.campaignId === 'string' ? parseInt(body.campaignId, 10) : body.campaignId;
+        if (isNaN(body.campaignId) || body.campaignId <= 0) {
+          return sendError(res, 'Campaign is required', 400);
+        }
+      } else {
+        return sendError(res, 'Campaign is required', 400);
+      }
+      
       if (body.assignedTo !== undefined && body.assignedTo !== null && body.assignedTo !== '') {
         body.assignedTo = typeof body.assignedTo === 'string' ? parseInt(body.assignedTo, 10) : body.assignedTo;
         if (isNaN(body.assignedTo) || body.assignedTo <= 0) {
@@ -153,6 +167,43 @@ export const leadController = {
         }
       } else {
         body.value = undefined;
+      }
+
+      // Handle new pricing fields
+      if (body.productId !== undefined && body.productId !== null && body.productId !== '') {
+        body.productId = typeof body.productId === 'string' ? parseInt(body.productId, 10) : body.productId;
+        if (isNaN(body.productId) || body.productId <= 0) {
+          body.productId = undefined;
+        }
+      } else {
+        body.productId = undefined;
+      }
+
+      if (body.purchasePrice !== undefined && body.purchasePrice !== null && body.purchasePrice !== '') {
+        body.purchasePrice = typeof body.purchasePrice === 'string' ? parseFloat(body.purchasePrice) : body.purchasePrice;
+        if (isNaN(body.purchasePrice) || body.purchasePrice < 0) {
+          body.purchasePrice = undefined;
+        }
+      } else {
+        body.purchasePrice = undefined;
+      }
+
+      if (body.salePrice !== undefined && body.salePrice !== null && body.salePrice !== '') {
+        body.salePrice = typeof body.salePrice === 'string' ? parseFloat(body.salePrice) : body.salePrice;
+        if (isNaN(body.salePrice) || body.salePrice < 0) {
+          body.salePrice = undefined;
+        }
+      } else {
+        body.salePrice = undefined;
+      }
+
+      if (body.profit !== undefined && body.profit !== null && body.profit !== '') {
+        body.profit = typeof body.profit === 'string' ? parseFloat(body.profit) : body.profit;
+        if (isNaN(body.profit)) {
+          body.profit = undefined;
+        }
+      } else {
+        body.profit = undefined;
       }
 
       const validatedData = createLeadFromInboxSchema.parse(body);

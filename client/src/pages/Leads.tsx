@@ -7,8 +7,11 @@ import { Label } from '@/components/ui/label';
 import { leadApi, leadCategoryApi, leadInterestApi } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { Target, Plus, Search, Filter, X, Edit, Eye } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useNavigate } from 'react-router-dom';
 
 export function Leads() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [filters, setFilters] = useState({
     search: '',
@@ -257,6 +260,7 @@ export function Leads() {
                     <th className="text-left py-3 px-4 font-semibold text-slate-700">Status</th>
                     <th className="text-left py-3 px-4 font-semibold text-slate-700">Source</th>
                     <th className="text-left py-3 px-4 font-semibold text-slate-700">Value</th>
+                    <th className="text-left py-3 px-4 font-semibold text-slate-700">Profit</th>
                     <th className="text-left py-3 px-4 font-semibold text-slate-700">Created By</th>
                     <th className="text-left py-3 px-4 font-semibold text-slate-700">Created At</th>
                     <th className="text-left py-3 px-4 font-semibold text-slate-700">Actions</th>
@@ -310,10 +314,22 @@ export function Leads() {
                       <td className="py-3 px-4">
                         {lead.value ? (
                           <span className="font-medium text-green-600">
-                            ${Number(lead.value).toLocaleString()}
+                            ৳{Number(lead.value).toLocaleString()}
                           </span>
                         ) : (
                           '-'
+                        )}
+                      </td>
+                      <td className="py-3 px-4">
+                        {lead.profit !== null && lead.profit !== undefined ? (
+                          <span className={cn(
+                            "font-medium",
+                            Number(lead.profit) > 0 ? "text-green-600" : Number(lead.profit) < 0 ? "text-red-600" : "text-slate-600"
+                          )}>
+                            ৳{Number(lead.profit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400">-</span>
                         )}
                       </td>
                       <td className="py-3 px-4">
@@ -332,10 +348,15 @@ export function Leads() {
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex gap-2">
-                          <Button variant="ghost" size="sm">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => navigate(`/leads/${lead.id}`)}
+                            title="View lead details"
+                          >
                             <Eye className="w-4 h-4" />
                           </Button>
-                          <Button variant="ghost" size="sm">
+                          <Button variant="ghost" size="sm" title="Edit lead">
                             <Edit className="w-4 h-4" />
                           </Button>
                         </div>
