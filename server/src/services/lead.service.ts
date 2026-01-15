@@ -829,8 +829,10 @@ export const leadService = {
       throw new AppError('Lead not found', 404);
     }
 
-    if (lead.status !== 'Won') {
-      throw new AppError('Only won leads can be converted to clients', 400);
+    // Allow conversion from Qualified, Negotiation, or Won status
+    // Automatically update status to Won if not already
+    if (!['Qualified', 'Negotiation', 'Won'].includes(lead.status)) {
+      throw new AppError('Only Qualified, Negotiation, or Won leads can be converted to clients', 400);
     }
 
     // Check if client already exists
@@ -865,13 +867,15 @@ export const leadService = {
       });
     }
 
-    // Update lead status to indicate conversion
-    await prisma.lead.update({
-      where: { id },
-      data: {
-        status: 'Won',
-      },
-    });
+    // Update lead status to Won to indicate conversion (if not already Won)
+    if (lead.status !== 'Won') {
+      await prisma.lead.update({
+        where: { id },
+        data: {
+          status: 'Won',
+        },
+      });
+    }
 
     return client;
   },

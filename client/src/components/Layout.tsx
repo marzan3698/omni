@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { Sidebar } from './Sidebar';
+import { MeetingAlert } from './MeetingAlert';
 import { Menu, Bell, Search, User, LogOut, Maximize2, Minimize2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSidebar } from '@/contexts/SidebarContext';
+import { meetingApi } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 interface LayoutProps {
@@ -16,6 +19,17 @@ export function Layout({ children }: LayoutProps) {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const { user, logout } = useAuth();
+
+  // Fetch upcoming meeting (within 1 hour)
+  const { data: upcomingMeeting } = useQuery({
+    queryKey: ['upcoming-meeting', user?.id, user?.companyId],
+    queryFn: async () => {
+      const response = await meetingApi.getUpcoming();
+      return response.data.data;
+    },
+    enabled: !!user?.id && !!user?.companyId,
+    refetchInterval: 30000, // Check every 30 seconds
+  });
 
   // Auto-hide sidebar when on /inbox route, show when navigating away
   useEffect(() => {
@@ -117,6 +131,11 @@ export function Layout({ children }: LayoutProps) {
 
             {/* Right: Actions */}
             <div className="flex items-center gap-2 md:gap-4">
+              {/* Meeting Alert (before fullscreen button) */}
+              {upcomingMeeting && (
+                <MeetingAlert meeting={upcomingMeeting} />
+              )}
+              
               {/* Fullscreen button */}
               <button
                 onClick={toggleFullscreen}

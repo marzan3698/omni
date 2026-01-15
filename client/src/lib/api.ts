@@ -149,6 +149,40 @@ export const leadApi = {
     apiClientInstance.post<ApiResponse>(`/leads/${id}/convert`, data, { params: { companyId } }),
   getPipeline: (companyId: number) => 
     apiClientInstance.get<ApiResponse>('/leads/pipeline', { params: { companyId } }),
+  getMeetings: (leadId: number, companyId: number) =>
+    apiClientInstance.get<ApiResponse>(`/leads/${leadId}/meetings`, { params: { companyId } }),
+  createMeeting: (leadId: number, data: any, companyId: number) =>
+    apiClientInstance.post<ApiResponse>(`/leads/${leadId}/meetings`, data, { params: { companyId } }),
+  updateMeeting: (leadId: number, meetingId: number, data: any, companyId: number) =>
+    apiClientInstance.put<ApiResponse>(`/leads/${leadId}/meetings/${meetingId}`, data, { params: { companyId } }),
+  deleteMeeting: (leadId: number, meetingId: number, companyId: number) =>
+    apiClientInstance.delete<ApiResponse>(`/leads/${leadId}/meetings/${meetingId}`, { params: { companyId } }),
+  getCalls: (leadId: number, companyId: number) =>
+    apiClientInstance.get<ApiResponse>(`/leads/${leadId}/calls`, { params: { companyId } }),
+  createCall: (leadId: number, data: any, companyId: number) =>
+    apiClientInstance.post<ApiResponse>(`/leads/${leadId}/calls`, data, { params: { companyId } }),
+  updateCall: (leadId: number, callId: number, data: any, companyId: number) =>
+    apiClientInstance.put<ApiResponse>(`/leads/${leadId}/calls/${callId}`, data, { params: { companyId } }),
+  deleteCall: (leadId: number, callId: number, companyId: number) =>
+    apiClientInstance.delete<ApiResponse>(`/leads/${leadId}/calls/${callId}`, { params: { companyId } }),
+  addCallNote: (leadId: number, callId: number, note: string, companyId: number) =>
+    apiClientInstance.post<ApiResponse>(`/leads/${leadId}/calls/${callId}/notes`, { note }, { params: { companyId } }),
+};
+
+// Meeting API
+export const meetingApi = {
+  getAll: (filters?: { status?: string; startDate?: string; endDate?: string; leadId?: number }) =>
+    apiClientInstance.get<ApiResponse>('/meetings', { params: filters }),
+  getUpcoming: () =>
+    apiClientInstance.get<ApiResponse>('/meetings/upcoming'),
+};
+
+// Call API
+export const callApi = {
+  getAll: (filters?: { status?: string; startDate?: string; endDate?: string; leadId?: number; assignedTo?: number }) =>
+    apiClientInstance.get<ApiResponse>('/calls', { params: filters }),
+  getUpcoming: () =>
+    apiClientInstance.get<ApiResponse>('/calls/upcoming'),
 };
 
 // Lead Category API

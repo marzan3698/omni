@@ -382,5 +382,77 @@ export const verifyTaskUpdateAccess = async (req: Request, res: Response, next: 
   }
 };
 
+/**
+ * Middleware to check if user can access a lead
+ * Allows users with can_manage_leads permission OR users with assigned calls for that lead
+ * Usage: verifyLeadAccess
+ */
+export const verifyLeadAccess = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const authReq = req as AuthRequest;
+
+    if (!authReq.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not authenticated',
+      });
+    }
+
+    // Get user's role with permissions
+    const user = await prisma.user.findUnique({
+      where: { id: authReq.user.id },
+      include: { role: true, employee: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    // SuperAdmin has access to everything
+    if (user.role.name === 'SuperAdmin') {
+      return next();
+    }
+
+    const permissions = user.role.permissions as Record<string, boolean>;
+
+    // Check if user has can_manage_leads permission
+    if (permissions['can_manage_leads']) {
+      return next();
+    }
+
+    // Check if user has assigned calls for this lead
+    // Check leadId first (for routes like /:leadId/calls), then id (for routes like /:id)
+    const leadId = parseInt(req.params.leadId || req.params.id);
+    if (!isNaN(leadId) && user.employee) {
+      const hasAssignedCall = await prisma.leadCall.findFirst({
+        where: {
+          leadId,
+          assignedTo: user.employee.id,
+          companyId: authReq.user.companyId,
+        },
+      });
+
+      if (hasAssignedCall) {
+        return next();
+      }
+    }
+
+    // Permission denied
+    return res.status(403).json({
+      success: false,
+      message: 'Permission denied: You can only access leads you have assigned calls for',
+    });
+  } catch (error) {
+    console.error('Lead access permission check error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Permission check failed',
+    });
+  }
+};
+
 export { authMiddleware as default };
 

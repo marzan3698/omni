@@ -13,10 +13,11 @@ import { useNavigate } from 'react-router-dom';
 export function Leads() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState<'Inbox' | 'Website' | 'FacebookPixel'>('Inbox');
   const [filters, setFilters] = useState({
     search: '',
     status: '',
-    source: '',
+    source: 'Inbox',
     categoryId: '',
     interestId: '',
     createdBy: '',
@@ -25,12 +26,17 @@ export function Leads() {
 
   // Fetch leads with filters
   const { data: leadsResponse, isLoading } = useQuery({
-    queryKey: ['leads', filters],
+    queryKey: ['leads', activeTab, filters],
     queryFn: async () => {
       const params: any = {};
       if (filters.search) params.search = filters.search;
       if (filters.status) params.status = filters.status;
-      if (filters.source) params.source = filters.source;
+      params.source =
+        activeTab === 'Inbox'
+          ? 'Inbox'
+          : activeTab === 'Website'
+          ? 'Website'
+          : 'FacebookPixel';
       if (filters.categoryId) params.categoryId = parseInt(filters.categoryId);
       if (filters.interestId) params.interestId = parseInt(filters.interestId);
       if (filters.createdBy) params.createdBy = filters.createdBy;
@@ -67,7 +73,7 @@ export function Leads() {
     setFilters({
       search: '',
       status: '',
-      source: '',
+      source: activeTab,
       categoryId: '',
       interestId: '',
       createdBy: '',
@@ -93,6 +99,7 @@ export function Leads() {
       case 'Inbox': return 'bg-indigo-100 text-indigo-700';
       case 'Website': return 'bg-blue-100 text-blue-700';
       case 'SocialMedia': return 'bg-pink-100 text-pink-700';
+      case 'FacebookPixel': return 'bg-sky-100 text-sky-700';
       default: return 'bg-gray-100 text-gray-700';
     }
   };
@@ -108,6 +115,55 @@ export function Leads() {
           <Plus className="w-4 h-4 mr-2" />
           Add Lead
         </Button>
+      </div>
+
+      {/* Source Tabs */}
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('Inbox');
+            setFilters(prev => ({ ...prev, source: 'Inbox' }));
+          }}
+          className={cn(
+            'px-4 py-2 rounded-full text-sm font-medium border',
+            activeTab === 'Inbox'
+              ? 'bg-indigo-600 text-white border-indigo-600'
+              : 'bg-white text-slate-700 border-gray-200 hover:bg-gray-50'
+          )}
+        >
+          Omni Inbox
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('Website');
+            setFilters(prev => ({ ...prev, source: 'Website' }));
+          }}
+          className={cn(
+            'px-4 py-2 rounded-full text-sm font-medium border',
+            activeTab === 'Website'
+              ? 'bg-indigo-600 text-white border-indigo-600'
+              : 'bg-white text-slate-700 border-gray-200 hover:bg-gray-50'
+          )}
+        >
+          Website
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('FacebookPixel');
+            setFilters(prev => ({ ...prev, source: 'FacebookPixel' }));
+          }}
+          className={cn(
+            'px-4 py-2 rounded-full text-sm font-medium border',
+            activeTab === 'FacebookPixel'
+              ? 'bg-indigo-600 text-white border-indigo-600'
+              : 'bg-white text-slate-700 border-gray-200 hover:bg-gray-50'
+          )}
+        >
+          Facebook Pixel
+        </button>
       </div>
 
       {/* Search and Filters */}
@@ -159,24 +215,7 @@ export function Leads() {
                   </select>
                 </div>
 
-                <div>
-                  <Label htmlFor="source-filter">Source</Label>
-                  <select
-                    id="source-filter"
-                    value={filters.source}
-                    onChange={(e) => handleFilterChange('source', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  >
-                    <option value="">All Sources</option>
-                    <option value="Website">Website</option>
-                    <option value="Referral">Referral</option>
-                    <option value="SocialMedia">Social Media</option>
-                    <option value="Email">Email</option>
-                    <option value="Phone">Phone</option>
-                    <option value="Inbox">Inbox</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
+                {/* Source is controlled by tabs, so we keep it implicit here */}
 
                 <div>
                   <Label htmlFor="category-filter">Category</Label>

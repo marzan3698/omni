@@ -141,3 +141,62 @@ export interface Task {
   unreadMessageCount?: number;
 }
 
+// Lead Meeting types
+export type LeadMeetingStatus = 'Scheduled' | 'Completed' | 'Canceled';
+
+export interface LeadMeeting {
+  id: number;
+  companyId: number;
+  leadId: number;
+  clientId?: number | null;
+  createdBy: string;
+  title: string;
+  description?: string | null;
+  meetingTime: string;
+  durationMinutes: number;
+  googleMeetUrl: string;
+  status: LeadMeetingStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Lead Call types
+export type LeadCallStatus = 'Scheduled' | 'Completed' | 'Canceled' | 'NoAnswer' | 'Busy' | 'LeftVoicemail';
+
+export interface LeadCall {
+  id: number;
+  companyId: number;
+  leadId: number;
+  clientId?: number | null;
+  assignedTo: number;
+  createdBy: string;
+  title?: string | null;
+  phoneNumber?: string | null;
+  callTime: string | Date;
+  durationMinutes?: number | null;
+  status: LeadCallStatus;
+  notes?: string | null;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+  assignedEmployee?: {
+    id: number;
+    user?: {
+      id: string;
+      email: string;
+      name?: string | null;
+      profileImage?: string | null;
+    };
+    designation?: string | null;
+    department?: string | null;
+  };
+  lead?: {
+    id: number;
+    title: string;
+    phone?: string | null;
+  };
+  client?: {
+    id: number;
+    name: string;
+  };
+}
+

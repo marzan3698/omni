@@ -25,6 +25,9 @@ import { TaskDetail } from './pages/TaskDetail';
 import { Finance } from './pages/Finance';
 import { Leads } from './pages/Leads';
 import { LeadDetail } from './pages/LeadDetail';
+import { MeetingSchedule } from './pages/MeetingSchedule';
+import { CallSchedule } from './pages/CallSchedule';
+import { MyCalls } from './pages/MyCalls';
 import Users from './pages/Users';
 import LeadConfig from './pages/LeadConfig';
 import SystemSettings from './pages/SystemSettings';
@@ -199,6 +202,40 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <LeadDetail />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/meeting-schedule"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <PermissionGuard permission="can_manage_leads">
+                    <MeetingSchedule />
+                  </PermissionGuard>
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/call-schedule"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <PermissionGuard permission="can_manage_leads">
+                    <CallSchedule />
+                  </PermissionGuard>
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/my-calls"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <MyCalls />
                 </Layout>
               </ProtectedRoute>
             }

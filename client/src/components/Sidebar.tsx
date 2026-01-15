@@ -25,7 +25,9 @@ import {
   Eye,
   Package,
   CreditCard,
-  Palette
+  Palette,
+  Calendar,
+  Phone
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -80,6 +82,35 @@ const menuSections: MenuSection[] = [
       { label: 'Employees', icon: Users, path: '/employees', permission: 'can_view_employees' },
       { label: 'Employee Groups', icon: Users, path: '/employee-groups', permission: 'can_manage_employees' },
       { label: 'Tasks', icon: CheckSquare, path: '/tasks', permission: 'can_view_tasks' },
+    ]
+  },
+  // Section 2.5: Meeting Schedule (মিটিং শিডিউল)
+  {
+    label: 'Meeting Schedule',
+    items: [
+      {
+        label: 'All Meetings',
+        icon: Calendar,
+        path: '/meeting-schedule',
+        permission: 'can_manage_leads'
+      }
+    ]
+  },
+  // Section 2.6: Call Schedule (কল শিডিউল)
+  {
+    label: 'Call Schedule',
+    items: [
+      {
+        label: 'All Calls',
+        icon: Phone,
+        path: '/call-schedule',
+        permission: 'can_manage_leads'
+      },
+      {
+        label: 'My Calls',
+        icon: Phone,
+        path: '/my-calls'
+      }
     ]
   },
   // Section 3: Project Management (প্রকল্প ব্যবস্থাপনা)

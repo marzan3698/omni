@@ -1,9 +1,17 @@
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { leadApi } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
+import type { LeadMeeting, LeadMeetingStatus, LeadCall, LeadCallStatus } from '@/types';
+import { EmployeeSelector } from '@/components/EmployeeSelector';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { 
   ArrowLeft, 
   Calendar, 
@@ -28,7 +36,10 @@ import {
   Facebook,
   CreditCard,
   Briefcase,
-  Edit
+  Edit,
+  Plus,
+  UserPlus,
+  X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -36,6 +47,102 @@ export function LeadDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  const meetingSchema = z.object({
+    title: z.string().min(1, 'Meeting title is required'),
+    description: z.string().optional(),
+    meetingTime: z.string().min(1, 'Meeting time is required'),
+    durationMinutes: z
+      .number({ invalid_type_error: 'Duration is required' })
+      .int()
+      .positive('Duration must be positive'),
+    googleMeetUrl: z.string().url('Valid Google Meet URL is required'),
+    status: z.enum(['Scheduled', 'Completed', 'Canceled']).optional(),
+  });
+
+  type MeetingFormValues = z.infer<typeof meetingSchema>;
+
+  const [editingMeeting, setEditingMeeting] = useState<LeadMeeting | null>(null);
+  const [isMeetingFormOpen, setIsMeetingFormOpen] = useState(false);
+
+  const callSchema = z.object({
+    title: z.string().optional(),
+    phoneNumber: z.string().optional(),
+    callTime: z.string().min(1, 'Call time is required'),
+    durationMinutes: z.number().int().positive('Duration must be positive').optional(),
+    assignedTo: z.number().int().positive('Assigned employee is required'),
+    status: z.enum(['Scheduled', 'Completed', 'Canceled', 'NoAnswer', 'Busy', 'LeftVoicemail']).optional(),
+  });
+
+  type CallFormValues = z.infer<typeof callSchema>;
+
+  const [editingCall, setEditingCall] = useState<LeadCall | null>(null);
+  const [isCallFormOpen, setIsCallFormOpen] = useState(false);
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<number[]>([]);
+  const [editingCallNote, setEditingCallNote] = useState<{ callId: number; note: string } | null>(null);
+  const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
+
+  const convertSchema = z.object({
+    name: z.string().min(1, 'Client name is required').optional(),
+    address: z.string().optional(),
+    email: z.string().email('Invalid email address').optional().or(z.literal('')),
+    phone: z.string().optional(),
+  });
+
+  type ConvertFormValues = z.infer<typeof convertSchema>;
+
+  const {
+    register: registerConvert,
+    handleSubmit: handleConvertSubmit,
+    reset: resetConvert,
+    formState: { errors: convertErrors, isSubmitting: isConvertSubmitting },
+  } = useForm<ConvertFormValues>({
+    resolver: zodResolver(convertSchema),
+    defaultValues: {
+      name: '',
+      address: '',
+      email: '',
+      phone: '',
+    },
+  });
+
+  const {
+    register: registerCall,
+    handleSubmit: handleCallSubmit,
+    reset: resetCall,
+    formState: { errors: callErrors, isSubmitting: isCallSubmitting },
+    setValue: setCallValue,
+    watch: watchCall,
+  } = useForm<CallFormValues>({
+    resolver: zodResolver(callSchema),
+    defaultValues: {
+      title: '',
+      phoneNumber: '',
+      callTime: '',
+      durationMinutes: undefined,
+      assignedTo: 0,
+      status: 'Scheduled',
+    },
+  });
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+    setValue,
+  } = useForm<MeetingFormValues>({
+    resolver: zodResolver(meetingSchema),
+    defaultValues: {
+      title: '',
+      description: '',
+      meetingTime: '',
+      durationMinutes: 30,
+      googleMeetUrl: '',
+      status: 'Scheduled',
+    },
+  });
 
   const { data: lead, isLoading, error } = useQuery({
     queryKey: ['lead', id, user?.companyId],
@@ -46,6 +153,326 @@ export function LeadDetail() {
     },
     enabled: !!id && !!user?.companyId,
   });
+
+  const { data: meetings = [], isLoading: isLoadingMeetings } = useQuery<LeadMeeting[]>({
+    queryKey: ['lead-meetings', id, user?.companyId],
+    queryFn: async () => {
+      if (!id || !user?.companyId) return [];
+      const response = await leadApi.getMeetings(parseInt(id), user.companyId);
+      return (response.data.data as LeadMeeting[]) || [];
+    },
+    enabled: !!id && !!user?.companyId,
+  });
+
+  const createMeetingMutation = useMutation({
+    mutationFn: async (values: MeetingFormValues) => {
+      if (!id || !user?.companyId) {
+        throw new Error('Invalid parameters');
+      }
+
+      const payload = {
+        ...values,
+        meetingTime: new Date(values.meetingTime),
+        durationMinutes: Number(values.durationMinutes),
+      };
+
+      const response = await leadApi.createMeeting(parseInt(id), payload, user.companyId);
+      return response.data.data as LeadMeeting;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lead-meetings', id, user?.companyId] });
+      setIsMeetingFormOpen(false);
+      setEditingMeeting(null);
+      reset();
+    },
+  });
+
+  const updateMeetingMutation = useMutation({
+    mutationFn: async (values: MeetingFormValues) => {
+      if (!id || !user?.companyId || !editingMeeting) {
+        throw new Error('Invalid parameters');
+      }
+
+      const payload = {
+        ...values,
+        meetingTime: new Date(values.meetingTime),
+        durationMinutes: Number(values.durationMinutes),
+      };
+
+      const response = await leadApi.updateMeeting(
+        parseInt(id),
+        editingMeeting.id,
+        payload,
+        user.companyId
+      );
+      return response.data.data as LeadMeeting;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lead-meetings', id, user?.companyId] });
+      setIsMeetingFormOpen(false);
+      setEditingMeeting(null);
+      reset();
+    },
+  });
+
+  const deleteMeetingMutation = useMutation({
+    mutationFn: async (meetingId: number) => {
+      if (!id || !user?.companyId) {
+        throw new Error('Invalid parameters');
+      }
+      const response = await leadApi.deleteMeeting(parseInt(id), meetingId, user.companyId);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lead-meetings', id, user?.companyId] });
+    },
+  });
+
+  const openCreateMeetingForm = () => {
+    setEditingMeeting(null);
+    reset({
+      title: '',
+      description: '',
+      meetingTime: '',
+      durationMinutes: 30,
+      googleMeetUrl: '',
+      status: 'Scheduled',
+    });
+    setIsMeetingFormOpen(true);
+  };
+
+  const openEditMeetingForm = (meeting: LeadMeeting) => {
+    setEditingMeeting(meeting);
+    reset({
+      title: meeting.title,
+      description: meeting.description || '',
+      meetingTime: new Date(meeting.meetingTime).toISOString().slice(0, 16),
+      durationMinutes: meeting.durationMinutes,
+      googleMeetUrl: meeting.googleMeetUrl,
+      status: meeting.status as LeadMeetingStatus,
+    });
+    setIsMeetingFormOpen(true);
+  };
+
+  const handleMeetingSubmit = (values: MeetingFormValues) => {
+    if (editingMeeting) {
+      return updateMeetingMutation.mutateAsync(values);
+    }
+    return createMeetingMutation.mutateAsync(values);
+  };
+
+  // Update call form phone number when lead loads (only if form is not open)
+  useEffect(() => {
+    if (lead?.phone && !isCallFormOpen) {
+      setCallValue('phoneNumber', lead.phone);
+    }
+  }, [lead?.phone, isCallFormOpen, setCallValue]);
+
+  // Sync selectedEmployeeId with form's assignedTo field
+  useEffect(() => {
+    if (selectedEmployeeId.length > 0) {
+      setCallValue('assignedTo', selectedEmployeeId[0]);
+    } else {
+      setCallValue('assignedTo', 0);
+    }
+  }, [selectedEmployeeId, setCallValue]);
+
+  // Call queries and mutations
+  const { data: calls = [], isLoading: isLoadingCalls } = useQuery<LeadCall[]>({
+    queryKey: ['lead-calls', id, user?.companyId],
+    queryFn: async () => {
+      if (!id || !user?.companyId) return [];
+      const response = await leadApi.getCalls(parseInt(id), user.companyId);
+      return (response.data.data as LeadCall[]) || [];
+    },
+    enabled: !!id && !!user?.companyId,
+  });
+
+  const createCallMutation = useMutation({
+    mutationFn: async (values: CallFormValues) => {
+      if (!id || !user?.companyId || selectedEmployeeId.length === 0) {
+        throw new Error('Invalid parameters');
+      }
+
+      const payload = {
+        ...values,
+        callTime: new Date(values.callTime),
+        assignedTo: selectedEmployeeId[0],
+        durationMinutes: values.durationMinutes ? Number(values.durationMinutes) : undefined,
+      };
+
+      const response = await leadApi.createCall(parseInt(id), payload, user.companyId);
+      return response.data.data as LeadCall;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lead-calls', id, user?.companyId] });
+      setIsCallFormOpen(false);
+      setEditingCall(null);
+      setSelectedEmployeeId([]);
+      resetCall();
+    },
+  });
+
+  const updateCallMutation = useMutation({
+    mutationFn: async (values: CallFormValues) => {
+      if (!id || !user?.companyId || !editingCall) {
+        throw new Error('Invalid parameters');
+      }
+
+      const payload = {
+        ...values,
+        callTime: new Date(values.callTime),
+        assignedTo: selectedEmployeeId.length > 0 ? selectedEmployeeId[0] : editingCall.assignedTo,
+        durationMinutes: values.durationMinutes ? Number(values.durationMinutes) : undefined,
+      };
+
+      const response = await leadApi.updateCall(
+        parseInt(id),
+        editingCall.id,
+        payload,
+        user.companyId
+      );
+      return response.data.data as LeadCall;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lead-calls', id, user?.companyId] });
+      setIsCallFormOpen(false);
+      setEditingCall(null);
+      setSelectedEmployeeId([]);
+      resetCall();
+    },
+  });
+
+  const deleteCallMutation = useMutation({
+    mutationFn: async (callId: number) => {
+      if (!id || !user?.companyId) {
+        throw new Error('Invalid parameters');
+      }
+      const response = await leadApi.deleteCall(parseInt(id), callId, user.companyId);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lead-calls', id, user?.companyId] });
+    },
+  });
+
+  const addCallNoteMutation = useMutation({
+    mutationFn: async ({ callId, note }: { callId: number; note: string }) => {
+      if (!id || !user?.companyId) {
+        throw new Error('Invalid parameters');
+      }
+      const response = await leadApi.addCallNote(parseInt(id), callId, note, user.companyId);
+      return response.data.data as LeadCall;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lead-calls', id, user?.companyId] });
+      setEditingCallNote(null);
+    },
+  });
+
+  // Convert lead to client mutation
+  const convertToClientMutation = useMutation({
+    mutationFn: async (values: ConvertFormValues) => {
+      if (!id || !user?.companyId) {
+        throw new Error('Invalid parameters');
+      }
+
+      const clientData: any = {};
+      if (values.name) clientData.name = values.name;
+      if (values.address) clientData.address = values.address;
+      
+      const contactInfo: any = {};
+      if (values.email) contactInfo.email = values.email;
+      if (values.phone) contactInfo.phone = values.phone;
+      if (Object.keys(contactInfo).length > 0) {
+        clientData.contactInfo = contactInfo;
+      }
+
+      const response = await leadApi.convert(parseInt(id), user.companyId, clientData);
+      return response.data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lead', id, user?.companyId] });
+      setIsConvertModalOpen(false);
+      resetConvert();
+      // Show success message (you can add a toast notification here)
+      alert('Lead converted to client successfully!');
+    },
+    onError: (error: any) => {
+      alert(error?.response?.data?.message || 'Failed to convert lead to client');
+    },
+  });
+
+  const openConvertModal = () => {
+    resetConvert({
+      name: lead?.customerName || lead?.title || '',
+      address: '',
+      email: '',
+      phone: lead?.phone || '',
+    });
+    setIsConvertModalOpen(true);
+  };
+
+  const onConvertSubmit = (values: ConvertFormValues) => {
+    convertToClientMutation.mutate(values);
+  };
+
+  const openCreateCallForm = () => {
+    setEditingCall(null);
+    setSelectedEmployeeId([]);
+    resetCall({
+      title: '',
+      phoneNumber: lead?.phone || '',
+      callTime: '',
+      durationMinutes: undefined,
+      assignedTo: 0,
+      status: 'Scheduled',
+    });
+    setIsCallFormOpen(true);
+  };
+
+  const openEditCallForm = (call: LeadCall) => {
+    setEditingCall(call);
+    setSelectedEmployeeId([call.assignedTo]);
+    resetCall({
+      title: call.title || '',
+      phoneNumber: call.phoneNumber || lead?.phone || '',
+      callTime: new Date(call.callTime).toISOString().slice(0, 16),
+      durationMinutes: call.durationMinutes || undefined,
+      assignedTo: call.assignedTo,
+      status: call.status as LeadCallStatus,
+    });
+    setIsCallFormOpen(true);
+  };
+
+  const onCallSubmit = (values: CallFormValues) => {
+    // Ensure assignedTo is set from selectedEmployeeId if not already set
+    if (selectedEmployeeId.length > 0 && (!values.assignedTo || values.assignedTo === 0)) {
+      values.assignedTo = selectedEmployeeId[0];
+    }
+    
+    if (!values.assignedTo || values.assignedTo === 0) {
+      alert('Please select an employee');
+      return;
+    }
+    
+    if (editingCall) {
+      return updateCallMutation.mutateAsync(values);
+    }
+    return createCallMutation.mutateAsync(values);
+  };
+
+  const getCallStatusColor = (status: LeadCallStatus) => {
+    switch (status) {
+      case 'Scheduled': return 'bg-blue-100 text-blue-700';
+      case 'Completed': return 'bg-green-100 text-green-700';
+      case 'Canceled': return 'bg-red-100 text-red-700';
+      case 'NoAnswer': return 'bg-yellow-100 text-yellow-700';
+      case 'Busy': return 'bg-orange-100 text-orange-700';
+      case 'LeftVoicemail': return 'bg-purple-100 text-purple-700';
+      default: return 'bg-gray-100 text-gray-700';
+    }
+  };
 
   if (isLoading) {
     return (
@@ -129,6 +556,17 @@ export function LeadDetail() {
     return `৳${num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
+  const formatMeetingDate = (date: string | Date) => {
+    const d = typeof date === 'string' ? new Date(date) : date;
+    return d.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -155,6 +593,15 @@ export function LeadDetail() {
             {getStatusIcon(lead.status)}
             {lead.status}
           </span>
+          {['Qualified', 'Negotiation', 'Won'].includes(lead.status) && (
+            <Button 
+              onClick={openConvertModal}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white"
+            >
+              <UserPlus className="w-4 h-4 mr-2" />
+              Convert to Client
+            </Button>
+          )}
           <Button variant="outline">
             <Edit className="w-4 h-4 mr-2" />
             Edit Lead
@@ -410,6 +857,227 @@ export function LeadDetail() {
               </CardContent>
             </Card>
           )}
+
+          {/* Lead Meetings */}
+          <Card className="shadow-sm border-gray-200">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-indigo-600" />
+                Meetings
+              </CardTitle>
+              <Button
+                size="sm"
+                onClick={openCreateMeetingForm}
+                variant="outline"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Schedule Meeting
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {isLoadingMeetings ? (
+                <div className="text-slate-500 py-4">Loading meetings...</div>
+              ) : meetings.length === 0 ? (
+                <div className="text-slate-500 py-4">
+                  No meetings scheduled for this lead.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {meetings.map((meeting) => (
+                    <div
+                      key={meeting.id}
+                      className="flex items-start justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-slate-900">
+                            {meeting.title}
+                          </span>
+                          <span
+                            className={cn(
+                              'px-2 py-0.5 rounded-full text-xs font-medium',
+                              meeting.status === 'Scheduled' &&
+                                'bg-blue-100 text-blue-700',
+                              meeting.status === 'Completed' &&
+                                'bg-green-100 text-green-700',
+                              meeting.status === 'Canceled' &&
+                                'bg-red-100 text-red-700'
+                            )}
+                          >
+                            {meeting.status}
+                          </span>
+                        </div>
+                        <div className="text-sm text-slate-600 flex items-center gap-2">
+                          <Clock className="w-4 h-4" />
+                          <span>{formatMeetingDate(meeting.meetingTime)}</span>
+                          <span className="text-slate-400">•</span>
+                          <span>{meeting.durationMinutes} min</span>
+                        </div>
+                        <div className="text-sm">
+                          <a
+                            href={meeting.googleMeetUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-indigo-600 hover:underline text-xs break-all"
+                          >
+                            {meeting.googleMeetUrl}
+                          </a>
+                        </div>
+                        {meeting.description && (
+                          <p className="text-sm text-slate-700 mt-1">
+                            {meeting.description}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex flex-col items-end gap-2">
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openEditMeetingForm(meeting)}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-600 hover:text-red-700"
+                            onClick={() => deleteMeetingMutation.mutate(meeting.id)}
+                          >
+                            <XCircle className="w-4 h-4" />
+                          </Button>
+                        </div>
+                        <span className="text-xs text-slate-400">
+                          Created at {formatMeetingDate(meeting.createdAt)}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {isMeetingFormOpen && (
+                <form
+                  onSubmit={handleSubmit(handleMeetingSubmit)}
+                  className="mt-4 space-y-4 border-t pt-4"
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium text-slate-600">
+                        Title
+                      </label>
+                      <Input
+                        {...register('title')}
+                        className="mt-1"
+                        placeholder="Meeting title"
+                      />
+                      {errors.title && (
+                        <p className="text-xs text-red-500 mt-1">
+                          {errors.title.message}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-slate-600">
+                        Meeting Time
+                      </label>
+                      <Input
+                        type="datetime-local"
+                        {...register('meetingTime')}
+                        className="mt-1"
+                      />
+                      {errors.meetingTime && (
+                        <p className="text-xs text-red-500 mt-1">
+                          {errors.meetingTime.message}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium text-slate-600">
+                        Duration (minutes)
+                      </label>
+                      <Input
+                        type="number"
+                        {...register('durationMinutes', {
+                          valueAsNumber: true,
+                        })}
+                        className="mt-1"
+                        min={1}
+                      />
+                      {errors.durationMinutes && (
+                        <p className="text-xs text-red-500 mt-1">
+                          {errors.durationMinutes.message}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-slate-600">
+                        Google Meet URL
+                      </label>
+                      <Input
+                        {...register('googleMeetUrl')}
+                        className="mt-1"
+                        placeholder="https://meet.google.com/..."
+                      />
+                      {errors.googleMeetUrl && (
+                        <p className="text-xs text-red-500 mt-1">
+                          {errors.googleMeetUrl.message}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-slate-600">
+                      Notes
+                    </label>
+                    <Textarea
+                      {...register('description')}
+                      className="mt-1"
+                      placeholder="Add any notes about this meeting..."
+                    />
+                    {errors.description && (
+                      <p className="text-xs text-red-500 mt-1">
+                        {errors.description.message}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setIsMeetingFormOpen(false);
+                        setEditingMeeting(null);
+                        reset();
+                      }}
+                      disabled={isSubmitting || createMeetingMutation.isPending || updateMeetingMutation.isPending}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={
+                        isSubmitting ||
+                        createMeetingMutation.isPending ||
+                        updateMeetingMutation.isPending
+                      }
+                    >
+                      {(createMeetingMutation.isPending ||
+                        updateMeetingMutation.isPending) && (
+                        <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></span>
+                      )}
+                      {editingMeeting ? 'Update Meeting' : 'Create Meeting'}
+                    </Button>
+                  </div>
+                </form>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         {/* Sidebar - Right Side (1 column) */}
@@ -550,8 +1218,347 @@ export function LeadDetail() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Call Schedule */}
+          <Card className="shadow-sm border-gray-200">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Phone className="w-5 h-5 text-indigo-600" />
+                  Call Schedule
+                </CardTitle>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={openCreateCallForm}
+                  disabled={isCallFormOpen}
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Schedule Call
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {isLoadingCalls ? (
+                <div className="text-center py-4 text-slate-500 text-sm">Loading calls...</div>
+              ) : calls.length === 0 ? (
+                <div className="text-center py-4 text-slate-500 text-sm">
+                  No calls scheduled
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {calls.map((call) => (
+                    <div
+                      key={call.id}
+                      className="flex items-start justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
+                    >
+                      <div className="flex-1 space-y-1">
+                        <div className="flex items-center gap-2">
+                          {call.title && (
+                            <span className="font-medium text-slate-900">{call.title}</span>
+                          )}
+                          <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium', getCallStatusColor(call.status))}>
+                            {call.status}
+                          </span>
+                        </div>
+                        <div className="text-sm text-slate-600 flex items-center gap-2">
+                          <Clock className="w-4 h-4" />
+                          <span>{formatMeetingDate(call.callTime)}</span>
+                          {call.durationMinutes && (
+                            <>
+                              <span className="text-slate-400">•</span>
+                              <span>{call.durationMinutes} min</span>
+                            </>
+                          )}
+                        </div>
+                        {call.phoneNumber && (
+                          <div className="text-sm text-slate-600 flex items-center gap-2">
+                            <Phone className="w-4 h-4" />
+                            <span>{call.phoneNumber}</span>
+                          </div>
+                        )}
+                        {call.assignedEmployee && (
+                          <div className="text-sm text-slate-600 flex items-center gap-2">
+                            <User className="w-4 h-4" />
+                            <span>{call.assignedEmployee.user?.email || 'Employee'}</span>
+                          </div>
+                        )}
+                        {call.notes && (
+                          <div className="text-sm text-slate-700 mt-2 p-2 bg-gray-50 rounded">
+                            <strong>Notes:</strong> {call.notes}
+                          </div>
+                        )}
+                        {editingCallNote?.callId === call.id && (
+                          <div className="mt-2 space-y-2">
+                            <Textarea
+                              value={editingCallNote.note}
+                              onChange={(e) => setEditingCallNote({ callId: call.id, note: e.target.value })}
+                              placeholder="Add call notes..."
+                              className="text-sm"
+                            />
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                onClick={() => {
+                                  if (editingCallNote.note.trim()) {
+                                    addCallNoteMutation.mutate({ callId: call.id, note: editingCallNote.note });
+                                  } else {
+                                    setEditingCallNote(null);
+                                  }
+                                }}
+                                disabled={addCallNoteMutation.isPending}
+                              >
+                                Save Note
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setEditingCallNote(null)}
+                              >
+                                Cancel
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-col items-end gap-2">
+                        <div className="flex gap-2">
+                          {!editingCallNote || editingCallNote.callId !== call.id ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setEditingCallNote({ callId: call.id, note: call.notes || '' })}
+                              title="Add note"
+                            >
+                              <FileText className="w-4 h-4" />
+                            </Button>
+                          ) : null}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openEditCallForm(call)}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-600 hover:text-red-700"
+                            onClick={() => deleteCallMutation.mutate(call.id)}
+                          >
+                            <XCircle className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {isCallFormOpen && (
+                <form
+                  onSubmit={handleCallSubmit(onCallSubmit)}
+                  className="mt-4 space-y-4 border-t pt-4"
+                >
+                  <div>
+                    <label className="text-sm font-medium text-slate-600">Title (Optional)</label>
+                    <Input
+                      {...registerCall('title')}
+                      className="mt-1"
+                      placeholder="Call title"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-slate-600">Phone Number</label>
+                    <Input
+                      {...registerCall('phoneNumber')}
+                      className="mt-1"
+                      placeholder={lead?.phone || 'Phone number'}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-slate-600">Call Time *</label>
+                    <Input
+                      type="datetime-local"
+                      {...registerCall('callTime')}
+                      className="mt-1"
+                    />
+                    {callErrors.callTime && (
+                      <p className="text-xs text-red-500 mt-1">{callErrors.callTime.message}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-slate-600">Duration (minutes, optional)</label>
+                    <Input
+                      type="number"
+                      {...registerCall('durationMinutes', { valueAsNumber: true })}
+                      className="mt-1"
+                      min={1}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-slate-600">Assigned To *</label>
+                    {user?.companyId && (
+                      <EmployeeSelector
+                        companyId={user.companyId}
+                        selectedEmployeeIds={selectedEmployeeId}
+                        onSelectionChange={setSelectedEmployeeId}
+                      />
+                    )}
+                    {callErrors.assignedTo && (
+                      <p className="text-xs text-red-500 mt-1">{callErrors.assignedTo.message}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-slate-600">Status</label>
+                    <select
+                      {...registerCall('status')}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 mt-1"
+                    >
+                      <option value="Scheduled">Scheduled</option>
+                      <option value="Completed">Completed</option>
+                      <option value="Canceled">Canceled</option>
+                      <option value="NoAnswer">No Answer</option>
+                      <option value="Busy">Busy</option>
+                      <option value="LeftVoicemail">Left Voicemail</option>
+                    </select>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setIsCallFormOpen(false);
+                        setEditingCall(null);
+                        setSelectedEmployeeId([]);
+                        resetCall();
+                      }}
+                      disabled={isCallSubmitting || createCallMutation.isPending || updateCallMutation.isPending}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={
+                        isCallSubmitting ||
+                        createCallMutation.isPending ||
+                        updateCallMutation.isPending ||
+                        selectedEmployeeId.length === 0
+                      }
+                    >
+                      {(createCallMutation.isPending || updateCallMutation.isPending) && (
+                        <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></span>
+                      )}
+                      {editingCall ? 'Update Call' : 'Schedule Call'}
+                    </Button>
+                  </div>
+                </form>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
+
+      {/* Convert to Client Modal */}
+      {isConvertModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-md shadow-lg border-gray-200">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <UserPlus className="w-5 h-5 text-indigo-600" />
+                  Convert Lead to Client
+                </CardTitle>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setIsConvertModalOpen(false)}
+                  className="h-8 w-8"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleConvertSubmit(onConvertSubmit)} className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-slate-600">Client Name</label>
+                  <Input
+                    {...registerConvert('name')}
+                    className="mt-1"
+                    placeholder={lead?.customerName || lead?.title || 'Client name'}
+                  />
+                  {convertErrors.name && (
+                    <p className="text-xs text-red-500 mt-1">{convertErrors.name.message}</p>
+                  )}
+                  <p className="text-xs text-slate-500 mt-1">
+                    Leave empty to use lead title: {lead?.title}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-slate-600">Email (Optional)</label>
+                  <Input
+                    type="email"
+                    {...registerConvert('email')}
+                    className="mt-1"
+                    placeholder="client@example.com"
+                  />
+                  {convertErrors.email && (
+                    <p className="text-xs text-red-500 mt-1">{convertErrors.email.message}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-slate-600">Phone (Optional)</label>
+                  <Input
+                    {...registerConvert('phone')}
+                    className="mt-1"
+                    placeholder={lead?.phone || 'Phone number'}
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-slate-600">Address (Optional)</label>
+                  <Textarea
+                    {...registerConvert('address')}
+                    className="mt-1"
+                    rows={3}
+                    placeholder="Client address"
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-4 border-t">
+                  <Button
+                    type="submit"
+                    className="flex-1 bg-indigo-600 hover:bg-indigo-700"
+                    disabled={convertToClientMutation.isPending}
+                  >
+                    {convertToClientMutation.isPending && (
+                      <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></span>
+                    )}
+                    Convert to Client
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsConvertModalOpen(false)}
+                    disabled={convertToClientMutation.isPending}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
