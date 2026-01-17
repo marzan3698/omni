@@ -72,11 +72,23 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT || 2222 }}
           script: |
+            # Check if deployment files exist
+            echo "Checking deployment files..."
+            ls -la ~/deployment-temp/ || echo "ERROR: deployment-temp directory not found"
+            
             # Frontend deployment
             echo "Deploying frontend to public_html..."
             mkdir -p ~/public_html
-            rm -rf ~/public_html/*
-            cp -r ~/deployment-temp/frontend-dist/* ~/public_html/
+            if [ -d "~/deployment-temp/frontend-dist" ]; then
+              echo "Frontend files found, copying..."
+              rm -rf ~/public_html/*
+              cp -r ~/deployment-temp/frontend-dist/* ~/public_html/ || echo "ERROR: Failed to copy frontend files"
+              echo "Frontend files copied. Contents:"
+              ls -la ~/public_html/ | head -10
+            else
+              echo "ERROR: frontend-dist directory not found in deployment-temp"
+              ls -la ~/deployment-temp/
+            fi
             
             # Create .htaccess for React Router
             cat > ~/public_html/.htaccess << 'EOF'
