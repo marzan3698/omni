@@ -478,6 +478,7 @@ function App() {
             />
             {/* Public routes */}
             <Route path="/" element={<Landing />} />
+            <Route path="/install" element={<Navigate to="/" replace />} />
             <Route path="/register" element={<Register />} />
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />
