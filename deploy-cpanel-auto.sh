@@ -35,6 +35,59 @@ info() {
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR" || error "Failed to navigate to project directory"
 
+# Step 0: Find and configure Node.js path (cPanel doesn't have Node.js in PATH)
+log "Step 0: Detecting Node.js installation..."
+find_nodejs() {
+    # Try common Node.js paths in cPanel
+    local nodejs_paths=(
+        "/usr/local/bin/node"
+        "/usr/bin/node"
+        "$HOME/.cpanel-nodejs-selector/nodejs-bin/20/bin/node"
+        "$HOME/.cpanel-nodejs-selector/nodejs-bin/18/bin/node"
+        "$(which node 2>/dev/null)"
+    )
+    
+    # Check for Node.js via nodevenv directories
+    if [ -d "$HOME/nodevenv" ]; then
+        for dir in "$HOME/nodevenv"/*; do
+            if [ -d "$dir" ] && [ -f "$dir/node" ]; then
+                nodejs_paths+=("$dir/node")
+            fi
+        done
+    fi
+    
+    # Try to find Node.js binary
+    for path in "${nodejs_paths[@]}"; do
+        if [ -n "$path" ] && [ -x "$path" ]; then
+            NODEJS_BIN="$path"
+            NPM_BIN="$(dirname "$path")/npm"
+            if [ -x "$NPM_BIN" ]; then
+                export PATH="$(dirname "$path"):$PATH"
+                log "✅ Found Node.js at: $NODEJS_BIN"
+                log "✅ Node.js version: $($NODEJS_BIN --version)"
+                log "✅ npm version: $($NPM_BIN --version)"
+                return 0
+            fi
+        fi
+    done
+    
+    # Try loading Node.js from cPanel Node.js Selector environment
+    if [ -f "$HOME/.cpanel-nodejs-selector/nodejs-bin/20/bin/node" ]; then
+        export PATH="$HOME/.cpanel-nodejs-selector/nodejs-bin/20/bin:$PATH"
+        NODEJS_BIN="$(which node)"
+        NPM_BIN="$(which npm)"
+        if [ -n "$NODEJS_BIN" ] && [ -n "$NPM_BIN" ]; then
+            log "✅ Found Node.js via cPanel Node.js Selector"
+            log "✅ Node.js version: $($NODEJS_BIN --version)"
+            return 0
+        fi
+    fi
+    
+    error "Node.js not found. Please install Node.js via cPanel Node.js Selector or contact your hosting provider."
+}
+
+find_nodejs
+
 log "========================================="
 log "Starting Omni CRM Automatic Deployment"
 log "========================================="
