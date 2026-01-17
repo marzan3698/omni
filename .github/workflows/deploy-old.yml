@@ -1,4 +1,4 @@
-name: Deploy Omni CRM to cPanel
+name: Deploy Omni CRM to cPanel (Build on Server - Requires Node.js)
 
 on:
   push:

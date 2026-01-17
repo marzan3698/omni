@@ -1,0 +1,131 @@
+name: Deploy Omni CRM to cPanel (Build on GitHub)
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch: # Allow manual trigger from GitHub Actions tab
+
+jobs:
+  deploy:
+    name: Build and Deploy to cPanel
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: |
+            client/package-lock.json
+            server/package-lock.json
+      
+      - name: Build Frontend
+        working-directory: ./client
+        run: |
+          npm ci
+          npm run build
+          echo "✅ Frontend build completed"
+      
+      - name: Build Backend
+        working-directory: ./server
+        run: |
+          npm ci
+          npx prisma generate
+          npm run build
+          echo "✅ Backend build completed"
+      
+      - name: Prepare Deployment Package
+        run: |
+          mkdir -p deployment-package
+          # Copy frontend build
+          cp -r client/dist deployment-package/frontend-dist
+          # Copy backend build
+          cp -r server/dist deployment-package/api-dist
+          cp server/package.json deployment-package/api-package.json
+          cp server/package-lock.json deployment-package/api-package-lock.json 2>/dev/null || true
+          cp -r server/prisma deployment-package/api-prisma
+          # Create uploads directory structure
+          mkdir -p deployment-package/api-uploads/{products,social,tasks,theme}
+          echo "✅ Deployment package prepared"
+      
+      - name: Deploy to cPanel via SSH
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.CPANEL_HOST }}
+          username: ${{ secrets.CPANEL_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 2222 }}
+          source: "deployment-package/*"
+          target: "~/deployment-temp"
+      
+      - name: Run Deployment Script on Server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.CPANEL_HOST }}
+          username: ${{ secrets.CPANEL_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 2222 }}
+          script: |
+            # Frontend deployment
+            echo "Deploying frontend to public_html..."
+            mkdir -p ~/public_html
+            rm -rf ~/public_html/*
+            cp -r ~/deployment-temp/frontend-dist/* ~/public_html/
+            
+            # Create .htaccess for React Router
+            cat > ~/public_html/.htaccess << 'EOF'
+            <IfModule mod_rewrite.c>
+              RewriteEngine On
+              RewriteBase /
+              RewriteRule ^index\.html$ - [L]
+              RewriteCond %{REQUEST_FILENAME} !-f
+              RewriteCond %{REQUEST_FILENAME} !-d
+              RewriteRule . /index.html [L]
+            </IfModule>
+            EOF
+            
+            # Backend deployment
+            echo "Deploying backend to ~/api..."
+            mkdir -p ~/api
+            cp -r ~/deployment-temp/api-dist ~/api/
+            cp ~/deployment-temp/api-package.json ~/api/package.json
+            cp ~/deployment-temp/api-package-lock.json ~/api/package-lock.json 2>/dev/null || true
+            cp -r ~/deployment-temp/api-prisma ~/api/
+            
+            # Install production dependencies for backend
+            cd ~/api
+            if [ -f "package-lock.json" ]; then
+              npm ci --production
+            else
+              npm install --production
+            fi
+            
+            # Create uploads directory if it doesn't exist
+            mkdir -p ~/api/uploads/{products,social,tasks,theme}
+            
+            # Set permissions
+            chmod -R 755 ~/public_html
+            chmod -R 755 ~/api
+            chmod -R 775 ~/api/uploads
+            
+            # Cleanup
+            rm -rf ~/deployment-temp
+            
+            echo "✅ Deployment completed successfully!"
+            echo "Frontend: ~/public_html"
+            echo "Backend: ~/api"
+      
+      - name: Deployment Status
+        if: always()
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ Deployment to cPanel completed successfully!"
+          else
+            echo "❌ Deployment failed! Check the logs above."
+          fi
