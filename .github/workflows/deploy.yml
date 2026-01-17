@@ -27,34 +27,34 @@ jobs:
             # Set project directory
             PROJECT_DIR="$HOME/omni"
             
-            # Check if directory exists and is a git repository
-            if [ -d "$PROJECT_DIR" ] && [ -d "$PROJECT_DIR/.git" ]; then
-              # Pull latest code if it's already a git repo
+            # Check if directory exists and has deploy script (valid repository)
+            if [ -d "$PROJECT_DIR" ] && [ -f "$PROJECT_DIR/deploy-cpanel-auto.sh" ]; then
+              # Pull latest code if it's a valid git repo with files
               echo "Updating existing repository..."
               cd "$PROJECT_DIR"
               git fetch origin
               git reset --hard origin/main
             else
-              # Clone repository if it doesn't exist
-              echo "Cloning repository for first time..."
+              # Clone repository if it doesn't exist or is incomplete
+              echo "Cloning repository (first time or fixing incomplete clone)..."
               cd "$HOME"
               rm -rf omni
               git clone https://github.com/marzan3698/omni.git omni
               cd "$PROJECT_DIR"
             fi
             
-            # Verify we're in the right directory
+            # Verify we're in the right directory and files exist
             pwd
-            ls -la
-            
-            # Run deployment script (it will build and deploy)
-            if [ -f "deploy-cpanel-auto.sh" ]; then
-              chmod +x deploy-cpanel-auto.sh
-              bash deploy-cpanel-auto.sh
-            else
-              echo "ERROR: deploy-cpanel-auto.sh not found in $(pwd)"
+            if [ ! -f "deploy-cpanel-auto.sh" ]; then
+              echo "ERROR: deploy-cpanel-auto.sh not found after clone/pull"
+              echo "Directory contents:"
+              ls -la
               exit 1
             fi
+            
+            # Run deployment script (it will build and deploy)
+            chmod +x deploy-cpanel-auto.sh
+            bash deploy-cpanel-auto.sh
       
       - name: Deployment Status
         if: always()
