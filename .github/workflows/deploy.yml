@@ -61,8 +61,9 @@ jobs:
           username: ${{ secrets.CPANEL_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT || 2222 }}
-          source: "deployment-package/*"
+          source: "deployment-package/"
           target: "~/deployment-temp"
+          strip_components: 0
       
       - name: Run Deployment Script on Server
         uses: appleboy/ssh-action@v1.0.3
@@ -79,7 +80,7 @@ jobs:
             # Frontend deployment
             echo "Deploying frontend to public_html..."
             mkdir -p ~/public_html
-            if [ -d "~/deployment-temp/frontend-dist" ]; then
+            if [ -d ~/deployment-temp/frontend-dist ]; then
               echo "Frontend files found, copying..."
               rm -rf ~/public_html/*
               cp -r ~/deployment-temp/frontend-dist/* ~/public_html/ || echo "ERROR: Failed to copy frontend files"
@@ -87,7 +88,12 @@ jobs:
               ls -la ~/public_html/ | head -10
             else
               echo "ERROR: frontend-dist directory not found in deployment-temp"
+              echo "Contents of deployment-temp:"
               ls -la ~/deployment-temp/
+              echo "Trying alternative path..."
+              if [ -d ~/deployment-temp/deployment-package/frontend-dist ]; then
+                cp -r ~/deployment-temp/deployment-package/frontend-dist/* ~/public_html/
+              fi
             fi
             
             # Create .htaccess for React Router
