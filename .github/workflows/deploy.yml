@@ -77,23 +77,30 @@ jobs:
             echo "Checking deployment files..."
             ls -la ~/deployment-temp/ || echo "ERROR: deployment-temp directory not found"
             
+            # Determine the correct source path
+            if [ -d ~/deployment-temp/deployment-package ]; then
+              DEPLOY_SRC=~/deployment-temp/deployment-package
+              echo "Found deployment-package subdirectory"
+            else
+              DEPLOY_SRC=~/deployment-temp
+              echo "Using deployment-temp directly"
+            fi
+            
+            echo "Deployment source: $DEPLOY_SRC"
+            ls -la $DEPLOY_SRC/
+            
             # Frontend deployment
             echo "Deploying frontend to public_html..."
             mkdir -p ~/public_html
-            if [ -d ~/deployment-temp/frontend-dist ]; then
+            if [ -d $DEPLOY_SRC/frontend-dist ]; then
               echo "Frontend files found, copying..."
               rm -rf ~/public_html/*
-              cp -r ~/deployment-temp/frontend-dist/* ~/public_html/ || echo "ERROR: Failed to copy frontend files"
+              cp -r $DEPLOY_SRC/frontend-dist/* ~/public_html/ || echo "ERROR: Failed to copy frontend files"
               echo "Frontend files copied. Contents:"
               ls -la ~/public_html/ | head -10
             else
-              echo "ERROR: frontend-dist directory not found in deployment-temp"
-              echo "Contents of deployment-temp:"
-              ls -la ~/deployment-temp/
-              echo "Trying alternative path..."
-              if [ -d ~/deployment-temp/deployment-package/frontend-dist ]; then
-                cp -r ~/deployment-temp/deployment-package/frontend-dist/* ~/public_html/
-              fi
+              echo "ERROR: frontend-dist directory not found"
+              ls -la $DEPLOY_SRC/
             fi
             
             # Create .htaccess for React Router and redirect /install
@@ -113,13 +120,17 @@ jobs:
             </IfModule>
             EOF
             
-            # Backend deployment
+            # Backend deployment (DEPLOY_SRC already set above)
             echo "Deploying backend to ~/api..."
             mkdir -p ~/api
-            cp -r ~/deployment-temp/api-dist ~/api/
-            cp ~/deployment-temp/api-package.json ~/api/package.json
-            cp ~/deployment-temp/api-package-lock.json ~/api/package-lock.json 2>/dev/null || true
-            cp -r ~/deployment-temp/api-prisma ~/api/
+            
+            cp -r $DEPLOY_SRC/api-dist ~/api/
+            cp $DEPLOY_SRC/api-package.json ~/api/package.json
+            cp $DEPLOY_SRC/api-package-lock.json ~/api/package-lock.json 2>/dev/null || true
+            cp -r $DEPLOY_SRC/api-prisma ~/api/
+            
+            echo "Backend files copied. Verifying package.json exists..."
+            ls -la ~/api/package.json
             
             # Install production dependencies for backend
             cd ~/api
