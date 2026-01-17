@@ -7,9 +7,15 @@ import { setupTaskConversationHandlers } from './taskConversationHandlers.js';
  * Initialize Socket.IO server
  */
 export const initializeSocketIO = (httpServer: HTTPServer): SocketIOServer => {
+  const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
   const io = new SocketIOServer(httpServer, {
     cors: {
-      origin: process.env.CLIENT_URL || 'http://localhost:5173',
+      origin: [
+        clientUrl,
+        'https://paaera.com',
+        'https://www.paaera.com',
+        'http://localhost:5173',
+      ],
       methods: ['GET', 'POST'],
       credentials: true,
     },

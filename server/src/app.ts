@@ -10,7 +10,15 @@ const app: Express = express();
 // CORS Middleware - must be before routes
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-  const allowedOrigins = [process.env.CLIENT_URL || 'http://localhost:5173'];
+  const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+  
+  // Allow both www and non-www versions of the domain
+  const allowedOrigins = [
+    clientUrl,
+    'https://paaera.com',
+    'https://www.paaera.com',
+    'http://localhost:5173',
+  ];
 
   if (origin && allowedOrigins.includes(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
