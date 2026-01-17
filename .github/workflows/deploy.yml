@@ -96,11 +96,16 @@ jobs:
               fi
             fi
             
-            # Create .htaccess for React Router
+            # Create .htaccess for React Router and redirect /install
             cat > ~/public_html/.htaccess << 'EOF'
             <IfModule mod_rewrite.c>
               RewriteEngine On
               RewriteBase /
+              
+              # Redirect /install to home page
+              RewriteRule ^install/?$ / [R=301,L]
+              
+              # React Router support
               RewriteRule ^index\.html$ - [L]
               RewriteCond %{REQUEST_FILENAME} !-f
               RewriteCond %{REQUEST_FILENAME} !-d
