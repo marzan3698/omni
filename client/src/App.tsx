@@ -58,6 +58,13 @@ import ServicesPage from './pages/public/ServicesPage';
 import Sitemap from './pages/public/Sitemap';
 
 function App() {
+  // Redirect /install to home immediately on mount
+  React.useEffect(() => {
+    if (window.location.pathname === '/install') {
+      window.location.replace('/');
+    }
+  }, []);
+
   return (
     <AuthProvider>
       <SidebarProvider>
