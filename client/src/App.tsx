@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { SidebarProvider } from './contexts/SidebarContext';
@@ -59,7 +60,7 @@ import Sitemap from './pages/public/Sitemap';
 
 function App() {
   // Redirect /install to home immediately on mount
-  React.useEffect(() => {
+  useEffect(() => {
     if (window.location.pathname === '/install') {
       window.location.replace('/');
     }
