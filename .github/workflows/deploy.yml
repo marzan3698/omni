@@ -24,24 +24,37 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT || 2222 }}
           script: |
-            # Navigate to project directory
-            cd ~/omni || mkdir -p ~/omni && cd ~/omni
+            # Set project directory
+            PROJECT_DIR="$HOME/omni"
             
-            # Pull latest code
-            if [ -d ".git" ]; then
+            # Check if directory exists and is a git repository
+            if [ -d "$PROJECT_DIR" ] && [ -d "$PROJECT_DIR/.git" ]; then
+              # Pull latest code if it's already a git repo
+              echo "Updating existing repository..."
+              cd "$PROJECT_DIR"
               git fetch origin
               git reset --hard origin/main
             else
-              # If not a git repo, clone it
-              cd ~
+              # Clone repository if it doesn't exist
+              echo "Cloning repository for first time..."
+              cd "$HOME"
               rm -rf omni
               git clone https://github.com/marzan3698/omni.git omni
-              cd omni
+              cd "$PROJECT_DIR"
             fi
             
+            # Verify we're in the right directory
+            pwd
+            ls -la
+            
             # Run deployment script (it will build and deploy)
-            chmod +x deploy-cpanel-auto.sh
-            bash deploy-cpanel-auto.sh
+            if [ -f "deploy-cpanel-auto.sh" ]; then
+              chmod +x deploy-cpanel-auto.sh
+              bash deploy-cpanel-auto.sh
+            else
+              echo "ERROR: deploy-cpanel-auto.sh not found in $(pwd)"
+              exit 1
+            fi
       
       - name: Deployment Status
         if: always()
