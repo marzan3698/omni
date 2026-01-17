@@ -28,7 +28,7 @@ export function ClientLayout({ children }: ClientLayoutProps) {
             </div>
             <span className="text-xl font-bold text-slate-900">Omni CRM</span>
           </div>
-          
+
           <nav className="space-y-2">
             <Link
               to="/client/dashboard"
