@@ -81,3 +81,8 @@ See `docs/project_roadmap.md` for the complete development phases.
 
 ISC
 
+
+## Automatic Deployment
+
+This project uses GitHub Actions for automatic deployment to cPanel.
+Deployment is triggered automatically on push to main branch.
