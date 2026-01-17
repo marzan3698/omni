@@ -86,3 +86,4 @@ ISC
 
 This project uses GitHub Actions for automatic deployment to cPanel.
 Deployment is triggered automatically on push to main branch.
+# Deployment test
