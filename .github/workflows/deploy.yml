@@ -142,6 +142,10 @@ jobs:
               npm install --production
             fi
             
+            # Regenerate Prisma Client (required for ES modules)
+            echo "Regenerating Prisma Client..."
+            npx prisma generate --schema=./api-prisma/schema.prisma || echo "Prisma generate failed, continuing..."
+            
             # Create uploads directory if it doesn't exist
             mkdir -p ~/api/uploads/{products,social,tasks,theme}
             
