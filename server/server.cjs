@@ -3,8 +3,8 @@
 
 require('dotenv').config();
 
-// Dynamically import the ES module
-import('./dist/server.js')
+// Dynamically import the ES module (server.js will be in the same directory after deployment)
+import('./server.js')
   .then(() => {
     console.log('✅ ES Module loaded successfully');
   })
