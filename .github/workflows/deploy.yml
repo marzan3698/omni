@@ -147,7 +147,7 @@ jobs:
             
             # Install production dependencies for backend
             # Note: Prisma Client is already generated during GitHub Actions build (step 39)
-            # No need to regenerate on server due to memory constraints on shared hosting
+            # We install dependencies first, then copy the pre-generated Prisma Client
             cd ~/api
             if [ -f "package-lock.json" ]; then
               npm ci --production
@@ -155,7 +155,20 @@ jobs:
               npm install --production
             fi
             
-            echo "✅ Dependencies installed. Prisma Client was pre-generated during build."
+            # Copy pre-generated Prisma Client from deployment package (generated during build)
+            if [ -d "$DEPLOY_SRC/api-prisma-client" ]; then
+              echo "Copying pre-generated Prisma Client..."
+              if [ -d "$DEPLOY_SRC/api-prisma-client/.prisma" ]; then
+                mkdir -p ~/api/node_modules/.prisma
+                cp -r $DEPLOY_SRC/api-prisma-client/.prisma/* ~/api/node_modules/.prisma/ 2>/dev/null || true
+              fi
+              if [ -d "$DEPLOY_SRC/api-prisma-client/@prisma-client" ]; then
+                mkdir -p ~/api/node_modules/@prisma
+                cp -r $DEPLOY_SRC/api-prisma-client/@prisma-client ~/api/node_modules/@prisma/client 2>/dev/null || true
+              fi
+            fi
+            
+            echo "✅ Dependencies installed. Prisma Client pre-generated during build."
             
             # Create uploads directory if it doesn't exist
             mkdir -p ~/api/uploads/{products,social,tasks,theme}
