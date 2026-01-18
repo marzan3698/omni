@@ -70,6 +70,10 @@ export const authController = {
         return sendError(res, error.message, error.statusCode);
       }
 
+      // Log actual error for debugging
+      console.error('Login error:', error);
+      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+
       return sendError(res, 'Login failed', 500);
     }
   },
