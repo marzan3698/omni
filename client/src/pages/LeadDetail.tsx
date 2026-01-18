@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { leadApi } from '@/lib/api';
+import { getImageUrl } from '@/lib/imageUtils';
 import { useAuth } from '@/contexts/AuthContext';
 import type { LeadMeeting, LeadMeetingStatus, LeadCall, LeadCallStatus } from '@/types';
 import { EmployeeSelector } from '@/components/EmployeeSelector';
@@ -843,9 +844,7 @@ export function LeadDetail() {
                         </div>
                         {message.imageUrl && (
                           <img
-                            src={message.imageUrl.startsWith('http') 
-                              ? message.imageUrl 
-                              : `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5001'}${message.imageUrl}`}
+                            src={getImageUrl(message.imageUrl)}
                             alt="Message attachment"
                             className="max-w-xs rounded-lg mb-2"
                           />

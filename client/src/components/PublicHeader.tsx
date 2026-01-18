@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { themeApi } from '@/lib/api';
+import { getImageUrl } from '@/lib/imageUtils';
 
 export function PublicHeader() {
   const links = [
@@ -31,7 +32,6 @@ export function PublicHeader() {
 
   const siteLogo = themeSettings?.siteLogo || null;
   const siteName = themeSettings?.siteName || 'Omni CRM';
-  const apiBaseUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5001';
 
   return (
     <header className="border-b border-gray-200 bg-white">
@@ -39,7 +39,7 @@ export function PublicHeader() {
         <Link to="/" className="flex items-center gap-2">
           {siteLogo ? (
             <img
-              src={siteLogo.startsWith('/') ? `${apiBaseUrl}${siteLogo}` : siteLogo}
+              src={getImageUrl(siteLogo)}
               alt={siteName}
               className="h-10 w-auto object-contain"
             />

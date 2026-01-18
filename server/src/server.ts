@@ -13,9 +13,26 @@ const io = initializeSocketIO(httpServer);
 // Make io available globally for use in controllers/services
 (global as any).io = io;
 
-httpServer.listen(PORT, () => {
-  console.log(`🚀 Server is running on http://localhost:${PORT}`);
+httpServer.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Server is running on http://0.0.0.0:${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔌 Socket.IO server initialized`);
 });
 
+// Handle errors
+httpServer.on('error', (error: any) => {
+  console.error('❌ Server error:', error);
+  if (error.code === 'EADDRINUSE') {
+    console.error(`Port ${PORT} is already in use`);
+  }
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+  process.exit(1);
+});

@@ -34,3 +34,5 @@ Thumbs.db
 # Prisma
 prisma/migrations/
 
+# Deployment package (created during CI/CD build)
+deployment-package/

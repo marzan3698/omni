@@ -34,6 +34,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSidebar } from '@/contexts/SidebarContext';
 import { PermissionGuard } from './PermissionGuard';
 import { themeApi } from '@/lib/api';
+import { getImageUrl } from '@/lib/imageUtils';
 
 interface SubMenuItem {
   label: string;
@@ -208,7 +209,6 @@ export function Sidebar() {
 
   const siteLogo = themeSettings?.siteLogo || null;
   const siteName = themeSettings?.siteName || 'Omni CRM';
-  const apiBaseUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5001';
 
   // Auto-expand dropdowns with active submenu items
   useEffect(() => {
@@ -252,7 +252,7 @@ export function Sidebar() {
           <div className="flex items-center gap-2">
             {siteLogo ? (
               <img
-                src={siteLogo.startsWith('/') ? `${apiBaseUrl}${siteLogo}` : siteLogo}
+                src={getImageUrl(siteLogo)}
                 alt={siteName}
                 className="h-8 w-auto object-contain"
               />

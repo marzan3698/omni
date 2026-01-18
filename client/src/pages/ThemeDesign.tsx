@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { themeApi } from '@/lib/api';
+import { getImageUrl } from '@/lib/imageUtils';
 import { Palette, Upload, Loader2, CheckCircle, AlertCircle, Image as ImageIcon } from 'lucide-react';
 
 const themeSettingsSchema = z.object({
@@ -180,7 +181,7 @@ export default function ThemeDesign() {
             <div className="flex items-center justify-center p-6 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
               {logoPreview ? (
                 <img
-                  src={logoPreview.startsWith('/') ? `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5001'}${logoPreview}` : logoPreview}
+                  src={getImageUrl(logoPreview)}
                   alt="Logo preview"
                   className="max-w-full max-h-32 object-contain"
                 />

@@ -11,7 +11,7 @@ const app: Express = express();
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
-  
+
   // Allow both www and non-www versions of the domain
   const allowedOrigins = [
     clientUrl,

@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { MessageSquare, Send, User, Bot, Target, X, Zap, Package, Image as ImageIcon, Check, CheckCheck, Clock, ShoppingCart, Users, Search, BarChart3, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getImageUrl } from '@/lib/imageUtils';
 import { useAuth } from '@/contexts/AuthContext';
 import { PermissionGuard } from '@/components/PermissionGuard';
 import { ErrorAlert } from '@/components/ErrorAlert';
@@ -922,24 +923,11 @@ export function Inbox() {
                           {message.imageUrl && (
                             <div className="mb-2">
                               <img
-                                src={(() => {
-                                  if (message.imageUrl?.startsWith('http')) {
-                                    return message.imageUrl;
-                                  }
-                                  // Remove /api from base URL if present, since /uploads is served directly
-                                  const baseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5001').replace('/api', '');
-                                  return `${baseUrl}${message.imageUrl}`;
-                                })()}
+                                src={getImageUrl(message.imageUrl)}
                                 alt="Message attachment"
                                 className="max-w-full max-h-[300px] rounded-lg object-contain cursor-pointer hover:opacity-90 transition-opacity"
                                 onClick={() => {
-                                  const fullUrl = message.imageUrl?.startsWith('http')
-                                    ? message.imageUrl
-                                    : (() => {
-                                      const baseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5001').replace('/api', '');
-                                      return `${baseUrl}${message.imageUrl}`;
-                                    })();
-                                  window.open(fullUrl, '_blank');
+                                  window.open(getImageUrl(message.imageUrl), '_blank');
                                 }}
                                 onError={(e) => {
                                   (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect fill="%23ddd" width="200" height="200"/%3E%3Ctext fill="%23999" font-family="sans-serif" font-size="14" dy="10.5" font-weight="bold" x="50%25" y="50%25" text-anchor="middle"%3EImage not found%3C/text%3E%3C/svg%3E';
