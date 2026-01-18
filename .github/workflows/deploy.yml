@@ -50,6 +50,8 @@ jobs:
           cp server/package.json deployment-package/api-package.json
           cp server/package-lock.json deployment-package/api-package-lock.json 2>/dev/null || true
           cp -r server/prisma deployment-package/api-prisma
+          # Copy CommonJS wrapper for cPanel if it exists
+          cp server/server.cjs deployment-package/api-dist/server.cjs 2>/dev/null || true
           # Create uploads directory structure
           mkdir -p deployment-package/api-uploads/{products,social,tasks,theme}
           echo "✅ Deployment package prepared"
