@@ -52,6 +52,14 @@ jobs:
           cp -r server/prisma deployment-package/api-prisma
           # Copy CommonJS wrapper for cPanel if it exists
           cp server/server.cjs deployment-package/api-dist/server.cjs 2>/dev/null || true
+          # Copy pre-generated Prisma Client (generated during build step 39)
+          mkdir -p deployment-package/api-prisma-client
+          if [ -d "server/node_modules/.prisma" ]; then
+            cp -r server/node_modules/.prisma deployment-package/api-prisma-client/.prisma
+          fi
+          if [ -d "server/node_modules/@prisma/client" ]; then
+            cp -r server/node_modules/@prisma/client deployment-package/api-prisma-client/@prisma-client
+          fi
           # Create uploads directory structure
           mkdir -p deployment-package/api-uploads/{products,social,tasks,theme}
           echo "✅ Deployment package prepared"
