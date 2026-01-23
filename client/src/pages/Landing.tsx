@@ -1,9 +1,9 @@
-import { ComponentType } from 'react';
+import { ComponentType, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, ArrowRight, Users, Briefcase, Target, BarChart3, MessageSquare, Star, Newspaper, TrendingUp, LineChart } from 'lucide-react';
+import { CheckCircle, ArrowRight, Users, Briefcase, Target, BarChart3, MessageSquare, Star, Newspaper, TrendingUp, LineChart, Play, Shield, Zap, Globe, Facebook, MessageCircle, DollarSign, Clock, Award, ChevronDown, Twitter, Linkedin, Youtube, Instagram } from 'lucide-react';
 import { socialApi } from '@/lib/social';
 import { contentApi } from '@/lib/content';
 import { themeApi } from '@/lib/api';
@@ -70,96 +70,348 @@ export function Landing() {
     },
   ];
 
+  const [videoPlaying, setVideoPlaying] = useState(false);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
       <PublicHeader />
 
-      {/* Hero Section */}
-      <section className="container mx-auto px-4 py-20 text-center">
-        <h1 className="text-5xl font-bold text-slate-900 mb-6">
-          Streamline Your Business Operations
-        </h1>
-        <p className="text-xl text-slate-600 mb-8 max-w-2xl mx-auto">
-          Complete CRM and project management solution for modern businesses.
-          Manage leads, campaigns, projects, and clients all in one place.
-        </p>
-        <div className="flex gap-4 justify-center">
-          <Link to="/register">
-            <Button size="lg" className="bg-indigo-600 hover:bg-indigo-700">
-              Start Free Trial
-              <ArrowRight className="ml-2 w-4 h-4" />
-            </Button>
-          </Link>
-          <Link to="/login">
-            <Button size="lg" variant="outline">
-              Sign In
-            </Button>
-          </Link>
+      {/* Enhanced Hero Banner Section */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-800 text-white">
+        <div 
+          className="absolute inset-0 opacity-20"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+          }}
+        ></div>
+        <div className="relative container mx-auto px-4 py-24 md:py-32 text-center">
+          <div className="max-w-4xl mx-auto animate-fade-in">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm text-sm font-medium mb-6">
+              <Award className="w-4 h-4" />
+              Trusted by 1000+ businesses worldwide
+            </div>
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
+              Streamline Your Business Operations
+            </h1>
+            <p className="text-xl md:text-2xl mb-8 max-w-2xl mx-auto text-indigo-100">
+              Complete CRM and project management solution for modern businesses.
+              Manage leads, campaigns, projects, and clients all in one place.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+              <Link to="/register">
+                <Button size="lg" className="bg-white text-indigo-600 hover:bg-gray-100 text-lg px-8 py-6 shadow-lg hover:shadow-xl transition-all">
+                  Start Free Trial
+                  <ArrowRight className="ml-2 w-5 h-5" />
+                </Button>
+              </Link>
+              <Link to="/login">
+                <Button size="lg" variant="outline" className="border-2 border-white text-white hover:bg-white/10 text-lg px-8 py-6">
+                  Sign In
+                </Button>
+              </Link>
+            </div>
+            <div className="flex items-center justify-center gap-8 text-sm text-indigo-100">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-5 h-5" />
+                <span>No credit card required</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-5 h-5" />
+                <span>14-day free trial</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-5 h-5" />
+                <span>Cancel anytime</span>
+              </div>
+            </div>
+          </div>
+          <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
+            <ChevronDown className="w-6 h-6 text-white/70" />
+          </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="container mx-auto px-4 py-16">
-        <h2 className="text-3xl font-bold text-center text-slate-900 mb-12">
-          Everything You Need to Manage Your Business
-        </h2>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[
-            {
-              icon: Users,
-              title: 'Client Management',
-              description: 'Register clients, projects, and track milestones seamlessly.',
-              points: ['Easy project creation', 'E-signature support', 'Status tracking'],
-            },
-            {
-              icon: Target,
-              title: 'Campaign Management',
-              description: 'Plan, launch, and report on marketing campaigns.',
-              points: ['Multi-client campaigns', 'Product assignments', 'Lead tracking'],
-            },
-            {
-              icon: Briefcase,
-              title: 'Project Tracking',
-              description: 'Monitor delivery health from draft to completion.',
-              points: ['Real-time updates', 'Document management', 'Timeline visibility'],
-            },
-            {
-              icon: BarChart3,
-              title: 'Lead Analytics',
-              description: 'Actionable insights for every campaign and channel.',
-              points: ['Campaign-based leads', 'Detailed insights', 'Filter by source'],
-            },
-            {
-              icon: CheckCircle,
-              title: 'Secure & Reliable',
-              description: 'Enterprise-grade security and observability.',
-              points: ['Data encryption', '99.9% uptime', 'Regular backups'],
-            },
-            {
-              icon: Users,
-              title: 'Team Collaboration',
-              description: 'Roles, permissions, and shared dashboards.',
-              points: ['Role-based access', 'Shared dashboards', 'Real-time sync'],
-            },
-          ].map((item) => (
-            <Card key={item.title} className="shadow-sm border-gray-200">
-              <CardHeader>
-                <item.icon className="w-10 h-10 text-indigo-600 mb-2" />
-                <CardTitle>{item.title}</CardTitle>
-                <CardDescription>{item.description}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2 text-sm text-slate-600">
-                  {item.points.map((point) => (
-                    <li key={point} className="flex items-center gap-2">
-                      <CheckCircle className="w-4 h-4 text-green-600" />
-                      {point}
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-          ))}
+      {/* Trust Indicators / Stats Bar */}
+      <section className="bg-white border-b border-gray-200 py-8">
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+            <div className="animate-fade-in-up">
+              <div className="text-3xl md:text-4xl font-bold text-indigo-600 mb-2">1000+</div>
+              <div className="text-sm text-slate-600">Active Companies</div>
+            </div>
+            <div className="animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+              <div className="text-3xl md:text-4xl font-bold text-indigo-600 mb-2">50K+</div>
+              <div className="text-sm text-slate-600">Messages Processed</div>
+            </div>
+            <div className="animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+              <div className="text-3xl md:text-4xl font-bold text-indigo-600 mb-2">99.9%</div>
+              <div className="text-sm text-slate-600">Uptime SLA</div>
+            </div>
+            <div className="animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
+              <div className="text-3xl md:text-4xl font-bold text-indigo-600 mb-2">24/7</div>
+              <div className="text-sm text-slate-600">Support Available</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Video Section */}
+      <section className="container mx-auto px-4 py-20">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-sm font-medium mb-4">
+              <Play className="w-4 h-4" />
+              Product Demo
+            </div>
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
+              See Omni CRM in Action
+            </h2>
+            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+              Watch how teams use Omni CRM to streamline their operations, manage leads, and grow their business.
+            </p>
+          </div>
+          <div className="relative rounded-2xl overflow-hidden shadow-2xl bg-slate-900 aspect-video">
+            {!videoPlaying ? (
+              <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-indigo-600 to-purple-700">
+                <button
+                  onClick={() => setVideoPlaying(true)}
+                  className="w-20 h-20 bg-white rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-lg"
+                >
+                  <Play className="w-10 h-10 text-indigo-600 ml-1" fill="currentColor" />
+                </button>
+              </div>
+            ) : (
+              <iframe
+                className="w-full h-full"
+                src="https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1"
+                title="Omni CRM Product Demo"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              ></iframe>
+            )}
+          </div>
+          <div className="mt-8 grid md:grid-cols-3 gap-6">
+            <div className="text-center">
+              <Zap className="w-8 h-8 text-indigo-600 mx-auto mb-3" />
+              <h3 className="font-semibold text-slate-900 mb-2">Quick Setup</h3>
+              <p className="text-sm text-slate-600">Get started in minutes, not days</p>
+            </div>
+            <div className="text-center">
+              <Shield className="w-8 h-8 text-indigo-600 mx-auto mb-3" />
+              <h3 className="font-semibold text-slate-900 mb-2">Secure & Reliable</h3>
+              <p className="text-sm text-slate-600">Enterprise-grade security built-in</p>
+            </div>
+            <div className="text-center">
+              <Globe className="w-8 h-8 text-indigo-600 mx-auto mb-3" />
+              <h3 className="font-semibold text-slate-900 mb-2">Global Scale</h3>
+              <p className="text-sm text-slate-600">Works anywhere, anytime</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Enhanced Features Section */}
+      <section className="bg-white py-20">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-sm font-medium mb-4">
+              <Target className="w-4 h-4" />
+              Powerful Features
+            </div>
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
+              Everything You Need to Manage Your Business
+            </h2>
+            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+              All-in-one platform designed to help you manage clients, campaigns, projects, and teams efficiently.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[
+              {
+                icon: Users,
+                title: 'Client Management',
+                description: 'Register clients, projects, and track milestones seamlessly.',
+                points: ['Easy project creation', 'E-signature support', 'Status tracking'],
+                image: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&h=600&fit=crop',
+              },
+              {
+                icon: Target,
+                title: 'Campaign Management',
+                description: 'Plan, launch, and report on marketing campaigns.',
+                points: ['Multi-client campaigns', 'Product assignments', 'Lead tracking'],
+                image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&h=600&fit=crop',
+              },
+              {
+                icon: Briefcase,
+                title: 'Project Tracking',
+                description: 'Monitor delivery health from draft to completion.',
+                points: ['Real-time updates', 'Document management', 'Timeline visibility'],
+                image: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&h=600&fit=crop',
+              },
+              {
+                icon: BarChart3,
+                title: 'Lead Analytics',
+                description: 'Actionable insights for every campaign and channel.',
+                points: ['Campaign-based leads', 'Detailed insights', 'Filter by source'],
+                image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=600&fit=crop',
+              },
+              {
+                icon: Shield,
+                title: 'Secure & Reliable',
+                description: 'Enterprise-grade security and observability.',
+                points: ['Data encryption', '99.9% uptime', 'Regular backups'],
+                image: 'https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=800&h=600&fit=crop',
+              },
+              {
+                icon: Users,
+                title: 'Team Collaboration',
+                description: 'Roles, permissions, and shared dashboards.',
+                points: ['Role-based access', 'Shared dashboards', 'Real-time sync'],
+                image: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800&h=600&fit=crop',
+              },
+            ].map((item, idx) => (
+              <Card key={item.title} className="shadow-sm border-gray-200 hover:shadow-lg transition-all duration-300 overflow-hidden group">
+                <div className="relative h-48 overflow-hidden">
+                  <img
+                    src={item.image}
+                    alt={item.title}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-indigo-600/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                </div>
+                <CardHeader>
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-12 h-12 rounded-lg bg-indigo-100 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
+                      <item.icon className="w-6 h-6 text-indigo-600 group-hover:text-white transition-colors" />
+                    </div>
+                    <CardTitle className="text-xl">{item.title}</CardTitle>
+                  </div>
+                  <CardDescription className="text-base">{item.description}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2 text-sm text-slate-600">
+                    {item.points.map((point) => (
+                      <li key={point} className="flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
+                        <span>{point}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Benefits Section */}
+      <section className="bg-gradient-to-br from-indigo-50 to-purple-50 py-20">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 text-sm font-medium mb-4">
+              <Zap className="w-4 h-4" />
+              Why Choose Omni
+            </div>
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
+              Built for Modern Teams
+            </h2>
+            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+              Experience the difference with a platform designed for speed, security, and scalability.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {[
+              {
+                icon: Clock,
+                title: 'Save Time',
+                description: 'Automate repetitive tasks and focus on what matters most.',
+                stat: '50% faster',
+              },
+              {
+                icon: DollarSign,
+                title: 'Reduce Costs',
+                description: 'All-in-one solution eliminates the need for multiple tools.',
+                stat: '60% savings',
+              },
+              {
+                icon: TrendingUp,
+                title: 'Grow Faster',
+                description: 'Scale your operations without scaling your team size.',
+                stat: '3x growth',
+              },
+              {
+                icon: Award,
+                title: 'Stay Ahead',
+                description: 'Latest features and updates to keep you competitive.',
+                stat: 'Monthly updates',
+              },
+            ].map((benefit) => (
+              <div key={benefit.title} className="text-center">
+                <div className="w-16 h-16 rounded-full bg-white shadow-md flex items-center justify-center mx-auto mb-4">
+                  <benefit.icon className="w-8 h-8 text-indigo-600" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 mb-2">{benefit.title}</h3>
+                <p className="text-slate-600 mb-3">{benefit.description}</p>
+                <div className="text-sm font-semibold text-indigo-600">{benefit.stat}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Integration Showcase */}
+      <section className="bg-white py-20">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-sm font-medium mb-4">
+              <Globe className="w-4 h-4" />
+              Integrations
+            </div>
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
+              Connect with Your Favorite Tools
+            </h2>
+            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+              Seamlessly integrate with the platforms you already use to streamline your workflow.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+            {[
+              {
+                name: 'Facebook Messenger',
+                icon: Facebook,
+                description: 'Connect your Facebook pages and manage conversations directly from Omni.',
+                color: 'text-blue-600',
+                bgColor: 'bg-blue-50',
+              },
+              {
+                name: 'Chatwoot',
+                icon: MessageCircle,
+                description: 'Sync conversations and manage customer support across all channels.',
+                color: 'text-emerald-600',
+                bgColor: 'bg-emerald-50',
+              },
+              {
+                name: 'WhatsApp Business',
+                icon: MessageSquare,
+                description: 'Coming soon: Direct WhatsApp integration for instant messaging.',
+                color: 'text-green-600',
+                bgColor: 'bg-green-50',
+              },
+            ].map((integration) => (
+              <Card key={integration.name} className="shadow-sm border-gray-200 hover:shadow-lg transition-shadow text-center">
+                <CardHeader>
+                  <div className={`w-16 h-16 rounded-full ${integration.bgColor} flex items-center justify-center mx-auto mb-4`}>
+                    <integration.icon className={`w-8 h-8 ${integration.color}`} />
+                  </div>
+                  <CardTitle className="text-xl">{integration.name}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <CardDescription className="text-base">{integration.description}</CardDescription>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -253,77 +505,176 @@ export function Landing() {
         </div>
       </section>
 
-      {/* Reviews */}
-      <section className="container mx-auto px-4 py-16">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-sm font-medium">
-              <Star className="w-4 h-4" />
-              Customer Reviews
+      {/* Enhanced Reviews / Testimonials */}
+      <section className="bg-gradient-to-b from-white to-gray-50 py-20">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-12">
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-sm font-medium mb-4">
+                <Star className="w-4 h-4" />
+                Customer Reviews
+              </div>
+              <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-3">Loved by modern teams</h2>
+              <p className="text-lg text-slate-600">Feedback from teams running their operations on Omni.</p>
             </div>
-            <h2 className="text-3xl font-bold text-slate-900 mt-3">Loved by modern teams</h2>
-            <p className="text-slate-600 mt-2">Feedback from teams running their operations on Omni.</p>
+            <Link to="/register" className="mt-4 md:mt-0">
+              <Button size="lg" variant="outline" className="border-2">
+                Start Free Trial
+                <ArrowRight className="ml-2 w-4 h-4" />
+              </Button>
+            </Link>
           </div>
-          <Link to="/register">
-            <Button variant="outline">Start Free Trial</Button>
-          </Link>
-        </div>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {reviews.map((review) => (
-            <Card key={review.id} className="shadow-sm border-gray-200">
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-base">{review.authorName}</CardTitle>
-                    <CardDescription>{review.role || 'Customer'}</CardDescription>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {reviews.map((review, idx) => (
+              <Card key={review.id} className="shadow-sm border-gray-200 hover:shadow-lg transition-shadow">
+                <CardHeader className="pb-4">
+                  <div className="flex items-start gap-4 mb-4">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+                      {review.authorName.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1">
+                      <CardTitle className="text-lg mb-1">{review.authorName}</CardTitle>
+                      <CardDescription className="text-sm">{review.role || 'Customer'}</CardDescription>
+                    </div>
                   </div>
                   <div className="flex items-center gap-1 text-amber-500">
-                    {Array.from({ length: 5 }).map((_, idx) => (
-                      <Star key={idx} className={`w-4 h-4 ${idx < review.rating ? 'fill-amber-400' : 'text-slate-200'}`} />
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star key={i} className={`w-5 h-5 ${i < review.rating ? 'fill-amber-400' : 'text-slate-200'}`} />
                     ))}
                   </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-slate-700 leading-relaxed">“{review.comment}”</p>
-              </CardContent>
-            </Card>
-          ))}
-          {reviews.length === 0 && (
-            <div className="col-span-full text-center text-slate-500">Reviews will appear once added.</div>
-          )}
+                </CardHeader>
+                <CardContent>
+                  <p className="text-slate-700 leading-relaxed">"{review.comment}"</p>
+                </CardContent>
+              </Card>
+            ))}
+            {reviews.length === 0 && (
+              <div className="col-span-full text-center text-slate-500 py-12">
+                <Star className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                <p>Reviews will appear once added.</p>
+              </div>
+            )}
+          </div>
         </div>
       </section>
 
-      {/* Blog */}
-      <section className="bg-white border-t border-gray-200">
-        <div className="container mx-auto px-4 py-16">
-          <div className="flex items-center justify-between mb-8">
+      {/* Pricing Preview Section */}
+      <section className="bg-white py-20">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-sm font-medium mb-4">
+              <DollarSign className="w-4 h-4" />
+              Simple Pricing
+            </div>
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
+              Choose the Right Plan for You
+            </h2>
+            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+              Start free, upgrade as you grow. All plans include our core features.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            {[
+              {
+                name: 'Starter',
+                price: 'Free',
+                period: 'forever',
+                description: 'Perfect for small teams getting started',
+                features: ['Up to 5 users', 'Basic CRM features', 'Email support', '5GB storage'],
+                cta: 'Get Started',
+                popular: false,
+              },
+              {
+                name: 'Professional',
+                price: '$29',
+                period: 'per month',
+                description: 'Best for growing businesses',
+                features: ['Unlimited users', 'Advanced analytics', 'Priority support', '100GB storage', 'API access'],
+                cta: 'Start Free Trial',
+                popular: true,
+              },
+              {
+                name: 'Enterprise',
+                price: 'Custom',
+                period: 'pricing',
+                description: 'For large organizations',
+                features: ['Everything in Professional', 'Custom integrations', 'Dedicated support', 'Unlimited storage', 'SLA guarantee'],
+                cta: 'Contact Sales',
+                popular: false,
+              },
+            ].map((plan) => (
+              <Card key={plan.name} className={`shadow-sm border-2 ${plan.popular ? 'border-indigo-600 relative' : 'border-gray-200'} hover:shadow-lg transition-all`}>
+                {plan.popular && (
+                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                    <span className="bg-indigo-600 text-white px-4 py-1 rounded-full text-sm font-medium">Most Popular</span>
+                  </div>
+                )}
+                <CardHeader className="text-center pb-8">
+                  <CardTitle className="text-2xl mb-2">{plan.name}</CardTitle>
+                  <div className="mb-4">
+                    <span className="text-4xl font-bold text-slate-900">{plan.price}</span>
+                    {plan.period !== 'forever' && <span className="text-slate-600 ml-2">{plan.period}</span>}
+                  </div>
+                  <CardDescription className="text-base">{plan.description}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-3 mb-8">
+                    {plan.features.map((feature) => (
+                      <li key={feature} className="flex items-center gap-2 text-slate-700">
+                        <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Link to="/register" className="block">
+                    <Button
+                      size="lg"
+                      className={`w-full ${plan.popular ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-slate-900 hover:bg-slate-800 text-white'}`}
+                    >
+                      {plan.cta}
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Enhanced Blog Section */}
+      <section className="bg-gradient-to-b from-gray-50 to-white py-20">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-12">
             <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-sm font-medium">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-sm font-medium mb-4">
                 <Newspaper className="w-4 h-4" />
                 Latest from the blog
               </div>
-              <h2 className="text-3xl font-bold text-slate-900 mt-3">Insights, playbooks, and releases</h2>
-              <p className="text-slate-600 mt-2">Stay ahead with product updates and GTM guides.</p>
+              <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-3">Insights, playbooks, and releases</h2>
+              <p className="text-lg text-slate-600">Stay ahead with product updates and GTM guides.</p>
             </div>
-            <Link to="/register">
-              <Button variant="ghost" className="text-indigo-600">
+            <Link to="/register" className="mt-4 md:mt-0">
+              <Button size="lg" variant="ghost" className="text-indigo-600 hover:text-indigo-700">
                 Join Omni
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </Link>
           </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {posts.map((post) => (
-              <Card key={post.id} className="shadow-sm border-gray-200 h-full flex flex-col">
+              <Card key={post.id} className="shadow-sm border-gray-200 h-full flex flex-col hover:shadow-lg transition-shadow overflow-hidden group">
+                <div className="relative h-48 overflow-hidden bg-gradient-to-br from-indigo-400 to-purple-500">
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Newspaper className="w-16 h-16 text-white/30" />
+                  </div>
+                </div>
                 <CardContent className="pt-6 flex-1 flex flex-col">
-                  <p className="text-xs uppercase tracking-wide text-indigo-600 font-semibold">
+                  <p className="text-xs uppercase tracking-wide text-indigo-600 font-semibold mb-2">
                     {post.publishedAt ? new Date(post.publishedAt).toLocaleDateString() : 'Coming soon'}
                   </p>
-                  <h3 className="text-xl font-semibold text-slate-900 mt-2">{post.title}</h3>
-                  <p className="text-slate-600 text-sm mt-2 flex-1">{post.excerpt || 'Read the latest updates from the Omni team.'}</p>
-                  <div className="mt-4 inline-flex items-center gap-2 text-indigo-600 text-sm font-medium">
+                  <h3 className="text-xl font-semibold text-slate-900 mb-3 group-hover:text-indigo-600 transition-colors">{post.title}</h3>
+                  <p className="text-slate-600 text-sm mb-4 flex-1">{post.excerpt || 'Read the latest updates from the Omni team.'}</p>
+                  <div className="inline-flex items-center gap-2 text-indigo-600 text-sm font-medium group-hover:gap-3 transition-all">
                     Read more
                     <ArrowRight className="w-4 h-4" />
                   </div>
@@ -331,60 +682,114 @@ export function Landing() {
               </Card>
             ))}
             {posts.length === 0 && (
-              <div className="col-span-full text-center text-slate-500">Blog posts will appear once published.</div>
+              <div className="col-span-full text-center text-slate-500 py-12">
+                <Newspaper className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                <p>Blog posts will appear once published.</p>
+              </div>
             )}
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="bg-indigo-600 text-white py-16">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl font-bold mb-4">Ready to Get Started?</h2>
-          <p className="text-xl mb-8 text-indigo-100">
-            Join thousands of businesses using Omni CRM to manage their operations
+      {/* Enhanced CTA Section */}
+      <section className="relative bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-800 text-white py-20 overflow-hidden">
+        <div 
+          className="absolute inset-0 opacity-20"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+          }}
+        ></div>
+        <div className="relative container mx-auto px-4 text-center">
+          <h2 className="text-4xl md:text-5xl font-bold mb-6">Ready to Get Started?</h2>
+          <p className="text-xl md:text-2xl mb-10 text-indigo-100 max-w-2xl mx-auto">
+            Join thousands of businesses using Omni CRM to manage their operations and grow faster.
           </p>
-          <Link to="/register">
-            <Button size="lg" variant="secondary" className="bg-white text-indigo-600 hover:bg-gray-100">
-              Create Your Account
-              <ArrowRight className="ml-2 w-4 h-4" />
-            </Button>
-          </Link>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
+            <Link to="/register">
+              <Button size="lg" className="bg-white text-indigo-600 hover:bg-gray-100 text-lg px-8 py-6 shadow-lg">
+                Create Your Account
+                <ArrowRight className="ml-2 w-5 h-5" />
+              </Button>
+            </Link>
+            <Link to="/contact">
+              <Button size="lg" variant="outline" className="border-2 border-white text-white hover:bg-white/10 text-lg px-8 py-6">
+                Contact Sales
+              </Button>
+            </Link>
+          </div>
+          <div className="flex items-center justify-center gap-6 text-sm text-indigo-100">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="w-5 h-5" />
+              <span>No credit card required</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle className="w-5 h-5" />
+              <span>14-day free trial</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle className="w-5 h-5" />
+              <span>Cancel anytime</span>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* Footer */}
+      {/* Enhanced Footer */}
       <footer className="border-t border-gray-200 bg-white">
-        <div className="container mx-auto px-4 py-12">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+        <div className="container mx-auto px-4 py-16">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
             {footerSections.map((section) => (
-              <div key={section.title} className="space-y-3">
+              <div key={section.title} className="space-y-4">
                 <h4 className="text-sm font-semibold text-slate-900 tracking-tight">{section.title}</h4>
-                <ul className="space-y-2 text-sm text-slate-600">
+                <ul className="space-y-3 text-sm text-slate-600">
                   {section.links.map((link) => (
-                    <li key={link} className="hover:text-slate-900 transition-colors cursor-pointer">
-                      {link}
+                    <li key={link}>
+                      <Link to={`/${link.toLowerCase().replace(/\s+/g, '-')}`} className="hover:text-indigo-600 transition-colors">
+                        {link}
+                      </Link>
                     </li>
                   ))}
                 </ul>
               </div>
             ))}
           </div>
-          <div className="border-t border-gray-200 mt-10 pt-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 text-xs text-slate-500">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-indigo-600 rounded-md flex items-center justify-center">
-                <span className="text-white font-bold text-lg">O</span>
+          <div className="border-t border-gray-200 pt-8">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-indigo-600 rounded-md flex items-center justify-center">
+                  <span className="text-white font-bold text-lg">O</span>
+                </div>
+                <div>
+                  <div className="text-slate-900 font-semibold text-base">{siteName}</div>
+                  <div className="text-xs text-slate-500">Enterprise CRM & Project Management</div>
+                </div>
               </div>
-              <span className="text-slate-900 font-semibold">{siteName}</span>
+              <div className="flex items-center gap-4">
+                <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center hover:bg-indigo-100 hover:text-indigo-600 transition-colors">
+                  <Twitter className="w-5 h-5" />
+                </a>
+                <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center hover:bg-indigo-100 hover:text-indigo-600 transition-colors">
+                  <Linkedin className="w-5 h-5" />
+                </a>
+                <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center hover:bg-indigo-100 hover:text-indigo-600 transition-colors">
+                  <Youtube className="w-5 h-5" />
+                </a>
+                <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center hover:bg-indigo-100 hover:text-indigo-600 transition-colors">
+                  <Instagram className="w-5 h-5" />
+                </a>
+              </div>
             </div>
-            <div className="flex flex-wrap items-center gap-4">
-              <span>&copy; {new Date().getFullYear()} {siteName}. All rights reserved.</span>
-              <span className="hidden md:inline-block text-slate-300">|</span>
-              <span className="hover:text-slate-900 cursor-pointer">Privacy Policy</span>
-              <span className="hover:text-slate-900 cursor-pointer">Terms of Service</span>
-            </div>
-            <div className="text-slate-500">
-              Bangladesh &middot; United States
+            <div className="border-t border-gray-200 mt-8 pt-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 text-xs text-slate-500">
+              <div className="flex flex-wrap items-center gap-4">
+                <span>&copy; {new Date().getFullYear()} {siteName}. All rights reserved.</span>
+                <span className="hidden md:inline-block text-slate-300">|</span>
+                <Link to="/privacy" className="hover:text-slate-900 transition-colors">Privacy Policy</Link>
+                <span className="hidden md:inline-block text-slate-300">|</span>
+                <Link to="/terms" className="hover:text-slate-900 transition-colors">Terms of Service</Link>
+              </div>
+              <div className="text-slate-500">
+                Made with ❤️ in Bangladesh &middot; United States
+              </div>
             </div>
           </div>
         </div>
