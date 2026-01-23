@@ -246,3 +246,125 @@ export const singleTaskAttachment = uploadTaskAttachment.single('file');
 // Multiple files upload middleware for task attachments
 export const multipleTaskAttachments = uploadTaskAttachment.array('files', 10); // Max 10 files at once
 
+// ============================================
+// Hero Background Image Upload
+// ============================================
+
+// Create uploads directory for hero images if it doesn't exist
+const heroImageUploadsDir = path.join(process.cwd(), 'uploads', 'theme', 'hero');
+if (!fs.existsSync(heroImageUploadsDir)) {
+  fs.mkdirSync(heroImageUploadsDir, { recursive: true });
+}
+
+// Configure storage for hero images
+const heroImageStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, heroImageUploadsDir);
+  },
+  filename: (req, file, cb) => {
+    // Generate unique filename: hero-image-timestamp-random.ext
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    const ext = path.extname(file.originalname);
+    cb(null, `hero-image-${uniqueSuffix}${ext}`);
+  },
+});
+
+// File filter for hero images - only images
+const heroImageFileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+  if (allowedMimes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Invalid file type. Only JPEG, PNG, and WebP images are allowed.'));
+  }
+};
+
+// Configure multer for hero images
+export const uploadHeroImage = multer({
+  storage: heroImageStorage,
+  fileFilter: heroImageFileFilter,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+});
+
+// Single file upload middleware for hero images
+export const singleHeroImage = uploadHeroImage.single('image');
+
+// ============================================
+// Hero Background Video Upload
+// ============================================
+
+// Configure storage for hero videos (same directory as images)
+const heroVideoStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, heroImageUploadsDir); // Use same directory
+  },
+  filename: (req, file, cb) => {
+    // Generate unique filename: hero-video-timestamp-random.ext
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    const ext = path.extname(file.originalname);
+    cb(null, `hero-video-${uniqueSuffix}${ext}`);
+  },
+});
+
+// File filter for hero videos - only videos
+const heroVideoFileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  const allowedMimes = ['video/mp4', 'video/webm'];
+  if (allowedMimes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Invalid file type. Only MP4 and WebM videos are allowed.'));
+  }
+};
+
+// Configure multer for hero videos
+export const uploadHeroVideo = multer({
+  storage: heroVideoStorage,
+  fileFilter: heroVideoFileFilter,
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB limit
+  },
+});
+
+// Single file upload middleware for hero videos
+export const singleHeroVideo = uploadHeroVideo.single('video');
+
+// ============================================
+// Hero Addon Image Upload (supports GIF)
+// ============================================
+
+// Configure storage for hero addon images (same directory as hero images)
+const heroAddonImageStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, heroImageUploadsDir); // Use same directory
+  },
+  filename: (req, file, cb) => {
+    // Generate unique filename: hero-addon-timestamp-random.ext
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    const ext = path.extname(file.originalname);
+    cb(null, `hero-addon-${uniqueSuffix}${ext}`);
+  },
+});
+
+// File filter for hero addon images - images including GIF
+const heroAddonImageFileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+  if (allowedMimes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Invalid file type. Only JPEG, PNG, WebP, and GIF images are allowed.'));
+  }
+};
+
+// Configure multer for hero addon images
+export const uploadHeroAddonImage = multer({
+  storage: heroAddonImageStorage,
+  fileFilter: heroAddonImageFileFilter,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit (larger for GIFs)
+  },
+});
+
+// Single file upload middleware for hero addon images
+export const singleHeroAddonImage = uploadHeroAddonImage.single('addonImage');

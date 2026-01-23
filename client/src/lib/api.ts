@@ -253,6 +253,67 @@ export const themeApi = {
   },
 };
 
+// Hero API (SuperAdmin only)
+export const heroApi = {
+  getHeroSettings: () => apiClientInstance.get<ApiResponse>('/theme/hero/settings'),
+  updateHeroSettings: (data: {
+    title?: string;
+    subtitle?: string;
+    trustIndicator?: string;
+    backgroundType?: 'image' | 'video_youtube' | 'video_local' | 'gradient';
+    backgroundVideoYoutube?: string;
+    ctaPrimaryText?: string;
+    ctaSecondaryText?: string;
+    buttonStyle?: 'solid' | 'outline' | 'gradient' | 'pill' | 'soft-shadow';
+    buttonPrimaryColor?: string;
+    buttonPrimaryTextColor?: string;
+    buttonSecondaryColor?: string;
+    buttonSecondaryTextColor?: string;
+    titleColor?: string;
+    subtitleColor?: string;
+    trustIndicatorColor?: string;
+    overlayColor?: string;
+    overlayOpacity?: number;
+    textAlignment?: 'left' | 'center' | 'right';
+    featureHighlight1?: string;
+    featureHighlight2?: string;
+    featureHighlight3?: string;
+    featureHighlightsAlignment?: 'left' | 'center' | 'right';
+    buttonSize?: 'sm' | 'md' | 'lg' | 'xl';
+    buttonPrimaryIcon?: string;
+    buttonSecondaryIcon?: string;
+    addonImage?: string;
+    addonImageAlignment?: 'left' | 'center' | 'right';
+  }) => apiClientInstance.post<ApiResponse>('/theme/hero/settings', data),
+  uploadHeroImage: (file: File) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    return apiClientInstance.post<ApiResponse>('/theme/hero/image', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+  uploadHeroVideo: (file: File) => {
+    const formData = new FormData();
+    formData.append('video', file);
+    return apiClientInstance.post<ApiResponse>('/theme/hero/video', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+  uploadHeroAddonImage: (file: File) => {
+    const formData = new FormData();
+    formData.append('addonImage', file);
+    return apiClientInstance.post<ApiResponse>('/theme/hero/addon-image', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+};
+
 // Role API (SuperAdmin only)
 export const roleApi = {
   getAll: () => apiClientInstance.get<ApiResponse>('/roles'),

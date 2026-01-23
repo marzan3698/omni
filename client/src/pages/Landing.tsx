@@ -3,11 +3,12 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, ArrowRight, Users, Briefcase, Target, BarChart3, MessageSquare, Star, Newspaper, TrendingUp, LineChart, Play, Shield, Zap, Globe, Facebook, MessageCircle, DollarSign, Clock, Award, ChevronDown, Twitter, Linkedin, Youtube, Instagram } from 'lucide-react';
+import { CheckCircle, ArrowRight, ArrowLeft, ArrowUp, ArrowDown, Play, Pause, Download, Upload, ShoppingCart, Heart, Star, Zap, Shield, Globe, Mail, Phone, Calendar, Clock, User, Users, Settings, Search, Menu, X, Plus, Minus, ChevronRight, ChevronLeft, ChevronUp, ChevronDown, Check, Briefcase, Target, BarChart3, MessageSquare, Newspaper, TrendingUp, LineChart, Facebook, MessageCircle, DollarSign, Award, Twitter, Linkedin, Youtube, Instagram } from 'lucide-react';
 import { socialApi } from '@/lib/social';
 import { contentApi } from '@/lib/content';
-import { themeApi } from '@/lib/api';
+import { themeApi, heroApi } from '@/lib/api';
 import { PublicHeader } from '@/components/PublicHeader';
+import { getImageUrl } from '@/lib/imageUtils';
 
 export function Landing() {
   const { data: analytics } = useQuery({
@@ -31,6 +32,200 @@ export function Landing() {
   });
 
   const siteName = themeSettings?.siteName || 'Omni CRM';
+
+  // Fetch hero settings
+  const { data: heroSettings } = useQuery({
+    queryKey: ['hero-settings-public'],
+    queryFn: async () => {
+      try {
+        const response = await heroApi.getHeroSettings();
+        return response.data.data;
+      } catch (error) {
+        return null;
+      }
+    },
+    retry: false,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+
+  // Helper function to extract YouTube video ID
+  const extractYouTubeId = (url: string | null): string | null => {
+    if (!url) return null;
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+      /^([a-zA-Z0-9_-]{11})$/,
+    ];
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match) return match[1];
+    }
+    return null;
+  };
+
+  // Use hero settings or defaults
+  const heroTitle = heroSettings?.title || 'Streamline Your Business Operations';
+  const heroSubtitle = heroSettings?.subtitle || 'Complete CRM and project management solution for modern businesses. Manage leads, campaigns, projects, and clients all in one place.';
+  const heroTrustIndicator = heroSettings?.trustIndicator || 'Trusted by 1000+ businesses worldwide';
+  const heroCtaPrimary = heroSettings?.ctaPrimaryText || 'Start Free Trial';
+  const heroCtaSecondary = heroSettings?.ctaSecondaryText || 'Sign In';
+  const backgroundType = heroSettings?.backgroundType || 'gradient';
+  const backgroundImage = heroSettings?.backgroundImage;
+  const backgroundVideoYoutube = heroSettings?.backgroundVideoYoutube;
+  const backgroundVideoLocal = heroSettings?.backgroundVideoLocal;
+  const youtubeVideoId = extractYouTubeId(backgroundVideoYoutube);
+  
+  // New design system settings
+  const buttonStyle = heroSettings?.buttonStyle || 'solid';
+  const buttonPrimaryColor = heroSettings?.buttonPrimaryColor || '#ffffff';
+  const buttonPrimaryTextColor = heroSettings?.buttonPrimaryTextColor || '#4f46e5';
+  const buttonSecondaryColor = heroSettings?.buttonSecondaryColor || 'transparent';
+  const buttonSecondaryTextColor = heroSettings?.buttonSecondaryTextColor || '#ffffff';
+  const titleColor = heroSettings?.titleColor || '#ffffff';
+  const subtitleColor = heroSettings?.subtitleColor || '#e0e7ff';
+  const trustIndicatorColor = heroSettings?.trustIndicatorColor || '#ffffff';
+  const overlayColor = heroSettings?.overlayColor || '#4f46e5';
+  const overlayOpacity = heroSettings?.overlayOpacity || 0.9;
+  const textAlignment = heroSettings?.textAlignment || 'center';
+  const featureHighlight1 = heroSettings?.featureHighlight1 || 'No credit card required';
+  const featureHighlight2 = heroSettings?.featureHighlight2 || '14-day free trial';
+  const featureHighlight3 = heroSettings?.featureHighlight3 || 'Cancel anytime';
+  const featureHighlightsAlignment = heroSettings?.featureHighlightsAlignment || 'center';
+  const buttonSize = heroSettings?.buttonSize || 'lg';
+  const buttonPrimaryIcon = heroSettings?.buttonPrimaryIcon || null;
+  const buttonSecondaryIcon = heroSettings?.buttonSecondaryIcon || null;
+  const addonImage = heroSettings?.addonImage || null;
+  const addonImageAlignment = (heroSettings?.addonImageAlignment && heroSettings.addonImageAlignment !== '') 
+    ? heroSettings.addonImageAlignment 
+    : 'center';
+
+  // Icon mapping for lucide-react icons
+  const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+    ArrowRight,
+    ArrowLeft,
+    ArrowUp,
+    ArrowDown,
+    Play,
+    Pause,
+    Download,
+    Upload,
+    ShoppingCart,
+    Heart,
+    Star,
+    Zap,
+    Shield,
+    Globe,
+    Mail,
+    Phone,
+    Calendar,
+    Clock,
+    User,
+    Users,
+    Settings,
+    Search,
+    Menu,
+    X,
+    Plus,
+    Minus,
+    ChevronRight,
+    ChevronLeft,
+    ChevronUp,
+    ChevronDown,
+    Check,
+    CheckCircle,
+  };
+
+  // Helper function to get icon component by name
+  const getIconComponent = (iconName: string | null | undefined): React.ComponentType<{ className?: string }> | null => {
+    if (!iconName) return null;
+    return iconMap[iconName] || null;
+  };
+
+  const PrimaryIcon = getIconComponent(buttonPrimaryIcon);
+  const SecondaryIcon = getIconComponent(buttonSecondaryIcon);
+
+  // Helper function to convert hex to rgba
+  const hexToRgba = (hex: string, opacity: number) => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+  };
+
+  // Helper function to get button classes based on style and size
+  const getButtonClasses = (isPrimary: boolean) => {
+    const sizeClasses: Record<string, string> = {
+      sm: 'px-4 py-2 text-sm',
+      md: 'px-6 py-3 text-base',
+      lg: 'px-8 py-6 text-lg',
+      xl: 'px-10 py-8 text-xl',
+    };
+    const baseClasses = `${sizeClasses[buttonSize] || 'px-8 py-6 text-lg'} transition-all font-medium rounded-md`;
+    const styleClasses: Record<string, string> = {
+      solid: '',
+      outline: 'border-2 bg-transparent',
+      gradient: 'bg-gradient-to-r',
+      pill: 'rounded-full',
+      'soft-shadow': 'shadow-lg hover:shadow-xl',
+    };
+    return `${baseClasses} ${styleClasses[buttonStyle] || ''}`;
+  };
+
+  // Helper function to get button style
+  const getButtonStyle = (isPrimary: boolean) => {
+    const baseStyle: React.CSSProperties = {};
+    
+    if (buttonStyle === 'outline') {
+      baseStyle.backgroundColor = 'transparent';
+      baseStyle.borderColor = isPrimary ? buttonPrimaryColor : buttonSecondaryTextColor;
+      baseStyle.color = isPrimary ? buttonPrimaryColor : buttonSecondaryTextColor;
+    } else if (buttonStyle === 'gradient') {
+      // Create gradient from primary color to a darker shade
+      const primaryR = parseInt(buttonPrimaryColor.slice(1, 3), 16);
+      const primaryG = parseInt(buttonPrimaryColor.slice(3, 5), 16);
+      const primaryB = parseInt(buttonPrimaryColor.slice(5, 7), 16);
+      const darkerR = Math.max(0, primaryR - 30);
+      const darkerG = Math.max(0, primaryG - 30);
+      const darkerB = Math.max(0, primaryB - 30);
+      baseStyle.background = `linear-gradient(to right, ${buttonPrimaryColor}, rgb(${darkerR}, ${darkerG}, ${darkerB}))`;
+      baseStyle.color = buttonPrimaryTextColor;
+    } else {
+      baseStyle.backgroundColor = isPrimary ? buttonPrimaryColor : (buttonSecondaryColor === 'transparent' ? 'transparent' : buttonSecondaryColor);
+      baseStyle.color = isPrimary ? buttonPrimaryTextColor : buttonSecondaryTextColor;
+      if (buttonStyle === 'outline' || (isPrimary === false && buttonSecondaryColor === 'transparent')) {
+        baseStyle.borderColor = isPrimary ? buttonPrimaryColor : buttonSecondaryTextColor;
+      }
+    }
+    
+    return baseStyle;
+  };
+
+  // Get alignment classes
+  const getAlignmentClasses = () => {
+    const alignMap: Record<string, string> = {
+      left: 'text-left',
+      center: 'text-center',
+      right: 'text-right',
+    };
+    return alignMap[textAlignment] || 'text-center';
+  };
+
+  const getJustifyClasses = () => {
+    const justifyMap: Record<string, string> = {
+      left: 'justify-start',
+      center: 'justify-center',
+      right: 'justify-end',
+    };
+    return justifyMap[textAlignment] || 'justify-center';
+  };
+
+  const getFeatureHighlightsJustifyClasses = () => {
+    const justifyMap: Record<string, string> = {
+      left: 'justify-start',
+      center: 'justify-center',
+      right: 'justify-end',
+    };
+    return justifyMap[featureHighlightsAlignment] || 'justify-center';
+  };
 
   const { data: reviews = [] } = useQuery({
     queryKey: ['public-reviews'],
@@ -77,53 +272,183 @@ export function Landing() {
       <PublicHeader />
 
       {/* Enhanced Hero Banner Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-800 text-white">
-        <div 
-          className="absolute inset-0 opacity-20"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-          }}
+      <section className="relative overflow-hidden text-white" style={{
+        background: backgroundType === 'gradient' 
+          ? 'linear-gradient(to bottom right, #4f46e5, #7c3aed, #6b21a8)' 
+          : 'transparent'
+      }}>
+        {/* Background based on type */}
+        {backgroundType === 'image' && backgroundImage && (
+          <div 
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: `url(${getImageUrl(backgroundImage)})` }}
+          />
+        )}
+        {backgroundType === 'video_youtube' && youtubeVideoId && (
+          <div className="absolute inset-0 overflow-hidden">
+            <iframe
+              className="absolute"
+              style={{
+                top: '50%',
+                left: '50%',
+                width: '100vw',
+                height: '56.25vw', // 16:9 aspect ratio
+                minHeight: '100vh',
+                minWidth: '177.78vh', // 16:9 aspect ratio
+                transform: 'translate(-50%, -50%)',
+                pointerEvents: 'none',
+                border: 'none',
+                zIndex: 0,
+              }}
+              src={`https://www.youtube.com/embed/${youtubeVideoId}?autoplay=1&loop=1&mute=1&controls=0&playlist=${youtubeVideoId}&modestbranding=1&rel=0`}
+              allow="autoplay; encrypted-media"
+            />
+          </div>
+        )}
+        {backgroundType === 'video_local' && backgroundVideoLocal && (
+          <video
+            className="absolute inset-0 w-full h-full object-cover"
+            src={getImageUrl(backgroundVideoLocal)}
+            autoPlay
+            loop
+            muted
+            playsInline
+          />
+        )}
+        {backgroundType === 'gradient' && (
+          <div 
+            className="absolute inset-0 opacity-20"
+            style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+            }}
+          />
+        )}
+        
+        {/* Overlay for better text readability */}
+        <div
+          className="absolute inset-0 z-0"
+          style={{ backgroundColor: hexToRgba(overlayColor, overlayOpacity) }}
         ></div>
-        <div className="relative container mx-auto px-4 py-24 md:py-32 text-center">
-          <div className="max-w-4xl mx-auto animate-fade-in">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm text-sm font-medium mb-6">
-              <Award className="w-4 h-4" />
-              Trusted by 1000+ businesses worldwide
-            </div>
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
-              Streamline Your Business Operations
+        
+        <div className={`relative container mx-auto px-4 py-24 md:py-32 z-20 ${getAlignmentClasses()}`}>
+          <div className={`max-w-4xl ${textAlignment === 'center' ? 'mx-auto' : textAlignment === 'right' ? 'ml-auto' : ''} animate-fade-in`}>
+            {heroTrustIndicator && (
+              <div
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm text-sm font-medium mb-6"
+                style={{ color: trustIndicatorColor }}
+              >
+                <Award className="w-4 h-4" />
+                {heroTrustIndicator}
+              </div>
+            )}
+            <h1
+              className="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight"
+              style={{ color: titleColor }}
+            >
+              {heroTitle}
             </h1>
-            <p className="text-xl md:text-2xl mb-8 max-w-2xl mx-auto text-indigo-100">
-              Complete CRM and project management solution for modern businesses.
-              Manage leads, campaigns, projects, and clients all in one place.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-              <Link to="/register">
-                <Button size="lg" className="bg-white text-indigo-600 hover:bg-gray-100 text-lg px-8 py-6 shadow-lg hover:shadow-xl transition-all">
-                  Start Free Trial
-                  <ArrowRight className="ml-2 w-5 h-5" />
-                </Button>
-              </Link>
-              <Link to="/login">
-                <Button size="lg" variant="outline" className="border-2 border-white text-white hover:bg-white/10 text-lg px-8 py-6">
-                  Sign In
-                </Button>
-              </Link>
+            {heroSubtitle && (
+              <p
+                className="text-xl md:text-2xl mb-8 max-w-2xl"
+                style={{
+                  color: subtitleColor,
+                  marginLeft: textAlignment === 'center' ? 'auto' : textAlignment === 'right' ? 'auto' : '0',
+                  marginRight: textAlignment === 'center' ? 'auto' : textAlignment === 'left' ? 'auto' : '0',
+                }}
+              >
+                {heroSubtitle}
+              </p>
+            )}
+            <div className={`flex flex-col sm:flex-row gap-4 ${getJustifyClasses()} mb-12`}>
+              {heroCtaPrimary && (
+                <Link to="/register">
+                  <button
+                    className={`${getButtonClasses(true)} flex items-center justify-center`}
+                    style={getButtonStyle(true)}
+                  >
+                    {PrimaryIcon ? (
+                      <PrimaryIcon className={`${buttonSize === 'sm' ? 'w-4 h-4' : 'w-5 h-5'} mr-2`} />
+                    ) : buttonSize === 'sm' ? (
+                      <ArrowRight className="w-4 h-4 mr-2" />
+                    ) : null}
+                    <span>{heroCtaPrimary}</span>
+                    {!PrimaryIcon && buttonSize !== 'sm' && <ArrowRight className="ml-2 w-5 h-5" />}
+                  </button>
+                </Link>
+              )}
+              {heroCtaSecondary && (
+                <Link to="/login">
+                  <button
+                    className={`${getButtonClasses(false)} flex items-center justify-center`}
+                    style={getButtonStyle(false)}
+                  >
+                    {SecondaryIcon && <SecondaryIcon className={`${buttonSize === 'sm' ? 'w-4 h-4' : 'w-5 h-5'} mr-2`} />}
+                    <span>{heroCtaSecondary}</span>
+                  </button>
+                </Link>
+              )}
             </div>
-            <div className="flex items-center justify-center gap-8 text-sm text-indigo-100">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-5 h-5" />
-                <span>No credit card required</span>
+            {/* Addon Image - Absolutely Positioned */}
+            {addonImage && (
+              <div 
+                className="absolute inset-0 pointer-events-none z-10"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: addonImageAlignment === 'center' 
+                    ? 'center' 
+                    : addonImageAlignment === 'right' 
+                    ? 'flex-end' 
+                    : 'flex-start',
+                  padding: addonImageAlignment === 'left' 
+                    ? '2rem 2rem 2rem 0' 
+                    : addonImageAlignment === 'right' 
+                    ? '2rem 0 2rem 2rem' 
+                    : '2rem',
+                }}
+              >
+                <img
+                  src={getImageUrl(addonImage)}
+                  alt="Hero addon"
+                  className="object-contain pointer-events-auto"
+                  style={{
+                    maxWidth: '35%',
+                    maxHeight: '80vh',
+                    width: 'auto',
+                    height: 'auto',
+                  }}
+                  onError={(e) => {
+                    console.error('Failed to load addon image:', addonImage);
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                  onLoad={() => {
+                    console.log('Addon image loaded successfully:', addonImage);
+                  }}
+                />
               </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-5 h-5" />
-                <span>14-day free trial</span>
+            )}
+            {(featureHighlight1 || featureHighlight2 || featureHighlight3) && (
+              <div className={`flex items-center gap-8 text-sm ${getFeatureHighlightsJustifyClasses()}`} style={{ color: subtitleColor }}>
+                {featureHighlight1 && (
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5" />
+                    <span>{featureHighlight1}</span>
+                  </div>
+                )}
+                {featureHighlight2 && (
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5" />
+                    <span>{featureHighlight2}</span>
+                  </div>
+                )}
+                {featureHighlight3 && (
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5" />
+                    <span>{featureHighlight3}</span>
+                  </div>
+                )}
               </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-5 h-5" />
-                <span>Cancel anytime</span>
-              </div>
-            </div>
+            )}
           </div>
           <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
             <ChevronDown className="w-6 h-6 text-white/70" />
@@ -219,54 +544,54 @@ export function Landing() {
               Powerful Features
             </div>
             <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
-              Everything You Need to Manage Your Business
-            </h2>
+          Everything You Need to Manage Your Business
+        </h2>
             <p className="text-lg text-slate-600 max-w-2xl mx-auto">
               All-in-one platform designed to help you manage clients, campaigns, projects, and teams efficiently.
             </p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[
-              {
-                icon: Users,
-                title: 'Client Management',
-                description: 'Register clients, projects, and track milestones seamlessly.',
-                points: ['Easy project creation', 'E-signature support', 'Status tracking'],
+          {[
+            {
+              icon: Users,
+              title: 'Client Management',
+              description: 'Register clients, projects, and track milestones seamlessly.',
+              points: ['Easy project creation', 'E-signature support', 'Status tracking'],
                 image: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&h=600&fit=crop',
-              },
-              {
-                icon: Target,
-                title: 'Campaign Management',
-                description: 'Plan, launch, and report on marketing campaigns.',
-                points: ['Multi-client campaigns', 'Product assignments', 'Lead tracking'],
+            },
+            {
+              icon: Target,
+              title: 'Campaign Management',
+              description: 'Plan, launch, and report on marketing campaigns.',
+              points: ['Multi-client campaigns', 'Product assignments', 'Lead tracking'],
                 image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&h=600&fit=crop',
-              },
-              {
-                icon: Briefcase,
-                title: 'Project Tracking',
-                description: 'Monitor delivery health from draft to completion.',
-                points: ['Real-time updates', 'Document management', 'Timeline visibility'],
+            },
+            {
+              icon: Briefcase,
+              title: 'Project Tracking',
+              description: 'Monitor delivery health from draft to completion.',
+              points: ['Real-time updates', 'Document management', 'Timeline visibility'],
                 image: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&h=600&fit=crop',
-              },
-              {
-                icon: BarChart3,
-                title: 'Lead Analytics',
-                description: 'Actionable insights for every campaign and channel.',
-                points: ['Campaign-based leads', 'Detailed insights', 'Filter by source'],
+            },
+            {
+              icon: BarChart3,
+              title: 'Lead Analytics',
+              description: 'Actionable insights for every campaign and channel.',
+              points: ['Campaign-based leads', 'Detailed insights', 'Filter by source'],
                 image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=600&fit=crop',
-              },
-              {
+            },
+            {
                 icon: Shield,
-                title: 'Secure & Reliable',
-                description: 'Enterprise-grade security and observability.',
-                points: ['Data encryption', '99.9% uptime', 'Regular backups'],
+              title: 'Secure & Reliable',
+              description: 'Enterprise-grade security and observability.',
+              points: ['Data encryption', '99.9% uptime', 'Regular backups'],
                 image: 'https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=800&h=600&fit=crop',
-              },
-              {
-                icon: Users,
-                title: 'Team Collaboration',
-                description: 'Roles, permissions, and shared dashboards.',
-                points: ['Role-based access', 'Shared dashboards', 'Real-time sync'],
+            },
+            {
+              icon: Users,
+              title: 'Team Collaboration',
+              description: 'Roles, permissions, and shared dashboards.',
+              points: ['Role-based access', 'Shared dashboards', 'Real-time sync'],
                 image: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800&h=600&fit=crop',
               },
             ].map((item, idx) => (
@@ -280,7 +605,7 @@ export function Landing() {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-indigo-600/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 </div>
-                <CardHeader>
+              <CardHeader>
                   <div className="flex items-center gap-3 mb-2">
                     <div className="w-12 h-12 rounded-lg bg-indigo-100 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
                       <item.icon className="w-6 h-6 text-indigo-600 group-hover:text-white transition-colors" />
@@ -288,19 +613,19 @@ export function Landing() {
                     <CardTitle className="text-xl">{item.title}</CardTitle>
                   </div>
                   <CardDescription className="text-base">{item.description}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-2 text-sm text-slate-600">
-                    {item.points.map((point) => (
-                      <li key={point} className="flex items-center gap-2">
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2 text-sm text-slate-600">
+                  {item.points.map((point) => (
+                    <li key={point} className="flex items-center gap-2">
                         <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
                         <span>{point}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            ))}
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          ))}
           </div>
         </div>
       </section>
@@ -509,10 +834,10 @@ export function Landing() {
       <section className="bg-gradient-to-b from-white to-gray-50 py-20">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-12">
-            <div>
+          <div>
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-sm font-medium mb-4">
-                <Star className="w-4 h-4" />
-                Customer Reviews
+              <Star className="w-4 h-4" />
+              Customer Reviews
               </div>
               <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-3">Loved by modern teams</h2>
               <p className="text-lg text-slate-600">Feedback from teams running their operations on Omni.</p>
@@ -535,20 +860,20 @@ export function Landing() {
                     <div className="flex-1">
                       <CardTitle className="text-lg mb-1">{review.authorName}</CardTitle>
                       <CardDescription className="text-sm">{review.role || 'Customer'}</CardDescription>
-                    </div>
+        </div>
                   </div>
                   <div className="flex items-center gap-1 text-amber-500">
                     {Array.from({ length: 5 }).map((_, i) => (
                       <Star key={i} className={`w-5 h-5 ${i < review.rating ? 'fill-amber-400' : 'text-slate-200'}`} />
                     ))}
-                  </div>
-                </CardHeader>
-                <CardContent>
+                </div>
+              </CardHeader>
+              <CardContent>
                   <p className="text-slate-700 leading-relaxed">"{review.comment}"</p>
-                </CardContent>
-              </Card>
-            ))}
-            {reviews.length === 0 && (
+              </CardContent>
+            </Card>
+          ))}
+          {reviews.length === 0 && (
               <div className="col-span-full text-center text-slate-500 py-12">
                 <Star className="w-12 h-12 text-slate-300 mx-auto mb-4" />
                 <p>Reviews will appear once added.</p>
@@ -705,30 +1030,30 @@ export function Landing() {
             Join thousands of businesses using Omni CRM to manage their operations and grow faster.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
-            <Link to="/register">
+          <Link to="/register">
               <Button size="lg" className="bg-white text-indigo-600 hover:bg-gray-100 text-lg px-8 py-6 shadow-lg">
-                Create Your Account
+              Create Your Account
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
             </Link>
             <Link to="/contact">
               <Button size="lg" variant="outline" className="border-2 border-white text-white hover:bg-white/10 text-lg px-8 py-6">
                 Contact Sales
-              </Button>
-            </Link>
+            </Button>
+          </Link>
           </div>
           <div className="flex items-center justify-center gap-6 text-sm text-indigo-100">
             <div className="flex items-center gap-2">
               <CheckCircle className="w-5 h-5" />
-              <span>No credit card required</span>
+              <span>{featureHighlight1}</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle className="w-5 h-5" />
-              <span>14-day free trial</span>
+              <span>{featureHighlight2}</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle className="w-5 h-5" />
-              <span>Cancel anytime</span>
+              <span>{featureHighlight3}</span>
             </div>
           </div>
         </div>
@@ -745,7 +1070,7 @@ export function Landing() {
                   {section.links.map((link) => (
                     <li key={link}>
                       <Link to={`/${link.toLowerCase().replace(/\s+/g, '-')}`} className="hover:text-indigo-600 transition-colors">
-                        {link}
+                      {link}
                       </Link>
                     </li>
                   ))}
@@ -757,7 +1082,7 @@ export function Landing() {
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-indigo-600 rounded-md flex items-center justify-center">
-                  <span className="text-white font-bold text-lg">O</span>
+                <span className="text-white font-bold text-lg">O</span>
                 </div>
                 <div>
                   <div className="text-slate-900 font-semibold text-base">{siteName}</div>
@@ -780,14 +1105,14 @@ export function Landing() {
               </div>
             </div>
             <div className="border-t border-gray-200 mt-8 pt-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 text-xs text-slate-500">
-              <div className="flex flex-wrap items-center gap-4">
-                <span>&copy; {new Date().getFullYear()} {siteName}. All rights reserved.</span>
-                <span className="hidden md:inline-block text-slate-300">|</span>
+            <div className="flex flex-wrap items-center gap-4">
+              <span>&copy; {new Date().getFullYear()} {siteName}. All rights reserved.</span>
+              <span className="hidden md:inline-block text-slate-300">|</span>
                 <Link to="/privacy" className="hover:text-slate-900 transition-colors">Privacy Policy</Link>
                 <span className="hidden md:inline-block text-slate-300">|</span>
                 <Link to="/terms" className="hover:text-slate-900 transition-colors">Terms of Service</Link>
-              </div>
-              <div className="text-slate-500">
+            </div>
+            <div className="text-slate-500">
                 Made with ❤️ in Bangladesh &middot; United States
               </div>
             </div>

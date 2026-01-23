@@ -27,7 +27,8 @@ import {
   CreditCard,
   Palette,
   Calendar,
-  Phone
+  Phone,
+  Layout
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -38,8 +39,9 @@ import { getImageUrl } from '@/lib/imageUtils';
 
 interface SubMenuItem {
   label: string;
-  path: string;
+  path?: string;
   icon?: React.ComponentType<{ className?: string }>;
+  submenu?: SubMenuItem[];
 }
 
 interface NavItem {
@@ -176,7 +178,15 @@ const menuSections: MenuSection[] = [
         permission: 'can_manage_root_items',
         submenu: [
           { label: 'General Settings', path: '/system-settings', icon: Cog },
-          { label: 'Theme Design', path: '/theme-design', icon: Palette },
+          {
+            label: 'Theme Design',
+            icon: Palette,
+            permission: 'can_manage_root_items',
+            submenu: [
+              { label: 'Theme Settings', path: '/theme-design', icon: Palette },
+              { label: 'Hero Design', path: '/theme-design/homepage/hero', icon: Layout },
+            ]
+          },
           { label: 'Integrations', path: '/integrations', icon: Plug },
           { label: 'Task Configuration', path: '/task-config', icon: ListChecks },
           { label: 'Settings', path: '/settings', icon: Settings },
@@ -347,11 +357,75 @@ export function Sidebar() {
                               {item.submenu.map((subItem) => {
                                 const SubIcon = subItem.icon || Eye;
                                 const isSubActive = location.pathname === subItem.path;
+                                const hasNestedSubmenu = subItem.submenu && subItem.submenu.length > 0;
+                                const nestedDropdownKey = `${item.label}-${subItem.label}`;
+                                const isNestedDropdownOpen = openDropdowns[nestedDropdownKey] || false;
+                                const hasActiveNestedSubmenu = subItem.submenu?.some(nested => location.pathname === nested.path);
+
+                                if (hasNestedSubmenu) {
+                                  return (
+                                    <li key={subItem.label}>
+                                      <button
+                                        onClick={() => toggleDropdown(nestedDropdownKey)}
+                                        className={cn(
+                                          "w-full flex items-center gap-3 px-4 py-2 rounded-md text-sm font-normal transition-colors",
+                                          "hover:bg-gray-50",
+                                          hasActiveNestedSubmenu
+                                            ? "bg-indigo-50 text-indigo-600 font-medium"
+                                            : "text-slate-600 hover:text-slate-900"
+                                        )}
+                                      >
+                                        <SubIcon className="w-4 h-4 flex-shrink-0" />
+                                        <span className="flex-1 text-left">{subItem.label}</span>
+                                        <ChevronRight className={cn(
+                                          "w-4 h-4 text-slate-500 transition-transform duration-200",
+                                          isNestedDropdownOpen && "rotate-90"
+                                        )} />
+                                      </button>
+                                      <div
+                                        className={cn(
+                                          "overflow-hidden transition-all duration-300 ease-in-out",
+                                          isNestedDropdownOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+                                        )}
+                                      >
+                                        <ul className="ml-4 mt-1 mb-1 space-y-1 border-l-2 border-indigo-100 pl-4">
+                                          {subItem.submenu!.map((nestedItem) => {
+                                            const NestedIcon = nestedItem.icon || Eye;
+                                            const isNestedActive = location.pathname === nestedItem.path;
+
+                                            return (
+                                              <li key={nestedItem.path}>
+                                                <Link
+                                                  to={nestedItem.path!}
+                                                  onClick={() => {
+                                                    if (window.innerWidth < 1024) {
+                                                      setIsOpen(false);
+                                                    }
+                                                  }}
+                                                  className={cn(
+                                                    "flex items-center gap-3 px-4 py-2 rounded-md text-sm font-normal transition-colors",
+                                                    "hover:bg-gray-50",
+                                                    isNestedActive
+                                                      ? "bg-indigo-50 text-indigo-600 font-medium"
+                                                      : "text-slate-600 hover:text-slate-900"
+                                                  )}
+                                                >
+                                                  <NestedIcon className="w-4 h-4 flex-shrink-0" />
+                                                  <span className="flex-1 text-left">{nestedItem.label}</span>
+                                                </Link>
+                                              </li>
+                                            );
+                                          })}
+                                        </ul>
+                                      </div>
+                                    </li>
+                                  );
+                                }
 
                                 return (
                                   <li key={subItem.path}>
                                     <Link
-                                      to={subItem.path}
+                                      to={subItem.path!}
                                       onClick={() => {
                                         if (window.innerWidth < 1024) {
                                           setIsOpen(false);
