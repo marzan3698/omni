@@ -1,14 +1,18 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
+import { useQuery } from '@tanstack/react-query';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { authApi } from '@/lib/auth';
-import { Mail, Lock, Loader2 } from 'lucide-react';
+import { headerApi, colorApi } from '@/lib/api';
+import { getImageUrl } from '@/lib/imageUtils';
+import { AuthBanner } from '@/components/ui/AuthBanner';
+import { SocialLoginButtons } from '@/components/ui/SocialLoginButtons';
+import { PasswordStrengthIndicator } from '@/components/ui/PasswordStrengthIndicator';
+import { Mail, Lock, Loader2, Eye, EyeOff } from 'lucide-react';
 
 const registerSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -25,14 +29,55 @@ export function Register() {
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Fetch header settings (for logo and branding)
+  const { data: headerSettings } = useQuery({
+    queryKey: ['header-settings-register'],
+    queryFn: async () => {
+      try {
+        const response = await headerApi.getHeaderSettings();
+        return response.data.data;
+      } catch (error) {
+        return null;
+      }
+    },
+    retry: false,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+
+  // Fetch color settings
+  const { data: colorSettings } = useQuery({
+    queryKey: ['color-settings-register'],
+    queryFn: async () => {
+      try {
+        const response = await colorApi.getColorSettings();
+        return response.data.data;
+      } catch (error) {
+        return null;
+      }
+    },
+    retry: false,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+
+  // Use fetched colors or defaults
+  const primaryColor = colorSettings?.primaryColor || '#4f46e5';
+  const secondaryColor = colorSettings?.secondaryColor || '#7c3aed';
+  const logoUrl = headerSettings?.logo ? getImageUrl(headerSettings.logo) : null;
+  const logoType = headerSettings?.logoType || 'wide';
 
   const {
     register,
     handleSubmit,
     formState: { errors },
+    watch,
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
   });
+
+  const passwordValue = watch('password');
 
   const onSubmit = async (data: RegisterFormData) => {
     try {
@@ -48,81 +93,202 @@ export function Register() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <Card className="w-full max-w-md shadow-sm border-gray-200">
-        <CardHeader className="space-y-1 text-center">
-          <div className="flex justify-center mb-4">
-            <div className="w-12 h-12 bg-indigo-600 rounded-md flex items-center justify-center">
-              <span className="text-white font-bold text-xl">O</span>
+    <div className="min-h-screen flex bg-white">
+      {/* Left Panel - Form Section */}
+      <div className="w-full lg:w-1/2 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 xl:px-12">
+        {/* Form Container */}
+        <div className="w-full max-w-md mx-auto space-y-8 animate-in fade-in duration-500">
+          {/* Logo and Header */}
+          <div className="space-y-2 text-center lg:text-left">
+            <div className="flex items-center gap-3 justify-center lg:justify-start">
+              {logoUrl ? (
+                logoType === 'wide' ? (
+                  <img
+                    src={logoUrl}
+                    alt="Logo"
+                    className="h-12 object-contain"
+                  />
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <img
+                      src={logoUrl}
+                      alt="Logo"
+                      className="h-12 w-12 object-contain"
+                    />
+                    <span className="text-2xl font-bold text-slate-900">Omni</span>
+                  </div>
+                )
+              ) : (
+                <>
+                  <div
+                    className="w-12 h-12 rounded-lg flex items-center justify-center shadow-lg hover:shadow-xl transition-shadow duration-300"
+                    style={{
+                      background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`,
+                    }}
+                  >
+                    <span className="text-white font-bold text-xl">O</span>
+                  </div>
+                  <h1
+                    className="text-3xl font-bold bg-clip-text text-transparent"
+                    style={{
+                      backgroundImage: `linear-gradient(to right, ${primaryColor}, ${secondaryColor})`,
+                    }}
+                  >
+                    Omni
+                  </h1>
+                </>
+              )}
             </div>
+            <p className="text-slate-600 text-sm">Enterprise Management System</p>
           </div>
-          <CardTitle className="text-2xl font-bold text-slate-900">Create Client Account</CardTitle>
-          <CardDescription className="text-slate-600">
-            Sign up to start managing your projects
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm">
-                {error}
-              </div>
-            )}
 
+          {/* Welcome Message */}
+          <div className="space-y-2">
+            <h2 className="text-3xl font-bold text-slate-900">Create your account</h2>
+            <p className="text-slate-600 text-sm">
+              Join thousands of businesses already using Omni CRM
+            </p>
+          </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm animate-in slide-in-from-top duration-300 flex items-start gap-3">
+              <div className="flex-1">{error}</div>
+              <button
+                onClick={() => setError(null)}
+                className="text-red-500 hover:text-red-700 font-bold"
+              >
+                ×
+              </button>
+            </div>
+          )}
+
+          {/* Register Form */}
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+            {/* Email Field */}
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <label htmlFor="email" className="text-sm font-semibold text-slate-900 block">
+                Email Address
+              </label>
+              <div className="relative group">
+                <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:transition-colors duration-200" />
                 <Input
                   id="email"
                   type="email"
                   placeholder="you@example.com"
-                  className="pl-10"
+                  className="pl-12 h-11 border-slate-200 rounded-lg transition-all duration-200"
+                  style={{
+                    '--tw-ring-color': primaryColor,
+                  } as any}
                   {...register('email')}
                 />
               </div>
               {errors.email && (
-                <p className="text-sm text-red-600">{errors.email.message}</p>
+                <p className="text-sm text-red-600 flex items-center gap-1 animate-in fade-in duration-200">
+                  <span>•</span> {errors.email.message}
+                </p>
               )}
             </div>
 
+            {/* Password Field */}
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <label htmlFor="password" className="text-sm font-semibold text-slate-900">
+                Password
+              </label>
+              <div className="relative group">
+                <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:transition-colors duration-200" />
                 <Input
                   id="password"
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   placeholder="••••••••"
-                  className="pl-10"
+                  className="pl-12 pr-12 h-11 border-slate-200 rounded-lg transition-all duration-200"
                   {...register('password')}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors duration-200"
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
+                </button>
               </div>
               {errors.password && (
-                <p className="text-sm text-red-600">{errors.password.message}</p>
+                <p className="text-sm text-red-600 flex items-center gap-1 animate-in fade-in duration-200">
+                  <span>•</span> {errors.password.message}
+                </p>
               )}
+              
+              {/* Password Strength Indicator */}
+              {passwordValue && <PasswordStrengthIndicator password={passwordValue} />}
             </div>
 
+            {/* Confirm Password Field */}
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <label htmlFor="confirmPassword" className="text-sm font-semibold text-slate-900">
+                Confirm Password
+              </label>
+              <div className="relative group">
+                <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:transition-colors duration-200" />
                 <Input
                   id="confirmPassword"
-                  type="password"
+                  type={showConfirmPassword ? 'text' : 'password'}
                   placeholder="••••••••"
-                  className="pl-10"
+                  className="pl-12 pr-12 h-11 border-slate-200 rounded-lg transition-all duration-200"
                   {...register('confirmPassword')}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors duration-200"
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
+                </button>
               </div>
               {errors.confirmPassword && (
-                <p className="text-sm text-red-600">{errors.confirmPassword.message}</p>
+                <p className="text-sm text-red-600 flex items-center gap-1 animate-in fade-in duration-200">
+                  <span>•</span> {errors.confirmPassword.message}
+                </p>
               )}
             </div>
 
+            {/* Terms Acceptance */}
+            <div className="flex items-start gap-2 text-xs text-slate-600">
+              <input
+                type="checkbox"
+                id="terms"
+                required
+                className="mt-1 w-4 h-4 rounded border-slate-300 cursor-pointer"
+                style={{
+                  accentColor: primaryColor,
+                }}
+              />
+              <label htmlFor="terms" className="cursor-pointer">
+                I agree to the{' '}
+                <a href="#" className="font-medium transition-colors duration-200 hover:underline" style={{ color: primaryColor }}>
+                  Terms of Service
+                </a>
+                {' '}and{' '}
+                <a href="#" className="font-medium transition-colors duration-200 hover:underline" style={{ color: primaryColor }}>
+                  Privacy Policy
+                </a>
+              </label>
+            </div>
+
+            {/* Submit Button */}
             <Button
               type="submit"
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"
+              className="w-full h-11 text-white font-semibold rounded-lg transition-all duration-200 hover:shadow-lg active:scale-95"
+              style={{
+                background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`,
+              }}
               disabled={isLoading}
             >
               {isLoading ? (
@@ -134,16 +300,44 @@ export function Register() {
                 'Create Account'
               )}
             </Button>
+          </form>
 
-            <div className="text-center text-sm text-slate-600">
+          {/* Social Login */}
+          <SocialLoginButtons isLoading={isLoading} />
+
+          {/* Sign In Link */}
+          <div className="text-center">
+            <p className="text-slate-600 text-sm">
               Already have an account?{' '}
-              <Link to="/login" className="text-indigo-600 hover:text-indigo-700 font-medium">
+              <Link
+                to="/login"
+                className="font-semibold transition-colors duration-200 hover:underline"
+                style={{ color: primaryColor }}
+              >
                 Sign in
               </Link>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+            </p>
+          </div>
+
+          {/* Footer */}
+          <div className="flex items-center justify-center gap-4 text-xs text-slate-500 border-t border-slate-200 pt-6">
+            <a href="#" className="hover:text-slate-700 transition-colors">
+              Privacy
+            </a>
+            <span>•</span>
+            <a href="#" className="hover:text-slate-700 transition-colors">
+              Terms
+            </a>
+            <span>•</span>
+            <a href="#" className="hover:text-slate-700 transition-colors">
+              Support
+            </a>
+          </div>
+        </div>
+      </div>
+
+      {/* Right Panel - Banner Section */}
+      <AuthBanner variant="register" />
     </div>
   );
 }
