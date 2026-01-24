@@ -41,6 +41,32 @@ const updateHeroSettingsSchema = z.object({
   addonImageAlignment: z.enum(['left', 'center', 'right']).optional(),
 });
 
+const updateHeaderSettingsSchema = z.object({
+  menuAbout: z.string().max(50, 'Menu item text must be 50 characters or less').optional().or(z.literal('')),
+  menuServices: z.string().max(50, 'Menu item text must be 50 characters or less').optional().or(z.literal('')),
+  menuContact: z.string().max(50, 'Menu item text must be 50 characters or less').optional().or(z.literal('')),
+  menuTerms: z.string().max(50, 'Menu item text must be 50 characters or less').optional().or(z.literal('')),
+  menuPrivacy: z.string().max(50, 'Menu item text must be 50 characters or less').optional().or(z.literal('')),
+  menuSitemap: z.string().max(50, 'Menu item text must be 50 characters or less').optional().or(z.literal('')),
+  buttonPrimaryText: z.string().max(50, 'Button text must be 50 characters or less').optional().or(z.literal('')),
+  buttonSecondaryText: z.string().max(50, 'Button text must be 50 characters or less').optional().or(z.literal('')),
+  backgroundColor: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, 'Invalid hex color format').optional(),
+  textColor: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, 'Invalid hex color format').optional(),
+  buttonBgColor: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, 'Invalid hex color format').optional(),
+  buttonTextColor: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, 'Invalid hex color format').optional(),
+  buttonSecondaryBgColor: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, 'Invalid hex color format').optional().or(z.literal('transparent')),
+  buttonSecondaryTextColor: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, 'Invalid hex color format').optional(),
+  isFixed: z.boolean().optional(),
+  isTransparent: z.boolean().optional(),
+  logo: z.string().optional().or(z.literal('')),
+  logoType: z.enum(['wide', 'with-text']).optional(),
+});
+
+const updateColorSettingsSchema = z.object({
+  primaryColor: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, 'Invalid hex color format'),
+  secondaryColor: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, 'Invalid hex color format'),
+});
+
 export const themeController = {
   /**
    * Get theme settings (public endpoint - can be accessed without auth)
@@ -186,6 +212,89 @@ export const themeController = {
       return sendSuccess(res, { imagePath: setting.value }, 'Hero addon image uploaded successfully');
     } catch (error: any) {
       return sendError(res, error.message || 'Failed to upload hero addon image', error.statusCode || 500);
+    }
+  },
+
+  /**
+   * Get header settings (public endpoint - can be accessed without auth)
+   */
+  getHeaderSettings: async (req: any, res: Response) => {
+    try {
+      // For public access, use companyId from query or default to 1 (first company)
+      const companyId = req.user?.companyId || parseInt(req.query.companyId as string) || 1;
+      const settings = await themeService.getHeaderSettings(companyId);
+      return sendSuccess(res, settings, 'Header settings retrieved successfully');
+    } catch (error: any) {
+      return sendError(res, error.message || 'Failed to retrieve header settings', error.statusCode || 500);
+    }
+  },
+
+  /**
+   * Update header settings
+   */
+  updateHeaderSettings: async (req: AuthRequest, res: Response) => {
+    try {
+      const companyId = req.user!.companyId;
+      const validatedData = updateHeaderSettingsSchema.parse(req.body);
+      const settings = await themeService.updateHeaderSettings(companyId, validatedData);
+      return sendSuccess(res, settings, 'Header settings updated successfully');
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return sendError(res, error.errors[0].message, 400);
+      }
+      return sendError(res, error.message || 'Failed to update header settings', error.statusCode || 500);
+    }
+  },
+
+  /**
+   * Upload header logo
+   */
+  uploadHeaderLogo: async (req: AuthRequest, res: Response) => {
+    try {
+      const companyId = req.user!.companyId;
+
+      if (!req.file) {
+        return sendError(res, 'No file uploaded', 400);
+      }
+
+      // File path relative to uploads directory
+      const filePath = `/uploads/theme/${req.file.filename}`;
+      const setting = await themeService.uploadHeaderLogo(companyId, filePath);
+
+      return sendSuccess(res, { logoPath: setting.value }, 'Header logo uploaded successfully');
+    } catch (error: any) {
+      return sendError(res, error.message || 'Failed to upload header logo', error.statusCode || 500);
+    }
+  },
+
+  /**
+   * Get color settings (public endpoint - can be accessed without auth)
+   */
+  getColorSettings: async (req: any, res: Response) => {
+    try {
+      // For public access, use companyId from query or default to 1 (first company)
+      const companyId = req.user?.companyId || parseInt(req.query.companyId as string) || 1;
+      const settings = await themeService.getColorSettings(companyId);
+      return sendSuccess(res, settings, 'Color settings retrieved successfully');
+    } catch (error: any) {
+      return sendError(res, error.message || 'Failed to retrieve color settings', error.statusCode || 500);
+    }
+  },
+
+  /**
+   * Update color settings
+   */
+  updateColorSettings: async (req: AuthRequest, res: Response) => {
+    try {
+      const companyId = req.user!.companyId;
+      const validatedData = updateColorSettingsSchema.parse(req.body);
+      const settings = await themeService.updateColorSettings(companyId, validatedData);
+      return sendSuccess(res, settings, 'Color settings updated successfully');
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return sendError(res, error.errors[0].message, 400);
+      }
+      return sendError(res, error.message || 'Failed to update color settings', error.statusCode || 500);
     }
   },
 };

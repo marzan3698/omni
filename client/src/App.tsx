@@ -34,6 +34,8 @@ import LeadConfig from './pages/LeadConfig';
 import SystemSettings from './pages/SystemSettings';
 import ThemeDesign from './pages/ThemeDesign';
 import ManageHomepage from './pages/ManageHomepage';
+import ManageHeader from './pages/ManageHeader';
+import ManageColors from './pages/ManageColors';
 import PaymentSettings from './pages/PaymentSettings';
 import PaymentManagement from './pages/PaymentManagement';
 import Roles from './pages/Roles';
@@ -298,6 +300,30 @@ function App() {
                   <Layout>
                     <PermissionGuard permission="can_manage_root_items">
                       <ManageHomepage />
+                    </PermissionGuard>
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/theme-design/homepage/header"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <PermissionGuard permission="can_manage_root_items">
+                      <ManageHeader />
+                    </PermissionGuard>
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/theme-design/homepage/colors"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <PermissionGuard permission="can_manage_root_items">
+                      <ManageColors />
                     </PermissionGuard>
                   </Layout>
                 </ProtectedRoute>

@@ -28,7 +28,8 @@ import {
   Palette,
   Calendar,
   Phone,
-  Layout
+  Layout,
+  Menu
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -185,6 +186,8 @@ const menuSections: MenuSection[] = [
             submenu: [
               { label: 'Theme Settings', path: '/theme-design', icon: Palette },
               { label: 'Hero Design', path: '/theme-design/homepage/hero', icon: Layout },
+              { label: 'Header Design', path: '/theme-design/homepage/header', icon: Menu },
+              { label: 'Color Change', path: '/theme-design/homepage/colors', icon: Palette },
             ]
           },
           { label: 'Integrations', path: '/integrations', icon: Plug },

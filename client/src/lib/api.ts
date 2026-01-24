@@ -314,6 +314,49 @@ export const heroApi = {
   },
 };
 
+// Header API
+export const headerApi = {
+  getHeaderSettings: () => apiClientInstance.get<ApiResponse>('/theme/header/settings'),
+  updateHeaderSettings: (data: {
+    menuAbout?: string;
+    menuServices?: string;
+    menuContact?: string;
+    menuTerms?: string;
+    menuPrivacy?: string;
+    menuSitemap?: string;
+    buttonPrimaryText?: string;
+    buttonSecondaryText?: string;
+    backgroundColor?: string;
+    textColor?: string;
+    buttonBgColor?: string;
+    buttonTextColor?: string;
+    buttonSecondaryBgColor?: string;
+    buttonSecondaryTextColor?: string;
+    isFixed?: boolean;
+    isTransparent?: boolean;
+    logo?: string;
+    logoType?: 'wide' | 'with-text';
+  }) => apiClientInstance.post<ApiResponse>('/theme/header/settings', data),
+  uploadHeaderLogo: (file: File) => {
+    const formData = new FormData();
+    formData.append('logo', file);
+    return apiClientInstance.post<ApiResponse>('/theme/header/logo', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+};
+
+// Color API
+export const colorApi = {
+  getColorSettings: () => apiClientInstance.get<ApiResponse>('/theme/colors'),
+  updateColorSettings: (data: {
+    primaryColor: string;
+    secondaryColor: string;
+  }) => apiClientInstance.post<ApiResponse>('/theme/colors', data),
+};
+
 // Role API (SuperAdmin only)
 export const roleApi = {
   getAll: () => apiClientInstance.get<ApiResponse>('/roles'),

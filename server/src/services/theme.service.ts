@@ -809,6 +809,21 @@ export const themeService = {
       }
     }
 
+    // Handle addon image clearing (empty string means delete)
+    if (data.addonImage !== undefined) {
+      if (data.addonImage === '' || data.addonImage === null) {
+        // Delete the addon image setting
+        updates.push(
+          prisma.systemSetting.deleteMany({
+            where: {
+              companyId,
+              key: 'hero_addon_image',
+            },
+          })
+        );
+      }
+    }
+
     try {
       await Promise.all(updates);
     } catch (error: any) {
@@ -923,6 +938,590 @@ export const themeService = {
     });
 
     return setting;
+  },
+
+  /**
+   * Get header settings
+   */
+  async getHeaderSettings(companyId: number) {
+    const settings = await prisma.systemSetting.findMany({
+      where: {
+        companyId,
+        key: {
+          in: [
+            'header_menu_about',
+            'header_menu_services',
+            'header_menu_contact',
+            'header_menu_terms',
+            'header_menu_privacy',
+            'header_menu_sitemap',
+            'header_button_primary_text',
+            'header_button_secondary_text',
+            'header_background_color',
+            'header_text_color',
+            'header_button_bg_color',
+            'header_button_text_color',
+            'header_button_secondary_bg_color',
+            'header_button_secondary_text_color',
+            'header_is_fixed',
+            'header_is_transparent',
+            'header_logo',
+            'header_logo_type',
+          ],
+        },
+      },
+    });
+
+    const settingsMap: Record<string, string> = {};
+    settings.forEach((setting) => {
+      settingsMap[setting.key] = setting.value;
+    });
+
+    return {
+      menuAbout: settingsMap['header_menu_about'] || 'About',
+      menuServices: settingsMap['header_menu_services'] || 'Services',
+      menuContact: settingsMap['header_menu_contact'] || 'Contact',
+      menuTerms: settingsMap['header_menu_terms'] || 'Terms',
+      menuPrivacy: settingsMap['header_menu_privacy'] || 'Privacy',
+      menuSitemap: settingsMap['header_menu_sitemap'] || 'Sitemap',
+      buttonPrimaryText: settingsMap['header_button_primary_text'] || 'Get Started',
+      buttonSecondaryText: settingsMap['header_button_secondary_text'] || 'Sign In',
+      backgroundColor: settingsMap['header_background_color'] || '#ffffff',
+      textColor: settingsMap['header_text_color'] || '#1e293b',
+      buttonBgColor: settingsMap['header_button_bg_color'] || '#4f46e5',
+      buttonTextColor: settingsMap['header_button_text_color'] || '#ffffff',
+      buttonSecondaryBgColor: settingsMap['header_button_secondary_bg_color'] || 'transparent',
+      buttonSecondaryTextColor: settingsMap['header_button_secondary_text_color'] || '#1e293b',
+      isFixed: settingsMap['header_is_fixed'] === 'true',
+      isTransparent: settingsMap['header_is_transparent'] === 'true',
+      logo: settingsMap['header_logo'] || null,
+      logoType: settingsMap['header_logo_type'] || 'with-text', // 'wide' or 'with-text'
+    };
+  },
+
+  /**
+   * Update header settings
+   */
+  async updateHeaderSettings(
+    companyId: number,
+    data: {
+      menuAbout?: string;
+      menuServices?: string;
+      menuContact?: string;
+      menuTerms?: string;
+      menuPrivacy?: string;
+      menuSitemap?: string;
+      buttonPrimaryText?: string;
+      buttonSecondaryText?: string;
+      backgroundColor?: string;
+      textColor?: string;
+      buttonBgColor?: string;
+      buttonTextColor?: string;
+      buttonSecondaryBgColor?: string;
+      buttonSecondaryTextColor?: string;
+      isFixed?: boolean;
+      isTransparent?: boolean;
+    }
+  ) {
+    const updates: Promise<any>[] = [];
+
+    if (data.menuAbout !== undefined) {
+      updates.push(
+        prisma.systemSetting.upsert({
+          where: {
+            companyId_key: {
+              companyId,
+              key: 'header_menu_about',
+            },
+          },
+          update: { value: data.menuAbout },
+          create: {
+            companyId,
+            key: 'header_menu_about',
+            value: data.menuAbout,
+            description: 'Header menu item: About',
+          },
+        })
+      );
+    }
+
+    if (data.menuServices !== undefined) {
+      updates.push(
+        prisma.systemSetting.upsert({
+          where: {
+            companyId_key: {
+              companyId,
+              key: 'header_menu_services',
+            },
+          },
+          update: { value: data.menuServices },
+          create: {
+            companyId,
+            key: 'header_menu_services',
+            value: data.menuServices,
+            description: 'Header menu item: Services',
+          },
+        })
+      );
+    }
+
+    if (data.menuContact !== undefined) {
+      updates.push(
+        prisma.systemSetting.upsert({
+          where: {
+            companyId_key: {
+              companyId,
+              key: 'header_menu_contact',
+            },
+          },
+          update: { value: data.menuContact },
+          create: {
+            companyId,
+            key: 'header_menu_contact',
+            value: data.menuContact,
+            description: 'Header menu item: Contact',
+          },
+        })
+      );
+    }
+
+    if (data.menuTerms !== undefined) {
+      updates.push(
+        prisma.systemSetting.upsert({
+          where: {
+            companyId_key: {
+              companyId,
+              key: 'header_menu_terms',
+            },
+          },
+          update: { value: data.menuTerms },
+          create: {
+            companyId,
+            key: 'header_menu_terms',
+            value: data.menuTerms,
+            description: 'Header menu item: Terms',
+          },
+        })
+      );
+    }
+
+    if (data.menuPrivacy !== undefined) {
+      updates.push(
+        prisma.systemSetting.upsert({
+          where: {
+            companyId_key: {
+              companyId,
+              key: 'header_menu_privacy',
+            },
+          },
+          update: { value: data.menuPrivacy },
+          create: {
+            companyId,
+            key: 'header_menu_privacy',
+            value: data.menuPrivacy,
+            description: 'Header menu item: Privacy',
+          },
+        })
+      );
+    }
+
+    if (data.menuSitemap !== undefined) {
+      updates.push(
+        prisma.systemSetting.upsert({
+          where: {
+            companyId_key: {
+              companyId,
+              key: 'header_menu_sitemap',
+            },
+          },
+          update: { value: data.menuSitemap },
+          create: {
+            companyId,
+            key: 'header_menu_sitemap',
+            value: data.menuSitemap,
+            description: 'Header menu item: Sitemap',
+          },
+        })
+      );
+    }
+
+    if (data.buttonPrimaryText !== undefined) {
+      updates.push(
+        prisma.systemSetting.upsert({
+          where: {
+            companyId_key: {
+              companyId,
+              key: 'header_button_primary_text',
+            },
+          },
+          update: { value: data.buttonPrimaryText },
+          create: {
+            companyId,
+            key: 'header_button_primary_text',
+            value: data.buttonPrimaryText,
+            description: 'Header primary button text',
+          },
+        })
+      );
+    }
+
+    if (data.buttonSecondaryText !== undefined) {
+      updates.push(
+        prisma.systemSetting.upsert({
+          where: {
+            companyId_key: {
+              companyId,
+              key: 'header_button_secondary_text',
+            },
+          },
+          update: { value: data.buttonSecondaryText },
+          create: {
+            companyId,
+            key: 'header_button_secondary_text',
+            value: data.buttonSecondaryText,
+            description: 'Header secondary button text',
+          },
+        })
+      );
+    }
+
+    if (data.backgroundColor !== undefined) {
+      updates.push(
+        prisma.systemSetting.upsert({
+          where: {
+            companyId_key: {
+              companyId,
+              key: 'header_background_color',
+            },
+          },
+          update: { value: data.backgroundColor },
+          create: {
+            companyId,
+            key: 'header_background_color',
+            value: data.backgroundColor,
+            description: 'Header background color',
+          },
+        })
+      );
+    }
+
+    if (data.textColor !== undefined) {
+      updates.push(
+        prisma.systemSetting.upsert({
+          where: {
+            companyId_key: {
+              companyId,
+              key: 'header_text_color',
+            },
+          },
+          update: { value: data.textColor },
+          create: {
+            companyId,
+            key: 'header_text_color',
+            value: data.textColor,
+            description: 'Header text color',
+          },
+        })
+      );
+    }
+
+    if (data.buttonBgColor !== undefined) {
+      updates.push(
+        prisma.systemSetting.upsert({
+          where: {
+            companyId_key: {
+              companyId,
+              key: 'header_button_bg_color',
+            },
+          },
+          update: { value: data.buttonBgColor },
+          create: {
+            companyId,
+            key: 'header_button_bg_color',
+            value: data.buttonBgColor,
+            description: 'Header primary button background color',
+          },
+        })
+      );
+    }
+
+    if (data.buttonTextColor !== undefined) {
+      updates.push(
+        prisma.systemSetting.upsert({
+          where: {
+            companyId_key: {
+              companyId,
+              key: 'header_button_text_color',
+            },
+          },
+          update: { value: data.buttonTextColor },
+          create: {
+            companyId,
+            key: 'header_button_text_color',
+            value: data.buttonTextColor,
+            description: 'Header primary button text color',
+          },
+        })
+      );
+    }
+
+    if (data.buttonSecondaryBgColor !== undefined) {
+      updates.push(
+        prisma.systemSetting.upsert({
+          where: {
+            companyId_key: {
+              companyId,
+              key: 'header_button_secondary_bg_color',
+            },
+          },
+          update: { value: data.buttonSecondaryBgColor },
+          create: {
+            companyId,
+            key: 'header_button_secondary_bg_color',
+            value: data.buttonSecondaryBgColor,
+            description: 'Header secondary button background color',
+          },
+        })
+      );
+    }
+
+    if (data.buttonSecondaryTextColor !== undefined) {
+      updates.push(
+        prisma.systemSetting.upsert({
+          where: {
+            companyId_key: {
+              companyId,
+              key: 'header_button_secondary_text_color',
+            },
+          },
+          update: { value: data.buttonSecondaryTextColor },
+          create: {
+            companyId,
+            key: 'header_button_secondary_text_color',
+            value: data.buttonSecondaryTextColor,
+            description: 'Header secondary button text color',
+          },
+        })
+      );
+    }
+
+    if (data.isFixed !== undefined) {
+      updates.push(
+        prisma.systemSetting.upsert({
+          where: {
+            companyId_key: {
+              companyId,
+              key: 'header_is_fixed',
+            },
+          },
+          update: { value: data.isFixed ? 'true' : 'false' },
+          create: {
+            companyId,
+            key: 'header_is_fixed',
+            value: data.isFixed ? 'true' : 'false',
+            description: 'Header fixed positioning (true/false)',
+          },
+        })
+      );
+    }
+
+    if (data.isTransparent !== undefined) {
+      updates.push(
+        prisma.systemSetting.upsert({
+          where: {
+            companyId_key: {
+              companyId,
+              key: 'header_is_transparent',
+            },
+          },
+          update: { value: data.isTransparent ? 'true' : 'false' },
+          create: {
+            companyId,
+            key: 'header_is_transparent',
+            value: data.isTransparent ? 'true' : 'false',
+            description: 'Header transparent background (true/false)',
+          },
+        })
+      );
+    }
+
+    // Handle logo clearing (empty string means delete)
+    if (data.logo !== undefined) {
+      if (data.logo === '' || data.logo === null) {
+        // Delete the logo setting
+        updates.push(
+          prisma.systemSetting.deleteMany({
+            where: {
+              companyId,
+              key: 'header_logo',
+            },
+          })
+        );
+      } else {
+        updates.push(
+          prisma.systemSetting.upsert({
+            where: {
+              companyId_key: {
+                companyId,
+                key: 'header_logo',
+              },
+            },
+            update: { value: data.logo },
+            create: {
+              companyId,
+              key: 'header_logo',
+              value: data.logo,
+              description: 'Header logo file path (supports SVG, PNG, JPG, WebP)',
+            },
+          })
+        );
+      }
+    }
+
+    if (data.logoType !== undefined) {
+      const logoTypeValue = String(data.logoType);
+      if (['wide', 'with-text'].includes(logoTypeValue)) {
+        updates.push(
+          prisma.systemSetting.upsert({
+            where: {
+              companyId_key: {
+                companyId,
+                key: 'header_logo_type',
+              },
+            },
+            update: { value: logoTypeValue },
+            create: {
+              companyId,
+              key: 'header_logo_type',
+              value: logoTypeValue,
+              description: 'Header logo type: wide (without text) or with-text',
+            },
+          })
+        );
+      }
+    }
+
+    try {
+      await Promise.all(updates);
+    } catch (error: any) {
+      console.error('Error updating header settings:', error);
+      throw new Error(`Failed to update header settings: ${error.message || 'Unknown error'}`);
+    }
+
+    return this.getHeaderSettings(companyId);
+  },
+
+  /**
+   * Handle header logo upload and save path
+   */
+  async uploadHeaderLogo(companyId: number, filePath: string) {
+    // Save header logo path to system settings
+    const setting = await prisma.systemSetting.upsert({
+      where: {
+        companyId_key: {
+          companyId,
+          key: 'header_logo',
+        },
+      },
+      update: { value: filePath },
+      create: {
+        companyId,
+        key: 'header_logo',
+        value: filePath,
+        description: 'Header logo file path (supports SVG, PNG, JPG, WebP)',
+      },
+    });
+
+    return setting;
+  },
+
+  /**
+   * Get color settings
+   */
+  async getColorSettings(companyId: number) {
+    const settings = await prisma.systemSetting.findMany({
+      where: {
+        companyId,
+        key: {
+          in: [
+            'theme_primary_color',
+            'theme_secondary_color',
+          ],
+        },
+      },
+    });
+
+    const settingsMap: Record<string, string> = {};
+    settings.forEach((setting) => {
+      settingsMap[setting.key] = setting.value;
+    });
+
+    return {
+      primaryColor: settingsMap['theme_primary_color'] || '#4f46e5',
+      secondaryColor: settingsMap['theme_secondary_color'] || '#7c3aed',
+    };
+  },
+
+  /**
+   * Update color settings
+   */
+  async updateColorSettings(
+    companyId: number,
+    data: {
+      primaryColor?: string;
+      secondaryColor?: string;
+    }
+  ) {
+    const updates: Promise<any>[] = [];
+
+    if (data.primaryColor !== undefined) {
+      updates.push(
+        prisma.systemSetting.upsert({
+          where: {
+            companyId_key: {
+              companyId,
+              key: 'theme_primary_color',
+            },
+          },
+          update: { value: data.primaryColor },
+          create: {
+            companyId,
+            key: 'theme_primary_color',
+            value: data.primaryColor,
+            description: 'Theme primary color (hex format)',
+          },
+        })
+      );
+    }
+
+    if (data.secondaryColor !== undefined) {
+      updates.push(
+        prisma.systemSetting.upsert({
+          where: {
+            companyId_key: {
+              companyId,
+              key: 'theme_secondary_color',
+            },
+          },
+          update: { value: data.secondaryColor },
+          create: {
+            companyId,
+            key: 'theme_secondary_color',
+            value: data.secondaryColor,
+            description: 'Theme secondary color (hex format)',
+          },
+        })
+      );
+    }
+
+    try {
+      await Promise.all(updates);
+    } catch (error: any) {
+      console.error('Error updating color settings:', error);
+      throw new Error(`Failed to update color settings: ${error.message || 'Unknown error'}`);
+    }
+
+    return this.getColorSettings(companyId);
   },
 };
 

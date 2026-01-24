@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { CheckCircle, ArrowRight, ArrowLeft, ArrowUp, ArrowDown, Play, Pause, Download, Upload, ShoppingCart, Heart, Star, Zap, Shield, Globe, Mail, Phone, Calendar, Clock, User, Users, Settings, Search, Menu, X, Plus, Minus, ChevronRight, ChevronLeft, ChevronUp, ChevronDown, Check, Briefcase, Target, BarChart3, MessageSquare, Newspaper, TrendingUp, LineChart, Facebook, MessageCircle, DollarSign, Award, Twitter, Linkedin, Youtube, Instagram } from 'lucide-react';
 import { socialApi } from '@/lib/social';
 import { contentApi } from '@/lib/content';
-import { themeApi, heroApi } from '@/lib/api';
+import { themeApi, heroApi, headerApi, colorApi } from '@/lib/api';
 import { PublicHeader } from '@/components/PublicHeader';
 import { getImageUrl } from '@/lib/imageUtils';
 
@@ -240,8 +240,46 @@ export function Landing() {
   const dailySeries = analytics?.daily.slice(-14) || [];
   const maxMessages = dailySeries.reduce((max, d) => Math.max(max, d.messages), 0);
 
+  // Fetch color settings
+  const { data: colorSettings } = useQuery({
+    queryKey: ['color-settings-public'],
+    queryFn: async () => {
+      try {
+        const response = await colorApi.getColorSettings();
+        return response.data.data;
+      } catch (error) {
+        console.error('Error fetching color settings:', error);
+        return null;
+      }
+    },
+    retry: false,
+    staleTime: 30 * 1000, // Cache for 30 seconds (shorter for faster updates)
+    refetchInterval: 60 * 1000, // Refetch every minute
+  });
+
+  // Use color settings or defaults
+  const primaryColor = colorSettings?.primaryColor || '#4f46e5';
+  const secondaryColor = colorSettings?.secondaryColor || '#7c3aed';
+
+  // Helper function to darken a color
+  const darkenColor = (color: string, amount: number): string => {
+    const hex = color.replace('#', '');
+    const fullHex = hex.length === 3
+      ? hex.split('').map(char => char + char).join('')
+      : hex;
+    const r = parseInt(fullHex.substring(0, 2), 16);
+    const g = parseInt(fullHex.substring(2, 4), 16);
+    const b = parseInt(fullHex.substring(4, 6), 16);
+    const darkerR = Math.max(0, r - amount);
+    const darkerG = Math.max(0, g - amount);
+    const darkerB = Math.max(0, b - amount);
+    return `#${darkerR.toString(16).padStart(2, '0')}${darkerG.toString(16).padStart(2, '0')}${darkerB.toString(16).padStart(2, '0')}`;
+  };
+
+  const darkerSecondary = darkenColor(secondaryColor, 30);
+
   const platformStats = [
-    { label: 'Facebook', value: analytics?.platformBreakdown.facebook || 0, color: 'text-indigo-600' },
+    { label: 'Facebook', value: analytics?.platformBreakdown.facebook || 0, color: primaryColor },
     { label: 'Chatwoot', value: analytics?.platformBreakdown.chatwoot || 0, color: 'text-emerald-600' },
     { label: 'Other', value: analytics?.platformBreakdown.other || 0, color: 'text-slate-600' },
   ];
@@ -267,14 +305,36 @@ export function Landing() {
 
   const [videoPlaying, setVideoPlaying] = useState(false);
 
+  // Fetch header settings to determine spacing
+  const { data: headerSettings } = useQuery({
+    queryKey: ['header-settings-public'],
+    queryFn: async () => {
+      try {
+        const response = await headerApi.getHeaderSettings();
+        return response.data.data;
+      } catch (error) {
+        console.error('Error fetching header settings:', error);
+        return null;
+      }
+    },
+    retry: false,
+    staleTime: 30 * 1000, // Cache for 30 seconds (shorter for faster updates)
+    refetchInterval: 60 * 1000, // Refetch every minute
+  });
+
+  const isHeaderFixed = headerSettings?.isFixed || false;
+  const isHeaderTransparent = headerSettings?.isTransparent || false;
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
       <PublicHeader />
 
       {/* Enhanced Hero Banner Section */}
-      <section className="relative overflow-hidden text-white" style={{
+      <section 
+        className={`relative overflow-hidden text-white ${isHeaderFixed ? 'pt-20' : ''}`}
+        style={{
         background: backgroundType === 'gradient' 
-          ? 'linear-gradient(to bottom right, #4f46e5, #7c3aed, #6b21a8)' 
+          ? `linear-gradient(to bottom right, ${primaryColor}, ${secondaryColor}, ${darkerSecondary})` 
           : 'transparent'
       }}>
         {/* Background based on type */}
@@ -461,19 +521,19 @@ export function Landing() {
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             <div className="animate-fade-in-up">
-              <div className="text-3xl md:text-4xl font-bold text-indigo-600 mb-2">1000+</div>
+              <div className="text-3xl md:text-4xl font-bold mb-2" style={{ color: primaryColor }}>1000+</div>
               <div className="text-sm text-slate-600">Active Companies</div>
             </div>
             <div className="animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
-              <div className="text-3xl md:text-4xl font-bold text-indigo-600 mb-2">50K+</div>
+              <div className="text-3xl md:text-4xl font-bold mb-2" style={{ color: primaryColor }}>50K+</div>
               <div className="text-sm text-slate-600">Messages Processed</div>
             </div>
             <div className="animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
-              <div className="text-3xl md:text-4xl font-bold text-indigo-600 mb-2">99.9%</div>
+              <div className="text-3xl md:text-4xl font-bold mb-2" style={{ color: primaryColor }}>99.9%</div>
               <div className="text-sm text-slate-600">Uptime SLA</div>
             </div>
             <div className="animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
-              <div className="text-3xl md:text-4xl font-bold text-indigo-600 mb-2">24/7</div>
+              <div className="text-3xl md:text-4xl font-bold mb-2" style={{ color: primaryColor }}>24/7</div>
               <div className="text-sm text-slate-600">Support Available</div>
             </div>
           </div>
@@ -497,12 +557,17 @@ export function Landing() {
           </div>
           <div className="relative rounded-2xl overflow-hidden shadow-2xl bg-slate-900 aspect-video">
             {!videoPlaying ? (
-              <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-indigo-600 to-purple-700">
+              <div 
+                className="absolute inset-0 flex items-center justify-center"
+                style={{
+                  background: `linear-gradient(to bottom right, ${primaryColor}, ${secondaryColor})`,
+                }}
+              >
                 <button
                   onClick={() => setVideoPlaying(true)}
                   className="w-20 h-20 bg-white rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-lg"
                 >
-                  <Play className="w-10 h-10 text-indigo-600 ml-1" fill="currentColor" />
+                  <Play className="w-10 h-10 ml-1" style={{ color: primaryColor }} fill="currentColor" />
                 </button>
               </div>
             ) : (
@@ -517,17 +582,17 @@ export function Landing() {
           </div>
           <div className="mt-8 grid md:grid-cols-3 gap-6">
             <div className="text-center">
-              <Zap className="w-8 h-8 text-indigo-600 mx-auto mb-3" />
+              <Zap className="w-8 h-8 mx-auto mb-3" style={{ color: primaryColor }} />
               <h3 className="font-semibold text-slate-900 mb-2">Quick Setup</h3>
               <p className="text-sm text-slate-600">Get started in minutes, not days</p>
             </div>
             <div className="text-center">
-              <Shield className="w-8 h-8 text-indigo-600 mx-auto mb-3" />
+              <Shield className="w-8 h-8 mx-auto mb-3" style={{ color: primaryColor }} />
               <h3 className="font-semibold text-slate-900 mb-2">Secure & Reliable</h3>
               <p className="text-sm text-slate-600">Enterprise-grade security built-in</p>
             </div>
             <div className="text-center">
-              <Globe className="w-8 h-8 text-indigo-600 mx-auto mb-3" />
+              <Globe className="w-8 h-8 mx-auto mb-3" style={{ color: primaryColor }} />
               <h3 className="font-semibold text-slate-900 mb-2">Global Scale</h3>
               <p className="text-sm text-slate-600">Works anywhere, anytime</p>
             </div>
@@ -539,7 +604,13 @@ export function Landing() {
       <section className="bg-white py-20">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-sm font-medium mb-4">
+            <div 
+              className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium mb-4"
+              style={{
+                backgroundColor: `${primaryColor}20`,
+                color: primaryColor,
+              }}
+            >
               <Target className="w-4 h-4" />
               Powerful Features
             </div>
@@ -603,12 +674,37 @@ export function Landing() {
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                     loading="lazy"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-indigo-600/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  <div 
+                    className="absolute inset-0 bg-gradient-to-t to-transparent opacity-0 group-hover:opacity-100 transition-opacity"
+                    style={{
+                      background: `linear-gradient(to top, ${primaryColor}CC, transparent)`,
+                    }}
+                  ></div>
                 </div>
               <CardHeader>
                   <div className="flex items-center gap-3 mb-2">
-                    <div className="w-12 h-12 rounded-lg bg-indigo-100 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
-                      <item.icon className="w-6 h-6 text-indigo-600 group-hover:text-white transition-colors" />
+                    <div 
+                      className="w-12 h-12 rounded-lg flex items-center justify-center transition-colors"
+                      style={{
+                        backgroundColor: `${primaryColor}20`,
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = primaryColor;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = `${primaryColor}20`;
+                      }}
+                    >
+                      <item.icon 
+                        className="w-6 h-6 transition-colors" 
+                        style={{ color: primaryColor }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.color = '#ffffff';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.color = primaryColor;
+                        }}
+                      />
                     </div>
                     <CardTitle className="text-xl">{item.title}</CardTitle>
                   </div>
@@ -631,10 +727,21 @@ export function Landing() {
       </section>
 
       {/* Benefits Section */}
-      <section className="bg-gradient-to-br from-indigo-50 to-purple-50 py-20">
+      <section 
+        className="py-20"
+        style={{
+          background: `linear-gradient(to bottom right, ${primaryColor}10, ${secondaryColor}10)`,
+        }}
+      >
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 text-sm font-medium mb-4">
+            <div 
+              className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium mb-4"
+              style={{
+                backgroundColor: `${primaryColor}20`,
+                color: primaryColor,
+              }}
+            >
               <Zap className="w-4 h-4" />
               Why Choose Omni
             </div>
@@ -674,11 +781,11 @@ export function Landing() {
             ].map((benefit) => (
               <div key={benefit.title} className="text-center">
                 <div className="w-16 h-16 rounded-full bg-white shadow-md flex items-center justify-center mx-auto mb-4">
-                  <benefit.icon className="w-8 h-8 text-indigo-600" />
+                  <benefit.icon className="w-8 h-8" style={{ color: primaryColor }} />
                 </div>
                 <h3 className="text-xl font-bold text-slate-900 mb-2">{benefit.title}</h3>
                 <p className="text-slate-600 mb-3">{benefit.description}</p>
-                <div className="text-sm font-semibold text-indigo-600">{benefit.stat}</div>
+                <div className="text-sm font-semibold" style={{ color: primaryColor }}>{benefit.stat}</div>
               </div>
             ))}
           </div>
@@ -745,7 +852,13 @@ export function Landing() {
         <div className="container mx-auto px-4 py-16">
           <div className="grid lg:grid-cols-2 gap-8 items-start">
             <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-sm font-medium">
+              <div 
+                className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium"
+                style={{
+                  backgroundColor: `${primaryColor}20`,
+                  color: primaryColor,
+                }}
+              >
                 <MessageSquare className="w-4 h-4" />
                 Conversation Insights
               </div>
@@ -760,7 +873,8 @@ export function Landing() {
                   title="Total Conversations"
                   value={analytics?.totalConversations ?? '—'}
                   icon={LineChart}
-                  accent="bg-indigo-100 text-indigo-700"
+                  accent={`${primaryColor}20`}
+                  accentText={primaryColor}
                 />
                 <StatCard
                   title="Open Conversations"
@@ -810,7 +924,8 @@ export function Landing() {
                     return (
                       <div key={day.date} className="flex-1 flex flex-col items-center gap-2">
                         <div
-                          className="w-full rounded-md bg-indigo-500 transition-all"
+                          className="w-full rounded-md transition-all"
+                          style={{ backgroundColor: primaryColor }}
                           style={{ height: `${Math.max(6, height)}%` }}
                           title={`${day.messages} messages on ${day.date}`}
                         />
@@ -887,7 +1002,13 @@ export function Landing() {
       <section className="bg-white py-20">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-sm font-medium mb-4">
+            <div 
+              className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium mb-4"
+              style={{
+                backgroundColor: `${primaryColor}20`,
+                color: primaryColor,
+              }}
+            >
               <DollarSign className="w-4 h-4" />
               Simple Pricing
             </div>
@@ -931,7 +1052,10 @@ export function Landing() {
               <Card key={plan.name} className={`shadow-sm border-2 ${plan.popular ? 'border-indigo-600 relative' : 'border-gray-200'} hover:shadow-lg transition-all`}>
                 {plan.popular && (
                   <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                    <span className="bg-indigo-600 text-white px-4 py-1 rounded-full text-sm font-medium">Most Popular</span>
+                    <span 
+                      className="text-white px-4 py-1 rounded-full text-sm font-medium"
+                      style={{ backgroundColor: primaryColor }}
+                    >Most Popular</span>
                   </div>
                 )}
                 <CardHeader className="text-center pb-8">
@@ -954,7 +1078,20 @@ export function Landing() {
                   <Link to="/register" className="block">
                     <Button
                       size="lg"
-                      className={`w-full ${plan.popular ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-slate-900 hover:bg-slate-800 text-white'}`}
+                      className={`w-full ${plan.popular ? 'text-white' : 'bg-slate-900 hover:bg-slate-800 text-white'}`}
+                      style={plan.popular ? {
+                        backgroundColor: primaryColor,
+                      } : {}}
+                      onMouseEnter={(e) => {
+                        if (plan.popular) {
+                          e.currentTarget.style.backgroundColor = darkenColor(primaryColor, 20);
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (plan.popular) {
+                          e.currentTarget.style.backgroundColor = primaryColor;
+                        }
+                      }}
                     >
                       {plan.cta}
                     </Button>
@@ -979,7 +1116,17 @@ export function Landing() {
               <p className="text-lg text-slate-600">Stay ahead with product updates and GTM guides.</p>
             </div>
             <Link to="/register" className="mt-4 md:mt-0">
-              <Button size="lg" variant="ghost" className="text-indigo-600 hover:text-indigo-700">
+              <Button 
+                size="lg" 
+                variant="ghost" 
+                style={{ color: primaryColor }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = darkenColor(primaryColor, 20);
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = primaryColor;
+                }}
+              >
                 Join Omni
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
@@ -988,18 +1135,35 @@ export function Landing() {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {posts.map((post) => (
               <Card key={post.id} className="shadow-sm border-gray-200 h-full flex flex-col hover:shadow-lg transition-shadow overflow-hidden group">
-                <div className="relative h-48 overflow-hidden bg-gradient-to-br from-indigo-400 to-purple-500">
+                <div 
+                  className="relative h-48 overflow-hidden"
+                  style={{
+                    background: `linear-gradient(to bottom right, ${primaryColor}80, ${secondaryColor}80)`,
+                  }}
+                >
                   <div className="absolute inset-0 flex items-center justify-center">
                     <Newspaper className="w-16 h-16 text-white/30" />
                   </div>
                 </div>
                 <CardContent className="pt-6 flex-1 flex flex-col">
-                  <p className="text-xs uppercase tracking-wide text-indigo-600 font-semibold mb-2">
+                  <p className="text-xs uppercase tracking-wide font-semibold mb-2" style={{ color: primaryColor }}>
                     {post.publishedAt ? new Date(post.publishedAt).toLocaleDateString() : 'Coming soon'}
                   </p>
-                  <h3 className="text-xl font-semibold text-slate-900 mb-3 group-hover:text-indigo-600 transition-colors">{post.title}</h3>
+                  <h3 
+                    className="text-xl font-semibold text-slate-900 mb-3 transition-colors"
+                    style={{ color: 'inherit' }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = primaryColor;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = '#0f172a';
+                    }}
+                  >{post.title}</h3>
                   <p className="text-slate-600 text-sm mb-4 flex-1">{post.excerpt || 'Read the latest updates from the Omni team.'}</p>
-                  <div className="inline-flex items-center gap-2 text-indigo-600 text-sm font-medium group-hover:gap-3 transition-all">
+                  <div 
+                    className="inline-flex items-center gap-2 text-sm font-medium group-hover:gap-3 transition-all"
+                    style={{ color: primaryColor }}
+                  >
                     Read more
                     <ArrowRight className="w-4 h-4" />
                   </div>
@@ -1017,7 +1181,12 @@ export function Landing() {
       </section>
 
       {/* Enhanced CTA Section */}
-      <section className="relative bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-800 text-white py-20 overflow-hidden">
+      <section 
+        className="relative text-white py-20 overflow-hidden"
+        style={{
+          background: `linear-gradient(to bottom right, ${primaryColor}, ${darkenColor(primaryColor, 20)}, ${darkenColor(secondaryColor, 40)})`,
+        }}
+      >
         <div 
           className="absolute inset-0 opacity-20"
           style={{
@@ -1026,7 +1195,7 @@ export function Landing() {
         ></div>
         <div className="relative container mx-auto px-4 text-center">
           <h2 className="text-4xl md:text-5xl font-bold mb-6">Ready to Get Started?</h2>
-          <p className="text-xl md:text-2xl mb-10 text-indigo-100 max-w-2xl mx-auto">
+          <p className="text-xl md:text-2xl mb-10 max-w-2xl mx-auto" style={{ color: 'rgba(255, 255, 255, 0.9)' }}>
             Join thousands of businesses using Omni CRM to manage their operations and grow faster.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
@@ -1042,7 +1211,7 @@ export function Landing() {
             </Button>
           </Link>
           </div>
-          <div className="flex items-center justify-center gap-6 text-sm text-indigo-100">
+          <div className="flex items-center justify-center gap-6 text-sm" style={{ color: 'rgba(255, 255, 255, 0.9)' }}>
             <div className="flex items-center gap-2">
               <CheckCircle className="w-5 h-5" />
               <span>{featureHighlight1}</span>
@@ -1081,7 +1250,10 @@ export function Landing() {
           <div className="border-t border-gray-200 pt-8">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-indigo-600 rounded-md flex items-center justify-center">
+                <div 
+                  className="w-10 h-10 rounded-md flex items-center justify-center"
+                  style={{ backgroundColor: primaryColor }}
+                >
                 <span className="text-white font-bold text-lg">O</span>
                 </div>
                 <div>
@@ -1090,16 +1262,68 @@ export function Landing() {
                 </div>
               </div>
               <div className="flex items-center gap-4">
-                <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center hover:bg-indigo-100 hover:text-indigo-600 transition-colors">
+                <a 
+                  href="https://twitter.com" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center transition-colors"
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = `${primaryColor}20`;
+                    e.currentTarget.style.color = primaryColor;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#f1f5f9';
+                    e.currentTarget.style.color = 'inherit';
+                  }}
+                >
                   <Twitter className="w-5 h-5" />
                 </a>
-                <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center hover:bg-indigo-100 hover:text-indigo-600 transition-colors">
+                <a 
+                  href="https://linkedin.com" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center transition-colors"
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = `${primaryColor}20`;
+                    e.currentTarget.style.color = primaryColor;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#f1f5f9';
+                    e.currentTarget.style.color = 'inherit';
+                  }}
+                >
                   <Linkedin className="w-5 h-5" />
                 </a>
-                <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center hover:bg-indigo-100 hover:text-indigo-600 transition-colors">
+                <a 
+                  href="https://youtube.com" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center transition-colors"
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = `${primaryColor}20`;
+                    e.currentTarget.style.color = primaryColor;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#f1f5f9';
+                    e.currentTarget.style.color = 'inherit';
+                  }}
+                >
                   <Youtube className="w-5 h-5" />
                 </a>
-                <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center hover:bg-indigo-100 hover:text-indigo-600 transition-colors">
+                <a 
+                  href="https://instagram.com" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center transition-colors"
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = `${primaryColor}20`;
+                    e.currentTarget.style.color = primaryColor;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#f1f5f9';
+                    e.currentTarget.style.color = 'inherit';
+                  }}
+                >
                   <Instagram className="w-5 h-5" />
                 </a>
               </div>
@@ -1128,14 +1352,21 @@ interface StatCardProps {
   value: number | string;
   icon: ComponentType<{ className?: string }>;
   accent: string;
+  accentText?: string;
 }
 
-function StatCard({ title, value, icon: Icon, accent }: StatCardProps) {
+function StatCard({ title, value, icon: Icon, accent, accentText }: StatCardProps) {
   return (
     <Card className="shadow-sm border-gray-200">
       <CardHeader className="pb-2">
         <div className="flex items-center gap-2">
-          <div className={`w-9 h-9 rounded-md flex items-center justify-center ${accent}`}>
+          <div 
+            className="w-9 h-9 rounded-md flex items-center justify-center"
+            style={{
+              backgroundColor: accent.includes('#') ? accent : (accent.includes('bg-') ? undefined : `${accent}20`),
+              color: accentText || (accent.includes('text-') ? undefined : accent),
+            }}
+          >
             <Icon className="w-4 h-4" />
           </div>
           <div>

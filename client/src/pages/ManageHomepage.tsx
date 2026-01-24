@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ColorPicker } from '@/components/ui/color-picker';
 import { heroApi } from '@/lib/api';
 import { getImageUrl } from '@/lib/imageUtils';
-import { Layout, Upload, Loader2, CheckCircle, AlertCircle, Image as ImageIcon, Video, Youtube, Palette, Eye, ArrowRight, ArrowLeft, ArrowUp, ArrowDown, Play, Pause, Download, Upload as UploadIcon, ShoppingCart, Heart, Star, Zap, Shield, Globe, Mail, Phone, Calendar, Clock, User, Users, Settings, Search, Menu, X, Plus, Minus, ChevronRight, ChevronLeft, ChevronUp, ChevronDown, Check, X as XIcon } from 'lucide-react';
+import { Layout, Upload, Loader2, CheckCircle, AlertCircle, Image as ImageIcon, Video, Youtube, Palette, Eye, ArrowRight, ArrowLeft, ArrowUp, ArrowDown, Play, Pause, Download, Upload as UploadIcon, ShoppingCart, Heart, Star, Zap, Shield, Globe, Mail, Phone, Calendar, Clock, User, Users, Settings, Search, Menu, X, Plus, Minus, ChevronRight, ChevronLeft, ChevronUp, ChevronDown, Check, X as XIcon, RotateCcw } from 'lucide-react';
 
 const heroSettingsSchema = z.object({
   title: z.string().min(1, 'Title is required').max(100, 'Title must be 100 characters or less'),
@@ -473,6 +473,44 @@ export default function ManageHomepage() {
 
     setUploadStatus('uploading');
     addonImageUploadMutation.mutate(addonImageFile);
+  };
+
+  const handleAddonImageReset = async () => {
+    if (!addonImagePreview && !settingsResponse?.addonImage) {
+      alert('No addon image to reset');
+      return;
+    }
+
+    if (!confirm('Are you sure you want to remove the addon image?')) {
+      return;
+    }
+
+    try {
+      // Clear local state
+      setAddonImagePreview(null);
+      setAddonImageFile(null);
+      
+      // Clear the file input
+      const fileInput = document.getElementById('hero-addon-image') as HTMLInputElement;
+      if (fileInput) {
+        fileInput.value = '';
+      }
+
+      // Update settings with empty addon image
+      await updateSettingsMutation.mutateAsync({
+        ...watch(),
+        addonImage: '',
+      });
+
+      // Refetch settings to get updated state
+      await queryClient.invalidateQueries({ queryKey: ['hero-settings'] });
+      await queryClient.refetchQueries({ queryKey: ['hero-settings'] });
+      
+      alert('Addon image removed successfully!');
+    } catch (error: any) {
+      console.error('Error resetting addon image:', error);
+      alert(error.message || 'Failed to reset addon image');
+    }
   };
 
   const onSubmit = (data: HeroSettingsFormData) => {
@@ -1006,18 +1044,21 @@ export default function ManageHomepage() {
                   <div>
                     <Label htmlFor="hero-addon-image">Addon Image (GIF supported)</Label>
                     <div className="mt-2 flex items-center justify-center p-6 border-2 border-dashed border-gray-300 rounded-lg bg-white">
-                      {addonImagePreview ? (
-                        <img
-                          src={getImageUrl(addonImagePreview)}
-                          alt="Addon image preview"
-                          className="max-w-full max-h-48 object-contain"
-                        />
-                      ) : (
-                        <div className="text-center text-gray-500">
-                          <ImageIcon className="h-12 w-12 mx-auto mb-2 text-gray-400" />
-                          <p className="text-sm">No addon image uploaded</p>
-                        </div>
-                      )}
+                      {(() => {
+                        const currentAddonImage = addonImagePreview || settingsResponse?.addonImage;
+                        return currentAddonImage ? (
+                          <img
+                            src={getImageUrl(currentAddonImage)}
+                            alt="Addon image preview"
+                            className="max-w-full max-h-48 object-contain"
+                          />
+                        ) : (
+                          <div className="text-center text-gray-500">
+                            <ImageIcon className="h-12 w-12 mx-auto mb-2 text-gray-400" />
+                            <p className="text-sm">No addon image uploaded</p>
+                          </div>
+                        );
+                      })()}
                     </div>
                     <Input
                       id="hero-addon-image"
@@ -1026,29 +1067,43 @@ export default function ManageHomepage() {
                       onChange={handleAddonImageChange}
                       className="mt-2"
                     />
-                    <Button
-                      type="button"
-                      onClick={handleAddonImageUpload}
-                      disabled={!addonImageFile || uploadStatus === 'uploading'}
-                      className="w-full mt-2"
-                    >
-                      {uploadStatus === 'uploading' ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Uploading...
-                        </>
-                      ) : uploadStatus === 'success' ? (
-                        <>
-                          <CheckCircle className="mr-2 h-4 w-4" />
-                          Uploaded Successfully
-                        </>
-                      ) : (
-                        <>
-                          <Upload className="mr-2 h-4 w-4" />
-                          Upload Addon Image
-                        </>
+                    <div className="flex gap-2 mt-2">
+                      <Button
+                        type="button"
+                        onClick={handleAddonImageUpload}
+                        disabled={!addonImageFile || uploadStatus === 'uploading'}
+                        className="flex-1"
+                      >
+                        {uploadStatus === 'uploading' ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Uploading...
+                          </>
+                        ) : uploadStatus === 'success' ? (
+                          <>
+                            <CheckCircle className="mr-2 h-4 w-4" />
+                            Uploaded Successfully
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="mr-2 h-4 w-4" />
+                            Upload Addon Image
+                          </>
+                        )}
+                      </Button>
+                      {(addonImagePreview || settingsResponse?.addonImage) && (
+                        <Button
+                          type="button"
+                          onClick={handleAddonImageReset}
+                          disabled={updateSettingsMutation.isPending}
+                          variant="outline"
+                          className="flex-1"
+                        >
+                          <RotateCcw className="mr-2 h-4 w-4" />
+                          Reset
+                        </Button>
                       )}
-                    </Button>
+                    </div>
                     <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
                       <h4 className="text-sm font-semibold text-blue-900 mb-2">Image Requirements:</h4>
                       <ul className="text-xs text-blue-800 space-y-1">
