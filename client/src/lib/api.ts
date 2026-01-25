@@ -361,8 +361,14 @@ export const colorApi = {
 export const roleApi = {
   getAll: () => apiClientInstance.get<ApiResponse>('/roles'),
   getById: (id: number) => apiClientInstance.get<ApiResponse>(`/roles/${id}`),
+  create: (name: string, permissions: Record<string, boolean>) =>
+    apiClientInstance.post<ApiResponse>('/roles', { name, permissions }),
+  updateName: (id: number, name: string) =>
+    apiClientInstance.put<ApiResponse>(`/roles/${id}`, { name }),
   updatePermissions: (id: number, permissions: Record<string, boolean>) => 
     apiClientInstance.put<ApiResponse>(`/roles/${id}/permissions`, { permissions }),
+  delete: (id: number) =>
+    apiClientInstance.delete<ApiResponse>(`/roles/${id}`),
 };
 
 // Campaign API (SuperAdmin only)

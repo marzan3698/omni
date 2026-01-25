@@ -271,11 +271,27 @@ export const chatwootService = {
         // Store Chatwoot conversation ID in externalUserId format: chatwoot_contactId_conversationId
         const externalUserId = `chatwoot_${chatwootConv.contact.id}_${chatwootConv.id}`;
 
-        // First try to find by exact match (new format)
+        // Get companyId from integration first (needed for filtering)
+        const integration = await prisma.integration.findFirst({
+          where: {
+            provider: 'chatwoot',
+            accountId: accountId.toString(),
+            pageId: inboxId,
+            isActive: true,
+          },
+        });
+
+        if (!integration) {
+          console.error(`No active Chatwoot integration found for account ${accountId}, inbox ${inboxId}`);
+          continue;
+        }
+
+        // First try to find by exact match (new format) with companyId filter
         let conversation = await prisma.socialConversation.findFirst({
           where: {
             platform: SocialPlatform.chatwoot,
             externalUserId: externalUserId,
+            companyId: integration.companyId, // Add companyId filter
           },
         });
 
@@ -286,6 +302,7 @@ export const chatwootService = {
             where: {
               platform: SocialPlatform.chatwoot,
               externalUserId: oldFormatUserId,
+              companyId: integration.companyId, // Add companyId filter
             },
           });
         }
@@ -299,21 +316,6 @@ export const chatwootService = {
           : ConversationStatus.Closed;
 
         if (!conversation) {
-          // Get companyId from integration - we need to find the integration first
-          const integration = await prisma.integration.findFirst({
-            where: {
-              provider: 'chatwoot',
-              accountId: accountId.toString(),
-              pageId: inboxId,
-              isActive: true,
-            },
-          });
-
-          if (!integration) {
-            console.error(`No active Chatwoot integration found for account ${accountId}, inbox ${inboxId}`);
-            continue;
-          }
-
           // Create new conversation
           conversation = await prisma.socialConversation.create({
             data: {
@@ -326,19 +328,21 @@ export const chatwootService = {
             },
           });
           createdCount++;
-          console.log(`Created new conversation: ${conversation.id} for contact ${chatwootConv.contact.id}, Chatwoot conversation ${chatwootConv.id}`);
+          console.log(`Created new conversation: ${conversation.id} for contact ${chatwootConv.contact.id}, Chatwoot conversation ${chatwootConv.id}, companyId: ${integration.companyId}`);
         } else {
-          // Update existing conversation - also update externalUserId to include conversation ID
+          // Update existing conversation - also update externalUserId and ensure companyId is correct
           await prisma.socialConversation.update({
             where: { id: conversation.id },
             data: {
               externalUserId: externalUserId, // Update to include conversation ID
-              externalUserName: chatwootConv.contact.name || chatwootConv.contact.identifier,
+              externalUserName: chatwootConv.contact.name || conversation.externalUserName,
               status: status,
               lastMessageAt: lastMessageAt,
+              companyId: integration.companyId, // Ensure companyId is correct (fixes mismatched companyId)
             },
           });
           updatedCount++;
+          console.log(`Updated conversation: ${conversation.id}, companyId: ${integration.companyId}`);
         }
 
         // Sync messages for this conversation
@@ -622,7 +626,8 @@ export const chatwootService = {
         }
       } else {
         // Update existing conversation - also update externalUserId if conversation ID changed
-        console.log(`${logPrefix} 🔄 Updating existing conversation ID: ${conversation.id}`);
+        // Also ensure companyId is correct (fixes companyId mismatch issues)
+        console.log(`${logPrefix} 🔄 Updating existing conversation ID: ${conversation.id}, companyId: ${integration.companyId}`);
         await prisma.socialConversation.update({
           where: { id: conversation.id },
           data: {
@@ -630,9 +635,10 @@ export const chatwootService = {
             externalUserName: contactName || conversation.externalUserName,
             lastMessageAt: createdAt,
             status: ConversationStatus.Open, // Reopen if closed
+            companyId: integration.companyId, // Ensure companyId is correct
           },
         });
-        console.log(`${logPrefix} ✅ Updated conversation ID: ${conversation.id}`);
+        console.log(`${logPrefix} ✅ Updated conversation ID: ${conversation.id}, companyId: ${integration.companyId}`);
       }
 
       // Check if message already exists (avoid duplicates)
