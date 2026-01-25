@@ -87,9 +87,12 @@ import reviewRoutes from './routes/review.routes.js';
 import blogRoutes from './routes/blog.routes.js';
 import paymentGatewayRoutes from './routes/paymentGateway.routes.js';
 import paymentRoutes from './routes/payment.routes.js';
+import facebookOAuthRoutes from './routes/facebookOAuth.routes.js';
+import environmentRoutes from './routes/environment.routes.js';
 app.use('/api/auth', authRoutes);
 app.use('/api', socialRoutes);
 app.use('/api/integrations', integrationRoutes);
+app.use('/api/integrations/facebook', facebookOAuthRoutes);
 app.use('/api/utils', utilsRoutes);
 app.use('/api/chatwoot', chatwootRoutes);
 app.use('/api/companies', companyRoutes);
@@ -116,6 +119,7 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/blog', blogRoutes);
 app.use('/api/payment-gateways', paymentGatewayRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/admin/environment', environmentRoutes);
 // app.use('/api/users', userRoutes);
 
 // Global error handling middleware

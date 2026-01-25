@@ -29,7 +29,8 @@ import {
   Calendar,
   Phone,
   Layout,
-  Menu
+  Menu,
+  FileCode
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -194,6 +195,18 @@ const menuSections: MenuSection[] = [
           { label: 'Task Configuration', path: '/task-config', icon: ListChecks },
           { label: 'Settings', path: '/settings', icon: Settings },
         ]
+      },
+    ]
+  },
+  // Section 7: Environment File Editing (SuperAdmin Only)
+  {
+    label: 'Environment File Editing',
+    items: [
+      {
+        label: 'Facebook Webhook Config',
+        icon: FileCode,
+        path: '/admin/environment',
+        permission: 'can_manage_root_items', // SuperAdmin only
       },
     ]
   },

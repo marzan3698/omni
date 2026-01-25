@@ -41,6 +41,8 @@ import PaymentManagement from './pages/PaymentManagement';
 import Roles from './pages/Roles';
 import TaskConfig from './pages/TaskConfig';
 import Integrations from './pages/Integrations';
+import FacebookOAuthCallback from './pages/FacebookOAuthCallback';
+import EnvironmentFileEditing from './pages/EnvironmentFileEditing';
 import Campaigns from './pages/Campaigns';
 import CampaignForm from './pages/CampaignForm';
 import CampaignDetail from './pages/CampaignDetail';
@@ -523,10 +525,23 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/admin/environment"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <PermissionGuard permission="can_manage_root_items">
+                      <EnvironmentFileEditing />
+                    </PermissionGuard>
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
             {/* Public routes */}
             <Route path="/" element={<Landing />} />
             <Route path="/install" element={<Navigate to="/" replace />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/facebook-oauth-callback" element={<FacebookOAuthCallback />} />
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/terms" element={<Terms />} />
