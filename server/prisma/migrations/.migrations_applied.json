@@ -9,5 +9,6 @@
   "add_company_id_to_leads.sql",
   "add_campaign_groups_table.sql",
   "add_project_and_group_to_tasks.sql",
-  "update_task_status_enum.sql"
+  "update_task_status_enum.sql",
+  "add_conversation_labels.sql"
 ]

@@ -23,6 +23,11 @@ router.post('/conversations/:id/unassign', authMiddleware, socialController.unas
 router.post('/conversations/:id/complete', authMiddleware, socialController.completeConversation);
 router.get('/conversations/stats', authMiddleware, socialController.getConversationStats);
 router.get('/conversations/:id/releases', authMiddleware, socialController.getConversationReleaseHistory);
+// Label endpoints
+router.post('/conversations/:id/labels', authMiddleware, socialController.addLabel);
+router.get('/conversations/:id/labels', authMiddleware, socialController.getConversationLabels);
+router.put('/conversations/:id/labels/:labelId', authMiddleware, socialController.updateLabel);
+router.delete('/conversations/:id/labels/:labelId', authMiddleware, socialController.deleteLabel);
 // Reply endpoint with image upload support
 // Note: singleSocialImage middleware handles file upload, errors are caught in controller
 router.post('/conversations/:id/reply', authMiddleware, (req, res, next) => {

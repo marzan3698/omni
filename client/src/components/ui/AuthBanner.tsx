@@ -2,9 +2,19 @@ import { Star, Shield, Zap, Users } from 'lucide-react';
 
 interface AuthBannerProps {
   variant?: 'login' | 'register';
+  primaryColor?: string;
+  secondaryColor?: string;
+  logoUrl?: string | null;
+  logoType?: 'wide' | 'with-text';
 }
 
-export function AuthBanner({ variant = 'login' }: AuthBannerProps) {
+export function AuthBanner({
+  variant = 'login',
+  primaryColor = '#4f46e5',
+  secondaryColor = '#7c3aed',
+  logoUrl = null,
+  logoType = 'wide',
+}: AuthBannerProps) {
   const testimonials = [
     {
       name: 'Sarah Johnson',
@@ -19,6 +29,24 @@ export function AuthBanner({ variant = 'login' }: AuthBannerProps) {
       image: '👨‍💼',
     },
   ];
+
+  // Helper function to darken a color
+  const darkenColor = (color: string, amount: number): string => {
+    const hex = color.replace('#', '');
+    const fullHex = hex.length === 3
+      ? hex.split('').map(char => char + char).join('')
+      : hex;
+    const r = parseInt(fullHex.substring(0, 2), 16);
+    const g = parseInt(fullHex.substring(2, 4), 16);
+    const b = parseInt(fullHex.substring(4, 6), 16);
+    const darkerR = Math.max(0, r - amount);
+    const darkerG = Math.max(0, g - amount);
+    const darkerB = Math.max(0, b - amount);
+    return `#${darkerR.toString(16).padStart(2, '0')}${darkerG.toString(16).padStart(2, '0')}${darkerB.toString(16).padStart(2, '0')}`;
+  };
+
+  const darkerPrimary = darkenColor(primaryColor, 30);
+  const darkerSecondary = darkenColor(secondaryColor, 30);
 
   const features = [
     {
@@ -39,11 +67,22 @@ export function AuthBanner({ variant = 'login' }: AuthBannerProps) {
   ];
 
   return (
-    <div className="hidden lg:flex flex-col justify-between bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-800 p-12 relative overflow-hidden">
+    <div
+      className="hidden lg:flex flex-col justify-between p-12 relative overflow-hidden"
+      style={{
+        background: `linear-gradient(to bottom right, ${primaryColor}, ${secondaryColor}, ${darkerSecondary})`,
+      }}
+    >
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-20 -right-20 w-64 h-64 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
-        <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse" style={{ animationDelay: '2s' }}></div>
+        <div
+          className="absolute -top-20 -right-20 w-64 h-64 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"
+          style={{ backgroundColor: primaryColor }}
+        ></div>
+        <div
+          className="absolute -bottom-20 -left-20 w-64 h-64 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"
+          style={{ backgroundColor: secondaryColor, animationDelay: '2s' }}
+        ></div>
       </div>
 
       {/* Content */}
@@ -51,13 +90,42 @@ export function AuthBanner({ variant = 'login' }: AuthBannerProps) {
         {/* Header */}
         <div className="space-y-4">
           <div className="flex items-center gap-3">
-            <div className="w-14 h-14 bg-white/20 backdrop-blur-md rounded-lg flex items-center justify-center border border-white/30">
-              <span className="text-white font-bold text-2xl">O</span>
-            </div>
-            <div>
-              <h1 className="text-white text-3xl font-bold">Omni CRM</h1>
-              <p className="text-indigo-100 text-sm">Modern Business Management</p>
-            </div>
+            {logoUrl ? (
+              logoType === 'wide' ? (
+                <img
+                  src={logoUrl}
+                  alt="Logo"
+                  className="h-14 object-contain"
+                />
+              ) : (
+                <div className="flex items-center gap-3">
+                  <img
+                    src={logoUrl}
+                    alt="Logo"
+                    className="h-14 w-14 object-contain"
+                  />
+                  <div>
+                    <h1 className="text-white text-3xl font-bold">Omni CRM</h1>
+                    <p className="text-white/80 text-sm">Modern Business Management</p>
+                  </div>
+                </div>
+              )
+            ) : (
+              <>
+                <div
+                  className="w-14 h-14 bg-white/20 backdrop-blur-md rounded-lg flex items-center justify-center border border-white/30"
+                  style={{
+                    background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`,
+                  }}
+                >
+                  <span className="text-white font-bold text-2xl">O</span>
+                </div>
+                <div>
+                  <h1 className="text-white text-3xl font-bold">Omni CRM</h1>
+                  <p className="text-white/80 text-sm">Modern Business Management</p>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -76,10 +144,12 @@ export function AuthBanner({ variant = 'login' }: AuthBannerProps) {
                 key={index}
                 className="flex gap-4 bg-white/10 backdrop-blur-md rounded-lg p-4 border border-white/20 hover:bg-white/20 transition-all duration-300"
               >
-                <div className="text-indigo-200 flex-shrink-0">{feature.icon}</div>
+                <div className="flex-shrink-0" style={{ color: '#e0e7ff' }}>
+                  {feature.icon}
+                </div>
                 <div className="flex-1">
                   <h3 className="text-white font-semibold text-sm">{feature.title}</h3>
-                  <p className="text-indigo-100 text-xs mt-1">{feature.description}</p>
+                  <p className="text-white/80 text-xs mt-1">{feature.description}</p>
                 </div>
               </div>
             ))}
@@ -113,7 +183,7 @@ export function AuthBanner({ variant = 'login' }: AuthBannerProps) {
                     <p className="text-white text-sm leading-relaxed">{testimonial.text}</p>
                     <div className="mt-2">
                       <p className="text-white text-xs font-semibold">{testimonial.name}</p>
-                      <p className="text-indigo-200 text-xs">{testimonial.role}</p>
+                      <p className="text-white/70 text-xs">{testimonial.role}</p>
                     </div>
                   </div>
                 </div>
@@ -123,7 +193,7 @@ export function AuthBanner({ variant = 'login' }: AuthBannerProps) {
         </div>
 
         {/* Footer */}
-        <div className="flex justify-between items-center text-indigo-100 text-xs border-t border-white/20 pt-6 mt-8">
+        <div className="flex justify-between items-center text-white/80 text-xs border-t border-white/20 pt-6 mt-8">
           <p>© 2024 Omni CRM. All rights reserved.</p>
           <div className="flex gap-4">
             <a href="#" className="hover:text-white transition-colors">Privacy</a>

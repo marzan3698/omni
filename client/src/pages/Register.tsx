@@ -337,7 +337,13 @@ export function Register() {
       </div>
 
       {/* Right Panel - Banner Section */}
-      <AuthBanner variant="register" />
+      <AuthBanner
+        variant="register"
+        primaryColor={primaryColor}
+        secondaryColor={secondaryColor}
+        logoUrl={logoUrl}
+        logoType={logoType}
+      />
     </div>
   );
 }

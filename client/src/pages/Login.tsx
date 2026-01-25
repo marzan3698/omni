@@ -279,7 +279,13 @@ export function Login() {
       </div>
 
       {/* Right Panel - Banner Section */}
-      <AuthBanner variant="login" />
+      <AuthBanner
+        variant="login"
+        primaryColor={primaryColor}
+        secondaryColor={secondaryColor}
+        logoUrl={logoUrl}
+        logoType={logoType}
+      />
     </div>
   );
 }

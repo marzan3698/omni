@@ -1,6 +1,16 @@
 import apiClient from './api';
 import type { ApiResponse } from '@/types';
 
+export interface ConversationLabel {
+  id: number;
+  conversationId: number;
+  name: string;
+  source?: string | null;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface SocialConversation {
   id: number;
   platform: 'facebook' | 'chatwoot';
@@ -20,6 +30,7 @@ export interface SocialConversation {
   } | null;
   createdAt: string;
   messages?: SocialMessage[];
+  labels?: ConversationLabel[];
   _count?: {
     messages: number;
     releases?: number; // Count of releases for this conversation
@@ -345,6 +356,66 @@ export const socialApi = {
       return response.data.data;
     }
     throw new Error(response.data.message || 'Failed to fetch release history');
+  },
+
+  /**
+   * Add a label to a conversation
+   */
+  async addLabel(conversationId: number, labelData: { name: string; source?: string | null }): Promise<ConversationLabel> {
+    const response = await apiClient.post<ApiResponse<ConversationLabel>>(
+      `/conversations/${conversationId}/labels`,
+      labelData
+    );
+
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+
+    throw new Error(response.data.message || 'Failed to add label');
+  },
+
+  /**
+   * Update a conversation label
+   */
+  async updateLabel(conversationId: number, labelId: number, labelData: { name?: string; source?: string | null }): Promise<ConversationLabel> {
+    const response = await apiClient.put<ApiResponse<ConversationLabel>>(
+      `/conversations/${conversationId}/labels/${labelId}`,
+      labelData
+    );
+
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+
+    throw new Error(response.data.message || 'Failed to update label');
+  },
+
+  /**
+   * Delete a conversation label
+   */
+  async deleteLabel(conversationId: number, labelId: number): Promise<void> {
+    const response = await apiClient.delete<ApiResponse<{ success: boolean }>>(
+      `/conversations/${conversationId}/labels/${labelId}`
+    );
+
+    if (!response.data.success) {
+      throw new Error(response.data.message || 'Failed to delete label');
+    }
+  },
+
+  /**
+   * Get all labels for a conversation
+   */
+  async getConversationLabels(conversationId: number): Promise<ConversationLabel[]> {
+    const response = await apiClient.get<ApiResponse<ConversationLabel[]>>(
+      `/conversations/${conversationId}/labels`
+    );
+
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+
+    throw new Error(response.data.message || 'Failed to fetch labels');
   },
 };
 

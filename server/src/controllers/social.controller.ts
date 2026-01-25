@@ -575,5 +575,124 @@ export const socialController = {
       next(error);
     }
   },
+
+  /**
+   * Add a label to a conversation
+   * POST /api/conversations/:id/labels
+   */
+  addLabel: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const conversationId = parseInt(req.params.id, 10);
+      const companyId = (req as any).user?.companyId;
+      const userId = (req as any).user?.id;
+
+      if (isNaN(conversationId)) {
+        return sendError(res, 'Invalid conversation ID', 400);
+      }
+
+      if (!companyId || !userId) {
+        return sendError(res, 'User not authenticated', 401);
+      }
+
+      const { name, source } = req.body;
+
+      if (!name || typeof name !== 'string') {
+        return sendError(res, 'Label name is required', 400);
+      }
+
+      const label = await socialService.addLabel(conversationId, { name, source }, companyId, userId);
+      sendSuccess(res, label, 'Label added successfully');
+    } catch (error) {
+      if (error instanceof AppError) {
+        return sendError(res, error.message, error.statusCode);
+      }
+      next(error);
+    }
+  },
+
+  /**
+   * Update a conversation label
+   * PUT /api/conversations/:id/labels/:labelId
+   */
+  updateLabel: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const conversationId = parseInt(req.params.id, 10);
+      const labelId = parseInt(req.params.labelId, 10);
+      const companyId = (req as any).user?.companyId;
+
+      if (isNaN(conversationId) || isNaN(labelId)) {
+        return sendError(res, 'Invalid conversation ID or label ID', 400);
+      }
+
+      if (!companyId) {
+        return sendError(res, 'User not authenticated', 401);
+      }
+
+      const { name, source } = req.body;
+
+      const label = await socialService.updateLabel(labelId, { name, source }, companyId);
+      sendSuccess(res, label, 'Label updated successfully');
+    } catch (error) {
+      if (error instanceof AppError) {
+        return sendError(res, error.message, error.statusCode);
+      }
+      next(error);
+    }
+  },
+
+  /**
+   * Delete a conversation label
+   * DELETE /api/conversations/:id/labels/:labelId
+   */
+  deleteLabel: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const conversationId = parseInt(req.params.id, 10);
+      const labelId = parseInt(req.params.labelId, 10);
+      const companyId = (req as any).user?.companyId;
+
+      if (isNaN(conversationId) || isNaN(labelId)) {
+        return sendError(res, 'Invalid conversation ID or label ID', 400);
+      }
+
+      if (!companyId) {
+        return sendError(res, 'User not authenticated', 401);
+      }
+
+      await socialService.deleteLabel(labelId, companyId);
+      sendSuccess(res, { success: true }, 'Label deleted successfully');
+    } catch (error) {
+      if (error instanceof AppError) {
+        return sendError(res, error.message, error.statusCode);
+      }
+      next(error);
+    }
+  },
+
+  /**
+   * Get all labels for a conversation
+   * GET /api/conversations/:id/labels
+   */
+  getConversationLabels: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const conversationId = parseInt(req.params.id, 10);
+      const companyId = (req as any).user?.companyId;
+
+      if (isNaN(conversationId)) {
+        return sendError(res, 'Invalid conversation ID', 400);
+      }
+
+      if (!companyId) {
+        return sendError(res, 'User not authenticated', 401);
+      }
+
+      const labels = await socialService.getConversationLabels(conversationId, companyId);
+      sendSuccess(res, labels, 'Labels retrieved successfully');
+    } catch (error) {
+      if (error instanceof AppError) {
+        return sendError(res, error.message, error.statusCode);
+      }
+      next(error);
+    }
+  },
 };
 

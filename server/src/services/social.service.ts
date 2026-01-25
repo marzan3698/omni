@@ -357,6 +357,15 @@ export const socialService = {
       where.assignedTo = assignedToEmployeeId;
     }
 
+    // Debug logging
+    console.log('🔍 getConversations query:', {
+      status,
+      companyId,
+      tab,
+      assignedToEmployeeId,
+      where,
+    });
+
     const conversations = await prisma.socialConversation.findMany({
       where,
       include: {
@@ -377,6 +386,7 @@ export const socialService = {
             },
           },
         },
+        labels: true,
         _count: {
           select: {
             messages: true,
@@ -384,9 +394,14 @@ export const socialService = {
           },
         },
       },
-      orderBy: {
-        lastMessageAt: 'desc',
-      },
+      orderBy: [
+        {
+          lastMessageAt: 'desc',
+        },
+        {
+          createdAt: 'desc', // Fallback to createdAt if lastMessageAt is null
+        },
+      ],
     });
 
     // Calculate unread count for each conversation
@@ -405,6 +420,14 @@ export const socialService = {
         };
       })
     );
+
+    // Debug logging
+    console.log('✅ getConversations result:', {
+      total: conversationsWithUnreadCount.length,
+      platforms: conversationsWithUnreadCount.map(c => c.platform),
+      chatwootCount: conversationsWithUnreadCount.filter(c => c.platform === 'chatwoot').length,
+      facebookCount: conversationsWithUnreadCount.filter(c => c.platform === 'facebook').length,
+    });
 
     return conversationsWithUnreadCount;
   },
@@ -512,6 +535,7 @@ export const socialService = {
             createdAt: 'asc',
           },
         },
+        labels: true,
       },
     });
 
@@ -1476,6 +1500,142 @@ export const socialService = {
     });
 
     return releases;
+  },
+
+  /**
+   * Add a label to a conversation
+   */
+  async addLabel(conversationId: number, labelData: { name: string; source?: string | null }, companyId: number, userId: string) {
+    // Validate label name
+    if (!labelData.name || labelData.name.trim().length === 0) {
+      throw new AppError('Label name is required', 400);
+    }
+    if (labelData.name.length > 50) {
+      throw new AppError('Label name must be 50 characters or less', 400);
+    }
+    if (labelData.source && labelData.source.length > 100) {
+      throw new AppError('Label source must be 100 characters or less', 400);
+    }
+
+    // Verify conversation exists and belongs to company
+    const conversation = await prisma.socialConversation.findFirst({
+      where: {
+        id: conversationId,
+        companyId,
+      },
+    });
+
+    if (!conversation) {
+      throw new AppError('Conversation not found', 404);
+    }
+
+    // Create label
+    const label = await prisma.conversationLabel.create({
+      data: {
+        conversationId,
+        companyId,
+        name: labelData.name.trim(),
+        source: labelData.source?.trim() || null,
+        createdBy: userId,
+      },
+    });
+
+    return label;
+  },
+
+  /**
+   * Update a conversation label
+   */
+  async updateLabel(labelId: number, labelData: { name?: string; source?: string | null }, companyId: number) {
+    // Validate if provided
+    if (labelData.name !== undefined) {
+      if (!labelData.name || labelData.name.trim().length === 0) {
+        throw new AppError('Label name is required', 400);
+      }
+      if (labelData.name.length > 50) {
+        throw new AppError('Label name must be 50 characters or less', 400);
+      }
+    }
+    if (labelData.source !== undefined && labelData.source && labelData.source.length > 100) {
+      throw new AppError('Label source must be 100 characters or less', 400);
+    }
+
+    // Verify label exists and belongs to company
+    const label = await prisma.conversationLabel.findFirst({
+      where: {
+        id: labelId,
+        companyId,
+      },
+    });
+
+    if (!label) {
+      throw new AppError('Label not found', 404);
+    }
+
+    // Update label
+    const updatedLabel = await prisma.conversationLabel.update({
+      where: { id: labelId },
+      data: {
+        ...(labelData.name !== undefined && { name: labelData.name.trim() }),
+        ...(labelData.source !== undefined && { source: labelData.source?.trim() || null }),
+      },
+    });
+
+    return updatedLabel;
+  },
+
+  /**
+   * Delete a conversation label
+   */
+  async deleteLabel(labelId: number, companyId: number) {
+    // Verify label exists and belongs to company
+    const label = await prisma.conversationLabel.findFirst({
+      where: {
+        id: labelId,
+        companyId,
+      },
+    });
+
+    if (!label) {
+      throw new AppError('Label not found', 404);
+    }
+
+    // Delete label
+    await prisma.conversationLabel.delete({
+      where: { id: labelId },
+    });
+
+    return { success: true };
+  },
+
+  /**
+   * Get all labels for a conversation
+   */
+  async getConversationLabels(conversationId: number, companyId: number) {
+    // Verify conversation exists and belongs to company
+    const conversation = await prisma.socialConversation.findFirst({
+      where: {
+        id: conversationId,
+        companyId,
+      },
+    });
+
+    if (!conversation) {
+      throw new AppError('Conversation not found', 404);
+    }
+
+    // Get all labels for this conversation
+    const labels = await prisma.conversationLabel.findMany({
+      where: {
+        conversationId,
+        companyId,
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+    });
+
+    return labels;
   },
 };
 

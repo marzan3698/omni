@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { socialApi, type SocialConversation, type SocialMessage } from '@/lib/social';
+import { socialApi, type SocialConversation, type SocialMessage, type ConversationLabel } from '@/lib/social';
 import { leadApi, leadCategoryApi, leadInterestApi, campaignApi, productApi } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { MessageSquare, Send, User, Bot, Target, X, Zap, Package, Image as ImageIcon, Check, CheckCheck, Clock, ShoppingCart, Users, Search, BarChart3, ChevronLeft, ChevronRight } from 'lucide-react';
+import { MessageSquare, Send, User, Bot, Target, X, Zap, Package, Image as ImageIcon, Check, CheckCheck, Clock, ShoppingCart, Users, Search, BarChart3, ChevronLeft, ChevronRight, Tag, Edit, Trash2, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getImageUrl } from '@/lib/imageUtils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -46,6 +46,9 @@ export function Inbox() {
   const [showQuickReplies, setShowQuickReplies] = useState(false);
   const [showReleaseHistoryModal, setShowReleaseHistoryModal] = useState(false);
   const [releaseHistoryConversationId, setReleaseHistoryConversationId] = useState<number | null>(null);
+  const [showLabelModal, setShowLabelModal] = useState(false);
+  const [editingLabel, setEditingLabel] = useState<ConversationLabel | null>(null);
+  const [labelFormData, setLabelFormData] = useState({ name: '', source: '' });
   const [quickReplyTab, setQuickReplyTab] = useState<'default' | 'campaign' | 'all'>('default');
   const [selectedCampaignId, setSelectedCampaignId] = useState<number | ''>('');
   
@@ -309,6 +312,49 @@ export function Inbox() {
     },
     onError: (error: any) => {
       alert(error.response?.data?.message || 'Failed to complete conversation');
+    },
+  });
+
+  // Add label mutation
+  const addLabelMutation = useMutation({
+    mutationFn: ({ conversationId, labelData }: { conversationId: number; labelData: { name: string; source?: string | null } }) =>
+      socialApi.addLabel(conversationId, labelData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conversations', activeTab] });
+      queryClient.invalidateQueries({ queryKey: ['conversation', selectedConversationId] });
+      setLabelFormData({ name: '', source: '' });
+      setEditingLabel(null);
+    },
+    onError: (error: any) => {
+      alert(error.response?.data?.message || 'Failed to add label');
+    },
+  });
+
+  // Update label mutation
+  const updateLabelMutation = useMutation({
+    mutationFn: ({ conversationId, labelId, labelData }: { conversationId: number; labelId: number; labelData: { name?: string; source?: string | null } }) =>
+      socialApi.updateLabel(conversationId, labelId, labelData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conversations', activeTab] });
+      queryClient.invalidateQueries({ queryKey: ['conversation', selectedConversationId] });
+      setLabelFormData({ name: '', source: '' });
+      setEditingLabel(null);
+    },
+    onError: (error: any) => {
+      alert(error.response?.data?.message || 'Failed to update label');
+    },
+  });
+
+  // Delete label mutation
+  const deleteLabelMutation = useMutation({
+    mutationFn: ({ conversationId, labelId }: { conversationId: number; labelId: number }) =>
+      socialApi.deleteLabel(conversationId, labelId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conversations', activeTab] });
+      queryClient.invalidateQueries({ queryKey: ['conversation', selectedConversationId] });
+    },
+    onError: (error: any) => {
+      alert(error.response?.data?.message || 'Failed to delete label');
     },
   });
 
@@ -730,6 +776,9 @@ export function Inbox() {
                                 {conversation.platform === 'facebook' && (
                                   <FacebookIcon className="w-4 h-4 text-blue-600 flex-shrink-0" />
                                 )}
+                                {conversation.platform === 'chatwoot' && (
+                                  <MessageSquare className="w-4 h-4 text-indigo-600 flex-shrink-0" />
+                                )}
                             <p className="text-sm font-medium text-slate-900 truncate">
                               {conversation.externalUserName || `User ${conversation.externalUserId.slice(0, 8)}`}
                             </p>
@@ -764,6 +813,25 @@ export function Inbox() {
                             <p className="text-xs text-slate-500 truncate mb-1">
                               {lastMessage.content}
                             </p>
+                          )}
+                          {conversation.labels && conversation.labels.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mb-1">
+                              {conversation.labels.slice(0, 2).map((label) => (
+                                <span
+                                  key={label.id}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-indigo-100 text-indigo-700 border border-indigo-200"
+                                  title={label.source ? `${label.name} (${label.source})` : label.name}
+                                >
+                                  <Tag className="w-3 h-3" />
+                                  {label.name}
+                                </span>
+                              ))}
+                              {conversation.labels.length > 2 && (
+                                <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 text-gray-600 border border-gray-200">
+                                  +{conversation.labels.length - 2} more
+                                </span>
+                              )}
+                            </div>
                           )}
                           {conversation.lastMessageAt && (
                             <p className="text-xs text-slate-400">
@@ -832,9 +900,9 @@ export function Inbox() {
             <>
               {/* Chat Header */}
               <div className="p-4 border-b border-gray-200">
-                <div className="flex items-center justify-between">
+                <div className="flex items-start justify-between gap-4">
                   <div className="flex items-center gap-3 flex-1">
-                    <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center">
+                    <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
                       {selectedConversation.externalUserName ? (
                         <span className="text-white text-sm font-medium">
                           {selectedConversation.externalUserName.charAt(0).toUpperCase()}
@@ -843,26 +911,59 @@ export function Inbox() {
                         <User className="w-5 h-5 text-white" />
                       )}
                     </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-slate-900">
-                        {selectedConversation.externalUserName || `User ${selectedConversation.externalUserId.slice(0, 8)}`}
-                      </h3>
-                      <p className="text-xs text-slate-500">
-                        {selectedConversation.platform} • {selectedConversation.status}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-semibold text-slate-900 truncate">
+                          {selectedConversation.externalUserName || `User ${selectedConversation.externalUserId.slice(0, 8)}`}
+                        </h3>
+                        <span
+                          className={cn(
+                            'px-2 py-0.5 text-xs font-medium rounded-full flex-shrink-0',
+                            selectedConversation.status === 'Open'
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-gray-100 text-gray-700'
+                          )}
+                        >
+                          {selectedConversation.status}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 mb-2">
+                        {selectedConversation.platform === 'chatwoot' ? 'Chatwoot' : selectedConversation.platform === 'facebook' ? 'Facebook' : selectedConversation.platform}
                       </p>
-                    </div>
-                    <span
-                      className={cn(
-                        'px-2 py-1 text-xs font-medium rounded-full',
-                        selectedConversation.status === 'Open'
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-gray-100 text-gray-700'
+                      {selectedConversation.labels && selectedConversation.labels.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {selectedConversation.labels.map((label) => (
+                            <span
+                              key={label.id}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-indigo-100 text-indigo-700 border border-indigo-200"
+                              title={label.source ? `${label.name} (${label.source})` : label.name}
+                            >
+                              <Tag className="w-3 h-3" />
+                              {label.name}
+                              {label.source && (
+                                <span className="text-indigo-500">• {label.source}</span>
+                              )}
+                            </span>
+                          ))}
+                        </div>
                       )}
-                    >
-                      {selectedConversation.status}
-                    </span>
+                    </div>
                   </div>
-                  <PermissionGuard permission="can_manage_leads">
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setShowLabelModal(true);
+                        setEditingLabel(null);
+                        setLabelFormData({ name: '', source: '' });
+                      }}
+                      className="text-xs"
+                    >
+                      <Tag className="w-3 h-3 mr-1" />
+                      {selectedConversation.labels && selectedConversation.labels.length > 0 ? 'Manage Labels' : 'Add Label'}
+                    </Button>
+                    <PermissionGuard permission="can_manage_leads">
                     <Button
                       variant="outline"
                       size="sm"
@@ -872,23 +973,23 @@ export function Inbox() {
                       <Target className="w-4 h-4 mr-2" />
                       Create Lead
                     </Button>
-                  </PermissionGuard>
-                  {selectedConversation.status === 'Open' && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        if (selectedConversationId) {
-                          completeConversationMutation.mutate(selectedConversationId);
-                        }
-                      }}
-                      disabled={completeConversationMutation.isPending}
-                      className="ml-2"
-                    >
-                      <Check className="w-4 h-4 mr-2" />
-                      {completeConversationMutation.isPending ? 'Completing...' : 'Complete'}
-                    </Button>
-                  )}
+                    </PermissionGuard>
+                    {selectedConversation.status === 'Open' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          if (selectedConversationId) {
+                            completeConversationMutation.mutate(selectedConversationId);
+                          }
+                        }}
+                        disabled={completeConversationMutation.isPending}
+                      >
+                        <Check className="w-4 h-4 mr-2" />
+                        {completeConversationMutation.isPending ? 'Completing...' : 'Complete'}
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -2019,6 +2120,186 @@ export function Inbox() {
                   })}
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Label Management Modal */}
+      {showLabelModal && selectedConversationId && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <Card className="w-full max-w-2xl shadow-lg max-h-[80vh] flex flex-col">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Tag className="w-5 h-5 text-indigo-600" />
+                  Manage Labels
+                </CardTitle>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    setShowLabelModal(false);
+                    setEditingLabel(null);
+                    setLabelFormData({ name: '', source: '' });
+                  }}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="flex-1 overflow-y-auto">
+              {/* Existing Labels */}
+              {selectedConversation?.labels && selectedConversation.labels.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-sm font-medium text-slate-900 mb-3">Existing Labels</h3>
+                  <div className="space-y-2">
+                    {selectedConversation.labels.map((label) => (
+                      <div
+                        key={label.id}
+                        className="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-gray-50"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Tag className="w-4 h-4 text-indigo-600" />
+                            <span className="font-medium text-slate-900">{label.name}</span>
+                          </div>
+                          {label.source && (
+                            <p className="text-xs text-slate-500 ml-6">Source: {label.source}</p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setEditingLabel(label);
+                              setLabelFormData({ name: label.name, source: label.source || '' });
+                            }}
+                            className="h-8 px-2"
+                          >
+                            <Edit className="w-4 h-4 text-indigo-600" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              if (confirm('Are you sure you want to delete this label?')) {
+                                deleteLabelMutation.mutate({
+                                  conversationId: selectedConversationId,
+                                  labelId: label.id,
+                                });
+                              }
+                            }}
+                            disabled={deleteLabelMutation.isPending}
+                            className="h-8 px-2"
+                          >
+                            <Trash2 className="w-4 h-4 text-red-600" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Add/Edit Label Form */}
+              <div className="border-t border-gray-200 pt-6">
+                <h3 className="text-sm font-medium text-slate-900 mb-4">
+                  {editingLabel ? 'Edit Label' : 'Add New Label'}
+                </h3>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (!labelFormData.name.trim()) {
+                      alert('Label name is required');
+                      return;
+                    }
+                    if (editingLabel) {
+                      updateLabelMutation.mutate({
+                        conversationId: selectedConversationId,
+                        labelId: editingLabel.id,
+                        labelData: {
+                          name: labelFormData.name.trim(),
+                          source: labelFormData.source.trim() || null,
+                        },
+                      });
+                    } else {
+                      addLabelMutation.mutate({
+                        conversationId: selectedConversationId,
+                        labelData: {
+                          name: labelFormData.name.trim(),
+                          source: labelFormData.source.trim() || null,
+                        },
+                      });
+                    }
+                  }}
+                  className="space-y-4"
+                >
+                  <div>
+                    <Label htmlFor="label-name">Label Name *</Label>
+                    <Input
+                      id="label-name"
+                      value={labelFormData.name}
+                      onChange={(e) => setLabelFormData({ ...labelFormData, name: e.target.value })}
+                      placeholder="e.g., Important, Follow-up, Customer"
+                      maxLength={50}
+                      required
+                      className="mt-1"
+                    />
+                    <p className="text-xs text-slate-500 mt-1">
+                      {labelFormData.name.length}/50 characters
+                    </p>
+                  </div>
+                  <div>
+                    <Label htmlFor="label-source">Label Source (Optional)</Label>
+                    <Input
+                      id="label-source"
+                      value={labelFormData.source}
+                      onChange={(e) => setLabelFormData({ ...labelFormData, source: e.target.value })}
+                      placeholder="e.g., Facebook Ad, Website, Referral"
+                      maxLength={100}
+                      className="mt-1"
+                    />
+                    <p className="text-xs text-slate-500 mt-1">
+                      {labelFormData.source.length}/100 characters
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 pt-2">
+                    <Button
+                      type="submit"
+                      disabled={addLabelMutation.isPending || updateLabelMutation.isPending}
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                    >
+                      {addLabelMutation.isPending || updateLabelMutation.isPending ? (
+                        'Saving...'
+                      ) : editingLabel ? (
+                        <>
+                          <Edit className="w-4 h-4 mr-2" />
+                          Update Label
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add Label
+                        </>
+                      )}
+                    </Button>
+                    {editingLabel && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setEditingLabel(null);
+                          setLabelFormData({ name: '', source: '' });
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    )}
+                  </div>
+                </form>
+              </div>
             </CardContent>
           </Card>
         </div>
