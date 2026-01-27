@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { socialApi, type SocialConversation, type SocialMessage, type ConversationLabel } from '@/lib/social';
 import { leadApi, leadCategoryApi, leadInterestApi, campaignApi, productApi } from '@/lib/api';
@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { MessageSquare, Send, User, Bot, Target, X, Zap, Package, Image as ImageIcon, Check, CheckCheck, Clock, ShoppingCart, Users, Search, BarChart3, ChevronLeft, ChevronRight, Tag, Edit, Trash2, Plus } from 'lucide-react';
+import { MessageSquare, Send, User, Bot, Target, X, Zap, Package, Image as ImageIcon, Check, CheckCheck, Clock, ShoppingCart, Users, Search, BarChart3, ChevronLeft, ChevronRight, Tag, Edit, Trash2, Plus, Filter } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getImageUrl } from '@/lib/imageUtils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -52,6 +52,11 @@ export function Inbox() {
   const [quickReplyTab, setQuickReplyTab] = useState<'default' | 'campaign' | 'all'>('default');
   const [selectedCampaignId, setSelectedCampaignId] = useState<number | ''>('');
   
+  // Filter state
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<'All' | 'Open' | 'Closed'>('All');
+  const [labelFilter, setLabelFilter] = useState<string | null>(null);
+  
   // Multi-step lead form state
   const [leadType, setLeadType] = useState<'sales' | 'connection' | 'research' | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
@@ -70,6 +75,7 @@ export function Inbox() {
   });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const filterPanelRef = useRef<HTMLDivElement>(null);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [error, setError] = useState<any | null>(null);
@@ -83,6 +89,34 @@ export function Inbox() {
     queryFn: () => socialApi.getConversations(activeTab),
     refetchInterval: 10000, // Refresh every 10 seconds
   });
+
+  // Extract available labels from conversations
+  const availableLabels = useMemo(() => {
+    const labelSet = new Set<string>();
+    conversations.forEach(conv => {
+      conv.labels?.forEach(label => labelSet.add(label.name));
+    });
+    return Array.from(labelSet).sort();
+  }, [conversations]);
+
+  // Filter conversations based on status and label
+  const filteredConversations = useMemo(() => {
+    let filtered = conversations;
+    
+    // Filter by status
+    if (statusFilter !== 'All') {
+      filtered = filtered.filter(conv => conv.status === statusFilter);
+    }
+    
+    // Filter by label
+    if (labelFilter) {
+      filtered = filtered.filter(conv => 
+        conv.labels?.some(label => label.name === labelFilter)
+      );
+    }
+    
+    return filtered;
+  }, [conversations, statusFilter, labelFilter]);
 
   // Fetch messages for selected conversation with auto-refresh
   const { data: selectedConversation, isLoading: messagesLoading } = useQuery({
@@ -683,15 +717,120 @@ export function Inbox() {
     };
   }, [selectedConversationId]);
 
+  // Close filter panel when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (filterPanelRef.current && !filterPanelRef.current.contains(event.target as Node)) {
+        setShowFilterPanel(false);
+      }
+    };
+
+    if (showFilterPanel) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showFilterPanel]);
+
   return (
     <div className="h-[calc(100vh-8rem)] flex flex-col">
       <div className="flex-1 flex gap-4 overflow-hidden">
         {/* Left Column: Conversation List */}
         <Card className="w-80 flex flex-col shadow-sm border-gray-200">
           <div className="p-4 border-b border-gray-200">
-            <h2 className="font-semibold text-slate-900">Conversations</h2>
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="font-semibold text-slate-900">Conversations</h2>
+              <div className="relative" ref={filterPanelRef}>
+                <button
+                  onClick={() => setShowFilterPanel(!showFilterPanel)}
+                  className={cn(
+                    "p-1.5 rounded-md transition-colors",
+                    showFilterPanel || statusFilter !== 'All' || labelFilter
+                      ? "bg-indigo-100 text-indigo-600"
+                      : "text-slate-500 hover:bg-gray-100 hover:text-slate-700"
+                  )}
+                  title="Filter conversations"
+                >
+                  <Filter className="h-4 w-4" />
+                </button>
+                {(statusFilter !== 'All' || labelFilter) && (
+                  <span className="absolute -top-1 -right-1 w-2 h-2 bg-indigo-600 rounded-full"></span>
+                )}
+                
+                {/* Filter Panel */}
+                {showFilterPanel && (
+                  <div className="absolute right-0 top-full mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-4">
+                    <div className="space-y-4">
+                      {/* Status Filter */}
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700 mb-2 block">Status</Label>
+                        <select
+                          value={statusFilter}
+                          onChange={(e) => setStatusFilter(e.target.value as 'All' | 'Open' | 'Closed')}
+                          className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        >
+                          <option value="All">All</option>
+                          <option value="Open">Open</option>
+                          <option value="Closed">Closed</option>
+                        </select>
+                      </div>
+
+                      {/* Label Filter */}
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700 mb-2 block">Label</Label>
+                        <select
+                          value={labelFilter || ''}
+                          onChange={(e) => setLabelFilter(e.target.value || null)}
+                          className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        >
+                          <option value="">All Labels</option>
+                          {availableLabels.length > 0 ? (
+                            availableLabels.map((label) => (
+                              <option key={label} value={label}>
+                                {label}
+                              </option>
+                            ))
+                          ) : (
+                            <option value="" disabled>No labels available</option>
+                          )}
+                        </select>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex gap-2 pt-2 border-t border-gray-200">
+                        <Button
+                          onClick={() => {
+                            setStatusFilter('All');
+                            setLabelFilter(null);
+                          }}
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                        >
+                          Clear
+                        </Button>
+                        <Button
+                          onClick={() => setShowFilterPanel(false)}
+                          size="sm"
+                          className="flex-1 bg-indigo-600 hover:bg-indigo-700"
+                        >
+                          Apply
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
             <p className="text-xs text-slate-500 mt-1">
-              {conversations.length} {conversations.length === 1 ? 'conversation' : 'conversations'}
+              {filteredConversations.length} of {conversations.length} {conversations.length === 1 ? 'conversation' : 'conversations'}
+              {(statusFilter !== 'All' || labelFilter) && (
+                <span className="ml-1 text-indigo-600 font-medium">
+                  (filtered)
+                </span>
+              )}
             </p>
             {/* Tabs */}
             <div className="flex gap-2 mt-3">
@@ -739,9 +878,25 @@ export function Inbox() {
                 <MessageSquare className="w-12 h-12 mx-auto mb-2 text-slate-300" />
                 <p>No conversations yet</p>
               </div>
+            ) : filteredConversations.length === 0 ? (
+              <div className="p-4 text-center text-slate-500">
+                <Filter className="w-12 h-12 mx-auto mb-2 text-slate-300" />
+                <p>No conversations match your filters</p>
+                <Button
+                  onClick={() => {
+                    setStatusFilter('All');
+                    setLabelFilter(null);
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                >
+                  Clear Filters
+                </Button>
+              </div>
             ) : (
               <div className="divide-y divide-gray-200">
-                {conversations.map((conversation) => {
+                {filteredConversations.map((conversation) => {
                   const lastMessage = getLastMessage(conversation);
                   const isSelected = selectedConversationId === conversation.id;
                   const isAssigned = conversation.assignedTo !== null && conversation.assignedTo !== undefined;
