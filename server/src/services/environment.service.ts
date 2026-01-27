@@ -14,14 +14,34 @@ interface FacebookConfig {
   FACEBOOK_OAUTH_REDIRECT_URI: string;
 }
 
+interface EnvFileResult {
+  found: boolean;
+  path: string | null;
+  isCPanel: boolean;
+}
+
 export const environmentService = {
+  /**
+   * Check if running in cPanel environment
+   */
+  isCPanelEnvironment(): boolean {
+    const cwd = process.cwd();
+    // cPanel typically has ~/api structure or nodevenv path
+    return cwd.includes('/home/') && (
+      cwd.includes('/api') || 
+      fs.existsSync(path.join(cwd, '..', 'public_html')) ||
+      process.env.NODE_ENV === 'production'
+    );
+  },
+
   /**
    * Auto-detect .env file location
    * Checks: api/.env (cPanel), server/.env (local), ./.env (fallback)
+   * Returns null if not found (for cPanel where env vars are set via interface)
    */
-  detectEnvFilePath(): string {
-    // Get current working directory
+  detectEnvFilePath(): EnvFileResult {
     const cwd = process.cwd();
+    const isCPanel = this.isCPanelEnvironment();
     
     // Build possible paths in order of likelihood
     const possiblePaths = [
@@ -31,6 +51,8 @@ export const environmentService = {
       path.join(cwd, 'server', '.env'),
       // cPanel structure: api/.env (if running from project root)
       path.join(cwd, 'api', '.env'),
+      // Home directory in cPanel
+      path.join(process.env.HOME || '~', 'api', '.env'),
       // Relative to current file location (go up from src/services or dist/services)
       path.resolve(__dirname, '..', '..', '.env'),
       path.resolve(__dirname, '..', '.env'),
@@ -40,7 +62,7 @@ export const environmentService = {
     const uniquePaths = [...new Set(possiblePaths.map(p => path.normalize(p)))];
     
     console.log('[Environment Service] Current working directory:', cwd);
-    console.log('[Environment Service] __dirname:', __dirname);
+    console.log('[Environment Service] Is cPanel environment:', isCPanel);
     console.log('[Environment Service] Searching for .env file in paths:', uniquePaths);
     
     for (const envPath of uniquePaths) {
@@ -49,19 +71,30 @@ export const environmentService = {
         if (fs.existsSync(normalizedPath)) {
           const stats = fs.statSync(normalizedPath);
           console.log('[Environment Service] Found .env at:', normalizedPath, 'Size:', stats.size, 'bytes');
-          return normalizedPath;
+          return { found: true, path: normalizedPath, isCPanel };
         }
       } catch (error: any) {
         // Continue to next path if this one fails
-        console.log('[Environment Service] Path check failed for:', envPath, error.message);
         continue;
       }
     }
 
-    throw new AppError(
-      `Environment file (.env) not found. Searched in: ${uniquePaths.slice(0, 5).join(', ')}. Current working directory: ${cwd}`,
-      404
-    );
+    // In cPanel, .env file might not exist - env vars are set via cPanel interface
+    console.log('[Environment Service] No .env file found. Will read from process.env');
+    return { found: false, path: null, isCPanel };
+  },
+
+  /**
+   * Get default .env file path for creating new file
+   */
+  getDefaultEnvFilePath(): string {
+    const cwd = process.cwd();
+    if (this.isCPanelEnvironment()) {
+      // In cPanel, create .env in api directory
+      return path.join(cwd, '.env');
+    }
+    // Local development
+    return path.join(cwd, '.env');
   },
 
   /**
@@ -168,54 +201,91 @@ export const environmentService = {
   },
 
   /**
-   * Read Facebook webhook configuration from .env file
+   * Read Facebook webhook configuration
+   * Reads from .env file if exists, otherwise from process.env (cPanel)
    */
-  readFacebookConfig(): FacebookConfig {
+  readFacebookConfig(): FacebookConfig & { source: string; isCPanel: boolean } {
     try {
-      const envPath = this.detectEnvFilePath();
-      console.log('[Environment Service] Detected .env path:', envPath);
+      const envResult = this.detectEnvFilePath();
+      console.log('[Environment Service] Env detection result:', envResult);
       
-      if (!fs.existsSync(envPath)) {
-        throw new AppError(`Environment file not found at: ${envPath}`, 404);
+      let config: FacebookConfig;
+      let source: string;
+      
+      if (envResult.found && envResult.path) {
+        // Read from .env file
+        console.log('[Environment Service] Reading from .env file:', envResult.path);
+        const content = fs.readFileSync(envResult.path, 'utf-8');
+        const env = this.parseEnvFile(content);
+        
+        config = {
+          FACEBOOK_APP_ID: env.FACEBOOK_APP_ID || '',
+          FACEBOOK_APP_SECRET: env.FACEBOOK_APP_SECRET || '',
+          FACEBOOK_VERIFY_TOKEN: env.FACEBOOK_VERIFY_TOKEN || '',
+          FACEBOOK_OAUTH_REDIRECT_URI: env.FACEBOOK_OAUTH_REDIRECT_URI || '',
+        };
+        source = envResult.path;
+      } else {
+        // Read from process.env (cPanel or when .env doesn't exist)
+        console.log('[Environment Service] Reading from process.env (cPanel mode or no .env file)');
+        config = {
+          FACEBOOK_APP_ID: process.env.FACEBOOK_APP_ID || '',
+          FACEBOOK_APP_SECRET: process.env.FACEBOOK_APP_SECRET || '',
+          FACEBOOK_VERIFY_TOKEN: process.env.FACEBOOK_VERIFY_TOKEN || '',
+          FACEBOOK_OAUTH_REDIRECT_URI: process.env.FACEBOOK_OAUTH_REDIRECT_URI || '',
+        };
+        source = 'process.env (cPanel Environment Variables)';
       }
       
-      const content = fs.readFileSync(envPath, 'utf-8');
-      const env = this.parseEnvFile(content);
-
-      const config = {
-        FACEBOOK_APP_ID: env.FACEBOOK_APP_ID || '',
-        FACEBOOK_APP_SECRET: env.FACEBOOK_APP_SECRET || '',
-        FACEBOOK_VERIFY_TOKEN: env.FACEBOOK_VERIFY_TOKEN || '',
-        FACEBOOK_OAUTH_REDIRECT_URI: env.FACEBOOK_OAUTH_REDIRECT_URI || '',
-      };
-      
-      console.log('[Environment Service] Successfully read config');
-      return config;
+      console.log('[Environment Service] Successfully read config from:', source);
+      return { ...config, source, isCPanel: envResult.isCPanel };
     } catch (error: any) {
       console.error('[Environment Service] Error reading config:', error);
       if (error instanceof AppError) {
         throw error;
       }
-      throw new AppError(`Failed to read environment file: ${error.message}`, 500);
+      throw new AppError(`Failed to read environment configuration: ${error.message}`, 500);
     }
   },
 
   /**
-   * Update Facebook webhook configuration in .env file
+   * Update Facebook webhook configuration
+   * Creates .env file if it doesn't exist, otherwise updates existing file
    */
-  updateFacebookConfig(data: FacebookConfig): { message: string; envPath: string } {
+  updateFacebookConfig(data: FacebookConfig): { message: string; envPath: string; isCPanel: boolean; requiresRestart: boolean } {
     try {
-      const envPath = this.detectEnvFilePath();
+      const envResult = this.detectEnvFilePath();
+      const isCPanel = envResult.isCPanel;
+      let envPath: string;
+      let originalContent = '';
+      let isNewFile = false;
       
-      // Read current content
-      const originalContent = fs.readFileSync(envPath, 'utf-8');
+      if (envResult.found && envResult.path) {
+        // Use existing .env file
+        envPath = envResult.path;
+        originalContent = fs.readFileSync(envPath, 'utf-8');
+      } else {
+        // Create new .env file
+        envPath = this.getDefaultEnvFilePath();
+        isNewFile = true;
+        console.log('[Environment Service] Creating new .env file at:', envPath);
+        
+        // Create initial content with Facebook config only
+        originalContent = `# Facebook Webhook Configuration
+# Generated by Omni CRM Environment Manager
+# Date: ${new Date().toISOString()}
+
+`;
+      }
       
-      // Create backup
+      // Create backup if file exists
       const backupPath = `${envPath}.backup.${Date.now()}`;
-      fs.writeFileSync(backupPath, originalContent);
+      if (!isNewFile) {
+        fs.writeFileSync(backupPath, originalContent);
+      }
       
       try {
-        // Parse current env
+        // Parse current env (or empty for new file)
         const env = this.parseEnvFile(originalContent);
         
         // Update Facebook config
@@ -236,13 +306,24 @@ export const environmentService = {
         process.env.FACEBOOK_VERIFY_TOKEN = data.FACEBOOK_VERIFY_TOKEN;
         process.env.FACEBOOK_OAUTH_REDIRECT_URI = data.FACEBOOK_OAUTH_REDIRECT_URI;
         
+        // Build message based on environment
+        let message = 'Facebook webhook configuration updated successfully';
+        if (isCPanel) {
+          message += '. Note: In cPanel, you may also need to add these variables in Node.js Selector environment variables section for persistence after app restart.';
+        }
+        if (isNewFile) {
+          message = 'Created new .env file and saved Facebook webhook configuration. ' + message;
+        }
+        
         return {
-          message: 'Facebook webhook configuration updated successfully',
+          message,
           envPath,
+          isCPanel,
+          requiresRestart: isCPanel,
         };
       } catch (writeError: any) {
         // Restore from backup on error
-        if (fs.existsSync(backupPath)) {
+        if (!isNewFile && fs.existsSync(backupPath)) {
           fs.writeFileSync(envPath, originalContent, 'utf-8');
         }
         throw new AppError(`Failed to update environment file: ${writeError.message}`, 500);
