@@ -16,6 +16,7 @@ import { ClientCampaigns } from './pages/ClientCampaigns';
 import { ClientLeads } from './pages/ClientLeads';
 import { ProjectSign } from './pages/ProjectSign';
 import { Inbox } from './pages/Inbox';
+import InboxReport from './pages/InboxReport';
 import { Settings } from './pages/Settings';
 import { Companies } from './pages/Companies';
 import { Employees } from './pages/Employees';
@@ -93,6 +94,18 @@ function App() {
                 <ProtectedRoute>
                   <Layout>
                     <Inbox />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/inbox-report"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <PermissionGuard permission="can_manage_root_items">
+                      <InboxReport />
+                    </PermissionGuard>
                   </Layout>
                 </ProtectedRoute>
               }

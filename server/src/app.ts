@@ -89,6 +89,7 @@ import paymentGatewayRoutes from './routes/paymentGateway.routes.js';
 import paymentRoutes from './routes/payment.routes.js';
 import facebookOAuthRoutes from './routes/facebookOAuth.routes.js';
 import environmentRoutes from './routes/environment.routes.js';
+import inboxReportRoutes from './routes/inbox-report.routes.js';
 app.use('/api/auth', authRoutes);
 app.use('/api', socialRoutes);
 app.use('/api/integrations', integrationRoutes);
@@ -120,6 +121,7 @@ app.use('/api/blog', blogRoutes);
 app.use('/api/payment-gateways', paymentGatewayRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/admin/environment', environmentRoutes);
+app.use('/api/admin/inbox-report', inboxReportRoutes);
 // app.use('/api/users', userRoutes);
 
 // Global error handling middleware

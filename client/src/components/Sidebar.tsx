@@ -67,7 +67,15 @@ const menuSections: MenuSection[] = [
     label: '',
     items: [
       { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-      { label: 'Inbox', icon: MessageSquare, path: '/inbox', permission: 'can_manage_inbox' },
+      {
+        label: 'Inbox',
+        icon: MessageSquare,
+        permission: 'can_manage_inbox',
+        submenu: [
+          { label: 'All Messages', path: '/inbox', icon: MessageSquare },
+          { label: 'Inbox Report', path: '/inbox-report', icon: BarChart3 },
+        ]
+      },
     ]
   },
   // Section 2: CRM & Sales (সিআরএম এবং বিক্রয়)
