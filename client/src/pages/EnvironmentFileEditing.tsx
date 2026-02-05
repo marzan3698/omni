@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { environmentApi, type FacebookConfig } from '@/lib/environment';
+import { environmentApi, type FacebookConfig, type WebhookUrls } from '@/lib/environment';
 import {
   FileCode,
   Save,
@@ -33,6 +33,8 @@ import {
   Key,
   Webhook,
   Link as LinkIcon,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -45,16 +47,54 @@ const facebookConfigSchema = z.object({
 
 type FacebookConfigFormData = z.infer<typeof facebookConfigSchema>;
 
+function CopyableField({
+  label,
+  value,
+  onCopy,
+  copied,
+}: {
+  label: string;
+  value: string;
+  onCopy: () => void;
+  copied: boolean;
+}) {
+  return (
+    <div className="space-y-1">
+      <Label className="text-sm font-medium text-slate-700">{label}</Label>
+      <div className="flex gap-2">
+        <Input readOnly value={value} className="font-mono text-sm bg-slate-50" />
+        <Button type="button" variant="outline" size="icon" onClick={onCopy} title="Copy">
+          {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export default function EnvironmentFileEditing() {
   const queryClient = useQueryClient();
   const [showSecret, setShowSecret] = useState(false);
   const [showDocs, setShowDocs] = useState(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
 
   // Fetch current configuration
   const { data: config, isLoading, error } = useQuery({
     queryKey: ['facebook-config'],
     queryFn: () => environmentApi.getFacebookConfig(),
   });
+
+  // Fetch webhook URLs (domain-agnostic; works for any deployed domain)
+  const { data: webhookUrls, isLoading: urlsLoading } = useQuery({
+    queryKey: ['webhook-urls'],
+    queryFn: () => environmentApi.getWebhookUrls(),
+  });
+
+  const copyToClipboard = (text: string, field: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedField(field);
+      setTimeout(() => setCopiedField(null), 2000);
+    });
+  };
 
   const {
     register,
@@ -252,6 +292,61 @@ export default function EnvironmentFileEditing() {
                 </Button>
               </div>
             </form>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Required URLs - Facebook এ কপি করে ব্যবহার করুন */}
+      <Card className="shadow-sm border-gray-200 mb-6">
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-green-100 rounded-lg">
+              <LinkIcon className="h-6 w-6 text-green-600" />
+            </div>
+            <div>
+              <CardTitle>প্রয়োজনীয় URL (Required URLs for Facebook)</CardTitle>
+              <CardDescription>
+                Facebook App (Messenger API Settings) এ এই URL ও Verify Token কপি করে দিন। ডিপ্লয় করা ডোমেইন অনুযায়ী অটো আপডেট হয়। Production এ সার্ভার env এ API_URL বা PUBLIC_URL সেট করুন।
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {urlsLoading || !webhookUrls ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-indigo-600" />
+              <span className="ml-2 text-gray-600">Loading URLs...</span>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <p className="text-sm text-slate-600 mb-4">
+                নিচের প্রতিটি মান কপি করে Facebook Developer Console → আপনার অ্যাপ → Use cases → Messenger → Configure webhooks এ যথাক্রমে ব্যবহার করুন।
+              </p>
+              <CopyableField
+                label="1. Callback URL (Facebook Webhook এ দেবেন)"
+                value={webhookUrls.webhookCallbackUrl}
+                onCopy={() => copyToClipboard(webhookUrls.webhookCallbackUrl, 'callback')}
+                copied={copiedField === 'callback'}
+              />
+              <CopyableField
+                label="2. Verify token (Facebook Verify token ফিল্ডে দেবেন)"
+                value={webhookUrls.verifyToken}
+                onCopy={() => copyToClipboard(webhookUrls.verifyToken, 'verify')}
+                copied={copiedField === 'verify'}
+              />
+              <CopyableField
+                label="3. OAuth Redirect URI (প্রয়োজনে Facebook OAuth settings এ)"
+                value={webhookUrls.oauthRedirectUri}
+                onCopy={() => copyToClipboard(webhookUrls.oauthRedirectUri, 'oauth')}
+                copied={copiedField === 'oauth'}
+              />
+              <CopyableField
+                label="Base URL (সার্ভার পাবলিক ঠিকানা)"
+                value={webhookUrls.baseUrl}
+                onCopy={() => copyToClipboard(webhookUrls.baseUrl, 'base')}
+                copied={copiedField === 'base'}
+              />
+            </div>
           )}
         </CardContent>
       </Card>

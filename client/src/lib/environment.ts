@@ -8,6 +8,13 @@ export interface FacebookConfig {
   FACEBOOK_OAUTH_REDIRECT_URI: string;
 }
 
+export interface WebhookUrls {
+  baseUrl: string;
+  webhookCallbackUrl: string;
+  oauthRedirectUri: string;
+  verifyToken: string;
+}
+
 export const environmentApi = {
   /**
    * Get Facebook webhook configuration
@@ -36,5 +43,19 @@ export const environmentApi = {
     }
 
     throw new Error(response.data.message || 'Failed to update Facebook configuration');
+  },
+
+  /**
+   * Get webhook URLs for current deployment (domain-agnostic)
+   * Use in Super Admin dashboard to copy into Facebook App settings
+   */
+  async getWebhookUrls(): Promise<WebhookUrls> {
+    const response = await apiClient.get<ApiResponse<WebhookUrls>>('/admin/environment/webhook-urls');
+
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+
+    throw new Error(response.data.message || 'Failed to fetch webhook URLs');
   },
 };

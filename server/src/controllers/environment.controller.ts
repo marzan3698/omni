@@ -49,4 +49,38 @@ export const environmentController = {
       return sendError(res, error.message || 'Failed to update Facebook configuration', error.statusCode || 500);
     }
   },
+
+  /**
+   * Get webhook URLs for current deployment (domain-agnostic)
+   * GET /api/admin/environment/webhook-urls
+   * Used by Super Admin to copy URLs into Facebook App (Callback URL, Verify Token, OAuth Redirect URI).
+   */
+  getWebhookUrls: async (req: AuthRequest, res: Response) => {
+    try {
+      const config = environmentService.readFacebookConfig();
+      // Resolve base URL: env (for auto-deploy/domain) or request host
+      const fromEnv =
+        process.env.API_URL ||
+        process.env.PUBLIC_URL ||
+        process.env.NGROK_URL ||
+        process.env.BASE_URL ||
+        '';
+      const fromRequest =
+        `${req.get('x-forwarded-proto') || req.protocol}://${req.get('x-forwarded-host') || req.get('host') || ''}`.replace(
+          /\/$/,
+          ''
+        );
+      const baseUrl = (fromEnv ? fromEnv.replace(/\/$/, '') : fromRequest) || 'https://your-domain.com';
+
+      const data = {
+        baseUrl,
+        webhookCallbackUrl: `${baseUrl}/api/webhooks/facebook`,
+        oauthRedirectUri: `${baseUrl}/api/integrations/facebook/callback`,
+        verifyToken: config.FACEBOOK_VERIFY_TOKEN || '',
+      };
+      return sendSuccess(res, data, 'Webhook URLs retrieved successfully');
+    } catch (error: any) {
+      return sendError(res, error.message || 'Failed to get webhook URLs', error.statusCode || 500);
+    }
+  },
 };
