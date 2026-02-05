@@ -866,6 +866,7 @@ model Integration {
 enum SocialPlatform {
   facebook
   chatwoot
+  whatsapp
 
   @@map("social_platform")
 }

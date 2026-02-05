@@ -6,6 +6,7 @@ import crypto from 'crypto';
 const FACEBOOK_APP_ID = process.env.FACEBOOK_APP_ID;
 const FACEBOOK_APP_SECRET = process.env.FACEBOOK_APP_SECRET;
 const FACEBOOK_OAUTH_REDIRECT_URI = process.env.FACEBOOK_OAUTH_REDIRECT_URI || 'http://localhost:5001/api/integrations/facebook/callback';
+const FACEBOOK_CONFIG_ID = process.env.FACEBOOK_CONFIG_ID; // Optional: Facebook Login for Business configuration ID
 const FACEBOOK_GRAPH_API_VERSION = 'v18.0';
 
 // Store OAuth state and temporary tokens (in production, use Redis or database)
@@ -50,12 +51,15 @@ export const facebookOAuthService = {
       'pages_manage_metadata', // Subscribe to webhooks
     ].join(',');
 
-    const authUrl = `https://www.facebook.com/${FACEBOOK_GRAPH_API_VERSION}/dialog/oauth?` +
+    let authUrl = `https://www.facebook.com/${FACEBOOK_GRAPH_API_VERSION}/dialog/oauth?` +
       `client_id=${FACEBOOK_APP_ID}&` +
       `redirect_uri=${encodeURIComponent(FACEBOOK_OAUTH_REDIRECT_URI)}&` +
       `scope=${scopes}&` +
       `state=${state}&` +
       `response_type=code`;
+    if (FACEBOOK_CONFIG_ID) {
+      authUrl += `&config_id=${FACEBOOK_CONFIG_ID}`;
+    }
 
     return { url: authUrl, state };
   },

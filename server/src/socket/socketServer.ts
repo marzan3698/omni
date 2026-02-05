@@ -2,6 +2,7 @@ import { Server as HTTPServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import { socketAuth } from './socketAuth.js';
 import { setupTaskConversationHandlers } from './taskConversationHandlers.js';
+import { setupWhatsAppHandlers } from './whatsappHandlers.js';
 
 /**
  * Initialize Socket.IO server
@@ -31,6 +32,7 @@ export const initializeSocketIO = (httpServer: HTTPServer): SocketIOServer => {
 
     // Setup task conversation handlers
     setupTaskConversationHandlers(io, socket);
+    setupWhatsAppHandlers(io, socket);
 
     // Handle disconnection
     socket.on('disconnect', (reason) => {

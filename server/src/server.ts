@@ -1,8 +1,9 @@
 import app from './app.js';
 import { createServer } from 'http';
 import { initializeSocketIO } from './socket/socketServer.js';
+import { restoreActiveWhatsAppClients } from './services/whatsapp.service.js';
 
-const PORT = process.env.PORT || 5001;
+const PORT = Number(process.env.PORT) || 5001;
 
 // Create HTTP server
 const httpServer = createServer(app);
@@ -17,6 +18,8 @@ httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server is running on http://0.0.0.0:${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔌 Socket.IO server initialized`);
+  // Restore WhatsApp clients for companies with active integration (so messages are received after restart)
+  setImmediate(() => restoreActiveWhatsAppClients());
 });
 
 // Handle errors

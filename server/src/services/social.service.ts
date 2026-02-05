@@ -503,8 +503,9 @@ export const socialService = {
     const platformBreakdown = {
       facebook: platformCounts.find((p) => p.platform === 'facebook')?._count._all || 0,
       chatwoot: platformCounts.find((p) => p.platform === 'chatwoot')?._count._all || 0,
+      whatsapp: platformCounts.find((p) => p.platform === 'whatsapp')?._count._all || 0,
       other: platformCounts.reduce((sum, p) => {
-        if (p.platform === 'facebook' || p.platform === 'chatwoot') return sum;
+        if (p.platform === 'facebook' || p.platform === 'chatwoot' || p.platform === 'whatsapp') return sum;
         return sum + p._count._all;
       }, 0),
     };
@@ -805,6 +806,19 @@ export const socialService = {
       return message;
     }
 
+    // For WhatsApp platform, send via whatsapp-web.js client
+    if (conversation.platform === 'whatsapp') {
+      const { sendMessage } = await import('./whatsapp.service.js');
+      const text = content?.trim() || (imageUrl ? '[Image]' : '');
+      if (!text) {
+        throw new AppError('Message content or image is required', 400);
+      }
+      const result = await sendMessage(conversation.companyId, conversation.externalUserId, text);
+      if (!result.success) {
+        throw new AppError(result.error || 'Failed to send WhatsApp message', 400);
+      }
+    }
+
     // For Facebook platform, send via Facebook Messenger API
     console.log('🔍 Checking conversation platform:', {
       conversationId: conversation.id,
@@ -956,9 +970,8 @@ export const socialService = {
           error.response?.status || 500
         );
       }
-    } else {
-      console.log('⚠️ Conversation platform is not Facebook:', conversation.platform);
-      console.log('💡 If this is a Facebook conversation, check the conversation platform in database');
+    } else if (conversation.platform !== 'whatsapp' && conversation.platform !== 'chatwoot') {
+      console.log('⚠️ Unknown conversation platform:', conversation.platform);
       console.log('💡 Conversation details:', {
         id: conversation.id,
         platform: conversation.platform,

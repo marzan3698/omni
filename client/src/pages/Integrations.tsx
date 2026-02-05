@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { integrationApi, type CreateIntegrationData } from '@/lib/integration';
 import { facebookOAuthApi } from '@/lib/facebookOAuth';
+import { whatsappApi } from '@/lib/whatsapp';
 import {
   Facebook,
   MessageSquare,
@@ -16,7 +17,9 @@ import {
   CheckCircle,
   AlertCircle,
   Power,
+  Smartphone,
 } from 'lucide-react';
+import WhatsAppQRModal from '@/components/WhatsAppQRModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { PermissionGuard } from '@/components/PermissionGuard';
 import MessengerSetupGuide from '@/components/MessengerSetupGuide';
@@ -33,6 +36,18 @@ export default function Integrations() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [isConnecting, setIsConnecting] = useState(false);
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
+
+  // WhatsApp status (connected or not)
+  const { data: whatsappStatusRes, refetch: refetchWhatsAppStatus } = useQuery({
+    queryKey: ['whatsapp-status'],
+    queryFn: async () => {
+      const res = await whatsappApi.getStatus();
+      return res.data?.data as { connected: boolean };
+    },
+    enabled: !!user?.companyId,
+  });
+  const whatsappConnected = whatsappStatusRes?.connected ?? false;
 
   // Fetch integrations
   const { data: integrationsResponse, isLoading } = useQuery({
@@ -92,8 +107,32 @@ export default function Integrations() {
     navigate('/settings');
   };
 
+  const handleWhatsAppConnect = async () => {
+    try {
+      setIsConnecting(true);
+      setShowWhatsAppModal(true); // Show modal immediately
+      await whatsappApi.connect(); // API call runs in background
+    } catch (err: any) {
+      alert(err?.response?.data?.message || err?.message || 'Failed to start WhatsApp connection');
+      setShowWhatsAppModal(false);
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  const handleWhatsAppDisconnect = async () => {
+    try {
+      await whatsappApi.disconnect();
+      queryClient.invalidateQueries({ queryKey: ['integrations'] });
+      queryClient.invalidateQueries({ queryKey: ['whatsapp-status'] });
+    } catch (err: any) {
+      alert(err?.response?.data?.message || err?.message || 'Failed to disconnect');
+    }
+  };
+
   const facebookIntegrations = integrations.filter((i) => i.provider === 'facebook');
   const chatwootIntegrations = integrations.filter((i) => i.provider === 'chatwoot');
+  const whatsappIntegrations = integrations.filter((i) => i.provider === 'whatsapp');
 
   return (
     <div className="container mx-auto p-6">
@@ -200,9 +239,89 @@ export default function Integrations() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* WhatsApp (Web) Card */}
+            <Card className="shadow-sm border-gray-200 hover:shadow-md transition-shadow">
+              <CardHeader>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <Smartphone className="h-6 w-6 text-green-600" />
+                  </div>
+                  <CardTitle className="text-xl">WhatsApp (Web)</CardTitle>
+                </div>
+                <CardDescription>
+                  QR স্ক্যান করে কানেক্ট করুন
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      <span>WhatsApp Web দিয়ে মেসেজ</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      <span>একটি ফোন একবার কানেক্ট</span>
+                    </div>
+                  </div>
+                  {whatsappConnected ? (
+                    <div className="flex flex-col gap-2">
+                      <span className="text-sm font-medium text-green-600">Connected</span>
+                      <Button
+                        variant="outline"
+                        onClick={handleWhatsAppDisconnect}
+                        className="w-full border-gray-300 text-gray-700"
+                      >
+                        <Power className="mr-2 h-4 w-4" />
+                        Disconnect
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      onClick={handleWhatsAppConnect}
+                      disabled={isConnecting}
+                      className="w-full bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      {isConnecting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Connecting...
+                        </>
+                      ) : (
+                        <>
+                          <Smartphone className="mr-2 h-4 w-4" />
+                          Connect WhatsApp
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </PermissionGuard>
+
+      <WhatsAppQRModal
+        isOpen={showWhatsAppModal}
+        onClose={() => {
+          setShowWhatsAppModal(false);
+          queryClient.invalidateQueries({ queryKey: ['integrations'] });
+          queryClient.invalidateQueries({ queryKey: ['whatsapp-status'] });
+        }}
+        onConnected={() => {
+          queryClient.invalidateQueries({ queryKey: ['integrations'] });
+          queryClient.invalidateQueries({ queryKey: ['whatsapp-status'] });
+        }}
+        onRetry={async () => {
+          try {
+            await whatsappApi.connect();
+          } catch (e) {
+            console.error(e);
+          }
+        }}
+      />
 
       {/* Connected Integrations */}
       {!isLoading && integrations.length > 0 && (
@@ -219,10 +338,16 @@ export default function Integrations() {
                           <MessageSquare className="h-5 w-5 text-purple-600" />
                         ) : integration.provider === 'facebook' ? (
                           <Facebook className="h-5 w-5 text-blue-600" />
+                        ) : integration.provider === 'whatsapp' ? (
+                          <Smartphone className="h-5 w-5 text-green-600" />
                         ) : (
                           <Plug className="h-5 w-5" />
                         )}
-                        {integration.provider === 'facebook' ? 'Direct Messenger' : 'Chatwoot'}
+                        {integration.provider === 'facebook'
+                          ? 'Direct Messenger'
+                          : integration.provider === 'whatsapp'
+                            ? 'WhatsApp (Web)'
+                            : 'Chatwoot'}
                       </CardTitle>
                       <CardDescription className="mt-1">
                         {integration.provider === 'chatwoot'
@@ -250,38 +375,57 @@ export default function Integrations() {
                           )}
                         </span>
                         <span className="px-2 py-1 text-xs rounded-full bg-indigo-100 text-indigo-700">
-                          {integration.provider === 'facebook' ? 'Direct' : 'Chatwoot'}
+                          {integration.provider === 'facebook'
+                            ? 'Direct'
+                            : integration.provider === 'whatsapp'
+                              ? 'WhatsApp'
+                              : 'Chatwoot'}
                         </span>
                       </div>
                     </div>
                     <PermissionGuard permission="can_manage_integrations">
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleToggleActive(integration)}
-                          disabled={toggleActiveMutation.isPending}
-                          className={
-                            integration.isActive
-                              ? 'text-green-600 hover:text-green-700 hover:bg-green-50'
-                              : 'text-gray-600 hover:text-gray-700'
-                          }
-                          title={integration.isActive ? 'Deactivate' : 'Activate'}
-                        >
-                          {toggleActiveMutation.isPending ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
+                      <div className="flex gap-2 flex-wrap">
+                        {integration.provider === 'whatsapp' && whatsappConnected && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleWhatsAppDisconnect}
+                            className="text-amber-600 hover:text-amber-700"
+                            title="Disconnect WhatsApp"
+                          >
                             <Power className="h-4 w-4" />
-                          )}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => navigate('/settings')}
-                          title="Edit"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
+                          </Button>
+                        )}
+                        {integration.provider !== 'whatsapp' && (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleToggleActive(integration)}
+                              disabled={toggleActiveMutation.isPending}
+                              className={
+                                integration.isActive
+                                  ? 'text-green-600 hover:text-green-700 hover:bg-green-50'
+                                  : 'text-gray-600 hover:text-gray-700'
+                              }
+                              title={integration.isActive ? 'Deactivate' : 'Activate'}
+                            >
+                              {toggleActiveMutation.isPending ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Power className="h-4 w-4" />
+                              )}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => navigate('/settings')}
+                              title="Edit"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
                         <Button
                           variant="outline"
                           size="sm"
