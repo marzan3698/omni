@@ -13,13 +13,14 @@ export interface ConversationLabel {
 
 export interface SocialConversation {
   id: number;
-  platform: 'facebook' | 'chatwoot';
+  platform: 'facebook' | 'chatwoot' | 'whatsapp';
   externalUserId: string;
   externalUserName: string | null;
   status: 'Open' | 'Closed';
   lastMessageAt: string | null;
   assignedTo?: number | null;
   assignedAt?: string | null;
+  whatsappSlotId?: string | null;
   assignedEmployee?: {
     id: number;
     user: {

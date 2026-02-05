@@ -896,6 +896,7 @@ model SocialConversation {
   lastMessageAt    DateTime?          @map("last_message_at") @db.DateTime
   assignedTo       Int?               @map("assigned_to")
   assignedAt       DateTime?          @map("assigned_at") @db.DateTime
+  whatsappSlotId   String?            @map("whatsapp_slot_id") @db.VarChar(10) // Slot 1-5 for multi-WhatsApp
   createdAt        DateTime           @default(now()) @map("created_at")
   updatedAt        DateTime           @updatedAt @map("updated_at")
 
@@ -912,6 +913,7 @@ model SocialConversation {
   @@index([status])
   @@index([lastMessageAt])
   @@index([assignedTo])
+  @@index([whatsappSlotId])
   @@map("social_conversations")
 }
 

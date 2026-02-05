@@ -37,17 +37,19 @@ export default function Integrations() {
   const navigate = useNavigate();
   const [isConnecting, setIsConnecting] = useState(false);
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
+  const [connectingSlotId, setConnectingSlotId] = useState<string | null>(null);
 
-  // WhatsApp status (connected or not)
-  const { data: whatsappStatusRes, refetch: refetchWhatsAppStatus } = useQuery({
-    queryKey: ['whatsapp-status'],
+  // WhatsApp slots (up to 5)
+  const { data: whatsappSlotsRes, refetch: refetchWhatsAppSlots } = useQuery({
+    queryKey: ['whatsapp-slots'],
     queryFn: async () => {
-      const res = await whatsappApi.getStatus();
-      return res.data?.data as { connected: boolean };
+      const res = await whatsappApi.listSlots();
+      return res.data?.data as { slotId: string; connected: boolean; phoneNumber?: string }[];
     },
     enabled: !!user?.companyId,
   });
-  const whatsappConnected = whatsappStatusRes?.connected ?? false;
+  const whatsappSlots = whatsappSlotsRes ?? [];
+  const whatsappConnectedCount = whatsappSlots.filter((s) => s.connected).length;
 
   // Fetch integrations
   const { data: integrationsResponse, isLoading } = useQuery({
@@ -107,24 +109,26 @@ export default function Integrations() {
     navigate('/settings');
   };
 
-  const handleWhatsAppConnect = async () => {
+  const handleWhatsAppConnect = async (slotId: string) => {
     try {
       setIsConnecting(true);
-      setShowWhatsAppModal(true); // Show modal immediately
-      await whatsappApi.connect(); // API call runs in background
+      setConnectingSlotId(slotId);
+      setShowWhatsAppModal(true);
+      await whatsappApi.connect(slotId);
     } catch (err: any) {
       alert(err?.response?.data?.message || err?.message || 'Failed to start WhatsApp connection');
       setShowWhatsAppModal(false);
+      setConnectingSlotId(null);
     } finally {
       setIsConnecting(false);
     }
   };
 
-  const handleWhatsAppDisconnect = async () => {
+  const handleWhatsAppDisconnect = async (slotId: string) => {
     try {
-      await whatsappApi.disconnect();
+      await whatsappApi.disconnect(slotId);
       queryClient.invalidateQueries({ queryKey: ['integrations'] });
-      queryClient.invalidateQueries({ queryKey: ['whatsapp-status'] });
+      queryClient.invalidateQueries({ queryKey: ['whatsapp-slots'] });
     } catch (err: any) {
       alert(err?.response?.data?.message || err?.message || 'Failed to disconnect');
     }
@@ -240,62 +244,75 @@ export default function Integrations() {
               </CardContent>
             </Card>
 
-            {/* WhatsApp (Web) Card */}
+            {/* WhatsApp Slots Card (max 5) */}
             <Card className="shadow-sm border-gray-200 hover:shadow-md transition-shadow">
               <CardHeader>
                 <div className="flex items-center gap-3 mb-2">
                   <div className="p-2 bg-green-100 rounded-lg">
                     <Smartphone className="h-6 w-6 text-green-600" />
                   </div>
-                  <CardTitle className="text-xl">WhatsApp (Web)</CardTitle>
+                  <CardTitle className="text-xl">WhatsApp Slots</CardTitle>
                 </div>
                 <CardDescription>
-                  QR স্ক্যান করে কানেক্ট করুন
+                  সর্বোচ্চ ৫টি নম্বর কানেক্ট করুন - সব মেসেজ ইনবক্সে জমা হবে
                 </CardDescription>
+                <p className="text-sm text-gray-500 mt-1">
+                  {whatsappConnectedCount}/5 Connected
+                </p>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                      <span>WhatsApp Web দিয়ে মেসেজ</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                      <span>একটি ফোন একবার কানেক্ট</span>
-                    </div>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <span>প্রতি স্লটে একটি ফোন - QR দিয়ে কানেক্ট করুন</span>
                   </div>
-                  {whatsappConnected ? (
-                    <div className="flex flex-col gap-2">
-                      <span className="text-sm font-medium text-green-600">Connected</span>
-                      <Button
-                        variant="outline"
-                        onClick={handleWhatsAppDisconnect}
-                        className="w-full border-gray-300 text-gray-700"
+                  {[1, 2, 3, 4, 5].map((n) => {
+                    const slotId = String(n);
+                    const slot = whatsappSlots.find((s) => s.slotId === slotId);
+                    const connected = slot?.connected ?? false;
+                    const phone = slot?.phoneNumber;
+                    const isThisSlotConnecting = connectingSlotId === slotId && isConnecting;
+                    return (
+                      <div
+                        key={slotId}
+                        className="flex items-center justify-between gap-3 py-2 px-3 rounded-lg border border-gray-200 bg-gray-50/50"
                       >
-                        <Power className="mr-2 h-4 w-4" />
-                        Disconnect
-                      </Button>
-                    </div>
-                  ) : (
-                    <Button
-                      onClick={handleWhatsAppConnect}
-                      disabled={isConnecting}
-                      className="w-full bg-green-600 hover:bg-green-700 text-white"
-                    >
-                      {isConnecting ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Connecting...
-                        </>
-                      ) : (
-                        <>
-                          <Smartphone className="mr-2 h-4 w-4" />
-                          Connect WhatsApp
-                        </>
-                      )}
-                    </Button>
-                  )}
+                        <span className="text-sm font-medium text-slate-700">
+                          Slot {slotId}: {connected && phone ? `+${phone}` : 'Empty'}
+                        </span>
+                        {connected ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleWhatsAppDisconnect(slotId)}
+                            className="border-gray-300 text-gray-700"
+                          >
+                            <Power className="mr-1 h-3 w-3" />
+                            Disconnect
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            onClick={() => handleWhatsAppConnect(slotId)}
+                            disabled={isConnecting}
+                            className="bg-green-600 hover:bg-green-700 text-white"
+                          >
+                            {isThisSlotConnecting ? (
+                              <>
+                                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                                Connecting...
+                              </>
+                            ) : (
+                              <>
+                                <Smartphone className="mr-1 h-3 w-3" />
+                                Connect
+                              </>
+                            )}
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
@@ -305,18 +322,22 @@ export default function Integrations() {
 
       <WhatsAppQRModal
         isOpen={showWhatsAppModal}
+        slotId={connectingSlotId ?? '1'}
         onClose={() => {
           setShowWhatsAppModal(false);
+          setConnectingSlotId(null);
           queryClient.invalidateQueries({ queryKey: ['integrations'] });
-          queryClient.invalidateQueries({ queryKey: ['whatsapp-status'] });
+          queryClient.invalidateQueries({ queryKey: ['whatsapp-slots'] });
         }}
         onConnected={() => {
           queryClient.invalidateQueries({ queryKey: ['integrations'] });
-          queryClient.invalidateQueries({ queryKey: ['whatsapp-status'] });
+          queryClient.invalidateQueries({ queryKey: ['whatsapp-slots'] });
+          setConnectingSlotId(null);
         }}
         onRetry={async () => {
+          const slot = connectingSlotId ?? '1';
           try {
-            await whatsappApi.connect();
+            await whatsappApi.connect(slot);
           } catch (e) {
             console.error(e);
           }
@@ -352,7 +373,11 @@ export default function Integrations() {
                       <CardDescription className="mt-1">
                         {integration.provider === 'chatwoot'
                           ? `Inbox ID: ${integration.pageId}`
-                          : `Page ID: ${integration.pageId}`}
+                          : integration.provider === 'whatsapp'
+                            ? (integration.pageId?.match(/whatsapp-slot-(.+)/)
+                                ? `Slot ${integration.pageId.match(/whatsapp-slot-(.+)/)?.[1]}`
+                                : `Page ID: ${integration.pageId}`)
+                            : `Page ID: ${integration.pageId}`}
                       </CardDescription>
                       <div className="mt-2 flex items-center gap-2 flex-wrap">
                         <span
@@ -385,17 +410,22 @@ export default function Integrations() {
                     </div>
                     <PermissionGuard permission="can_manage_integrations">
                       <div className="flex gap-2 flex-wrap">
-                        {integration.provider === 'whatsapp' && whatsappConnected && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleWhatsAppDisconnect}
-                            className="text-amber-600 hover:text-amber-700"
-                            title="Disconnect WhatsApp"
-                          >
-                            <Power className="h-4 w-4" />
-                          </Button>
-                        )}
+                        {integration.provider === 'whatsapp' && (() => {
+                          const slotMatch = integration.pageId?.match(/whatsapp-slot-(.+)/);
+                          const slotId = slotMatch ? slotMatch[1] : '1';
+                          const slotConnected = whatsappSlots.some((s) => s.slotId === slotId && s.connected);
+                          return slotConnected ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleWhatsAppDisconnect(slotId)}
+                              className="text-amber-600 hover:text-amber-700"
+                              title="Disconnect WhatsApp"
+                            >
+                              <Power className="h-4 w-4" />
+                            </Button>
+                          ) : null;
+                        })()}
                         {integration.provider !== 'whatsapp' && (
                           <>
                             <Button

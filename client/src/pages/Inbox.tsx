@@ -942,7 +942,14 @@ export function Inbox() {
                                   <MessageSquare className="w-4 h-4 text-indigo-600 flex-shrink-0" />
                                 )}
                                 {conversation.platform === 'whatsapp' && (
-                                  <WhatsAppIcon className="w-4 h-4 text-green-500 flex-shrink-0" />
+                                  <>
+                                    <WhatsAppIcon className="w-4 h-4 text-green-500 flex-shrink-0" />
+                                    {conversation.whatsappSlotId && (
+                                      <span className="text-[10px] font-medium text-green-600 bg-green-50 px-1 rounded" title={`Slot ${conversation.whatsappSlotId}`}>
+                                        S{conversation.whatsappSlotId}
+                                      </span>
+                                    )}
+                                  </>
                                 )}
                             <p className="text-sm font-medium text-slate-900 truncate">
                               {conversation.externalUserName || `User ${conversation.externalUserId.slice(0, 8)}`}
@@ -1096,7 +1103,7 @@ export function Inbox() {
                         {selectedConversation.platform === 'facebook' && <FacebookIcon className="w-3.5 h-3.5 text-blue-600" />}
                         {selectedConversation.platform === 'chatwoot' && <MessageSquare className="w-3.5 h-3.5 text-indigo-600" />}
                         {selectedConversation.platform === 'whatsapp' && <WhatsAppIcon className="w-3.5 h-3.5 text-green-500" />}
-                        {selectedConversation.platform === 'chatwoot' ? 'Chatwoot' : selectedConversation.platform === 'facebook' ? 'Facebook' : selectedConversation.platform === 'whatsapp' ? 'WhatsApp' : selectedConversation.platform}
+                        {selectedConversation.platform === 'chatwoot' ? 'Chatwoot' : selectedConversation.platform === 'facebook' ? 'Facebook' : selectedConversation.platform === 'whatsapp' ? `WhatsApp${selectedConversation.whatsappSlotId ? ` (Slot ${selectedConversation.whatsappSlotId})` : ''}` : selectedConversation.platform}
                       </p>
                       {selectedConversation.labels && selectedConversation.labels.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-2">

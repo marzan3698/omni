@@ -808,12 +808,15 @@ export const socialService = {
 
     // For WhatsApp platform, send via whatsapp-web.js client
     if (conversation.platform === 'whatsapp') {
-      const { sendMessage } = await import('./whatsapp.service.js');
+      const { sendMessage, isValidSlotId } = await import('./whatsapp.service.js');
       const text = content?.trim() || (imageUrl ? '[Image]' : '');
       if (!text) {
         throw new AppError('Message content or image is required', 400);
       }
-      const result = await sendMessage(conversation.companyId, conversation.externalUserId, text);
+      const slotId = conversation.whatsappSlotId && isValidSlotId(conversation.whatsappSlotId)
+        ? conversation.whatsappSlotId
+        : '1';
+      const result = await sendMessage(conversation.companyId, slotId, conversation.externalUserId, text);
       if (!result.success) {
         throw new AppError(result.error || 'Failed to send WhatsApp message', 400);
       }

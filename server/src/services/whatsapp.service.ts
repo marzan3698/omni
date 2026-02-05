@@ -10,41 +10,63 @@ const { Client, LocalAuth } = require('whatsapp-web.js');
 
 type SocketIOServer = import('socket.io').Server;
 
-const WHATSAPP_PAGE_ID = 'whatsapp-web';
+const MAX_SLOTS = 5;
+const VALID_SLOT_IDS = ['1', '2', '3', '4', '5'];
+
+function getPageId(slotId: string): string {
+  return `whatsapp-slot-${slotId}`;
+}
 
 interface WhatsAppClientState {
   client: any;
   isReady: boolean;
+  companyId: number;
+  slotId: string;
 }
 
-const clients = new Map<number, WhatsAppClientState>();
+const clients = new Map<string, WhatsAppClientState>();
+
+function getClientKey(companyId: number, slotId: string): string {
+  return `${companyId}-${slotId}`;
+}
 
 function getIO(): SocketIOServer | null {
   return (global as any).io || null;
 }
 
-function emitToCompany(companyId: number, event: string, ...args: any[]) {
+function emitToCompanySlot(companyId: number, slotId: string, event: string, ...args: any[]) {
   const io = getIO();
   if (!io) return;
-  io.to(`whatsapp-${companyId}`).emit(event, ...args);
+  io.to(`whatsapp-${companyId}-${slotId}`).emit(event, ...args);
+}
+
+export function isValidSlotId(slotId: string): boolean {
+  return VALID_SLOT_IDS.includes(slotId);
 }
 
 /**
- * Initialize WhatsApp client for a company. Generates QR and emits via Socket.IO.
+ * Initialize WhatsApp client for a company slot. Generates QR and emits via Socket.IO.
  * Returns immediately - QR code will be sent via socket when ready.
  */
-export async function initializeClient(companyId: number): Promise<{ success: boolean; message?: string }> {
-  if (clients.has(companyId)) {
-    const state = clients.get(companyId)!;
+export async function initializeClient(
+  companyId: number,
+  slotId: string
+): Promise<{ success: boolean; message?: string }> {
+  if (!isValidSlotId(slotId)) {
+    return { success: false, message: 'Invalid slot. Use 1-5.' };
+  }
+  const key = getClientKey(companyId, slotId);
+  if (clients.has(key)) {
+    const state = clients.get(key)!;
     if (state.isReady) {
       return { success: true, message: 'Already connected' };
     }
-    await disconnectClient(companyId);
+    await disconnectClient(companyId, slotId);
   }
 
   const client = new Client({
     authStrategy: new LocalAuth({
-      clientId: `company-${companyId}`,
+      clientId: `company-${companyId}-slot-${slotId}`,
       dataPath: './whatsapp-sessions',
     }),
     puppeteer: {
@@ -53,25 +75,25 @@ export async function initializeClient(companyId: number): Promise<{ success: bo
     },
   });
 
-  clients.set(companyId, { client, isReady: false });
+  clients.set(key, { client, isReady: false, companyId, slotId });
 
   client.on('qr', async (qr: string) => {
     try {
-      console.log('WhatsApp QR generated for company:', companyId);
+      console.log('WhatsApp QR generated for company:', companyId, 'slot:', slotId);
       const qrDataUrl = await QRCode.toDataURL(qr);
-      emitToCompany(companyId, 'whatsapp:qr', qrDataUrl);
+      emitToCompanySlot(companyId, slotId, `whatsapp:qr:${slotId}`, qrDataUrl);
     } catch (err) {
       console.error('WhatsApp QR code error:', err);
     }
   });
 
   client.on('ready', async () => {
-    console.log('WhatsApp client ready for company:', companyId);
-    clients.set(companyId, { client, isReady: true });
+    console.log('WhatsApp client ready for company:', companyId, 'slot:', slotId);
+    clients.set(key, { client, isReady: true, companyId, slotId });
     try {
       await integrationService.upsertIntegration({
         provider: 'whatsapp',
-        pageId: WHATSAPP_PAGE_ID,
+        pageId: getPageId(slotId),
         accessToken: 'session-active',
         companyId,
         isActive: true,
@@ -79,61 +101,83 @@ export async function initializeClient(companyId: number): Promise<{ success: bo
     } catch (e) {
       console.error('WhatsApp integration upsert error:', e);
     }
-    emitToCompany(companyId, 'whatsapp:ready');
+    emitToCompanySlot(companyId, slotId, `whatsapp:ready:${slotId}`);
   });
 
   client.on('authenticated', () => {
-    console.log('WhatsApp authenticated for company:', companyId);
-    emitToCompany(companyId, 'whatsapp:authenticated');
+    console.log('WhatsApp authenticated for company:', companyId, 'slot:', slotId);
+    emitToCompanySlot(companyId, slotId, `whatsapp:authenticated:${slotId}`);
   });
 
   client.on('auth_failure', (msg: string) => {
     console.error('WhatsApp auth failure:', msg);
-    emitToCompany(companyId, 'whatsapp:auth_failure', msg);
-    clients.delete(companyId);
+    emitToCompanySlot(companyId, slotId, `whatsapp:auth_failure:${slotId}`, msg);
+    clients.delete(key);
   });
 
   client.on('disconnected', (reason: string) => {
     console.log('WhatsApp disconnected:', reason);
-    clients.delete(companyId);
-    emitToCompany(companyId, 'whatsapp:disconnected', reason);
+    clients.delete(key);
+    emitToCompanySlot(companyId, slotId, `whatsapp:disconnected:${slotId}`, reason);
   });
 
   client.on('message', async (msg: any) => {
-    await handleIncomingMessage(companyId, msg);
+    await handleIncomingMessage(companyId, slotId, msg);
   });
 
-  // Start initialization in background - don't wait
   client.initialize().catch((err: Error) => {
     console.error('WhatsApp client init error:', err);
-    clients.delete(companyId);
-    emitToCompany(companyId, 'whatsapp:disconnected', err.message);
+    clients.delete(key);
+    emitToCompanySlot(companyId, slotId, `whatsapp:disconnected:${slotId}`, err.message);
   });
 
-  // Return immediately - QR will come via socket
   return { success: true, message: 'Initializing, QR will be sent via socket' };
 }
 
-export function getClient(companyId: number): any | null {
-  const state = clients.get(companyId);
+export function getClient(companyId: number, slotId: string): any | null {
+  const key = getClientKey(companyId, slotId);
+  const state = clients.get(key);
   return state?.isReady ? state.client : null;
 }
 
-export async function disconnectClient(companyId: number): Promise<void> {
-  const state = clients.get(companyId);
+export async function disconnectClient(companyId: number, slotId: string): Promise<void> {
+  const key = getClientKey(companyId, slotId);
+  const state = clients.get(key);
   if (!state) return;
   try {
     await state.client.destroy();
   } catch (e) {
     console.error('WhatsApp disconnect error:', e);
   }
-  clients.delete(companyId);
-  emitToCompany(companyId, 'whatsapp:disconnected', 'Disconnected by user');
+  clients.delete(key);
+  emitToCompanySlot(companyId, slotId, `whatsapp:disconnected:${slotId}`, 'Disconnected by user');
 }
 
-export function getStatus(companyId: number): { connected: boolean } {
-  const state = clients.get(companyId);
+export function getStatus(companyId: number, slotId: string): { connected: boolean } {
+  const key = getClientKey(companyId, slotId);
+  const state = clients.get(key);
   return { connected: !!(state?.isReady) };
+}
+
+export interface SlotInfo {
+  slotId: string;
+  connected: boolean;
+  phoneNumber?: string;
+}
+
+export async function listSlots(companyId: number): Promise<SlotInfo[]> {
+  const result: SlotInfo[] = [];
+  for (const slotId of VALID_SLOT_IDS) {
+    const key = getClientKey(companyId, slotId);
+    const state = clients.get(key);
+    const connected = !!(state?.isReady);
+    let phoneNumber: string | undefined;
+    if (state?.isReady && state.client?.info?.wid?.user) {
+      phoneNumber = state.client.info.wid.user;
+    }
+    result.push({ slotId, connected, phoneNumber });
+  }
+  return result;
 }
 
 /**
@@ -144,21 +188,21 @@ export async function restoreActiveWhatsAppClients(): Promise<void> {
   try {
     const integrations = await prisma.integration.findMany({
       where: { provider: 'whatsapp', isActive: true },
-      select: { companyId: true },
-      distinct: ['companyId'],
+      select: { companyId: true, pageId: true },
     });
-    const companyIds = integrations.map((i) => i.companyId);
-    if (companyIds.length === 0) {
+    if (integrations.length === 0) {
       console.log('WhatsApp: No active integrations to restore');
       return;
     }
-    console.log('WhatsApp: Restoring clients for companies:', companyIds);
-    for (const companyId of companyIds) {
+    for (const row of integrations) {
+      const match = row.pageId.match(/^whatsapp-slot-(.+)$/);
+      const slotId = (match && isValidSlotId(match[1])) ? match[1] : (row.pageId === 'whatsapp-web' ? '1' : null);
+      if (!slotId) continue;
       try {
-        await initializeClient(companyId);
-        console.log('WhatsApp: Init started for company', companyId);
+        await initializeClient(row.companyId, slotId);
+        console.log('WhatsApp: Init started for company', row.companyId, 'slot', slotId);
       } catch (err) {
-        console.error('WhatsApp: Restore failed for company', companyId, err);
+        console.error('WhatsApp: Restore failed for company', row.companyId, 'slot', slotId, err);
       }
     }
   } catch (err) {
@@ -166,31 +210,26 @@ export async function restoreActiveWhatsAppClients(): Promise<void> {
   }
 }
 
-/**
- * Normalize phone to JID format (e.g. 1234567890@s.whatsapp.net)
- */
 function toJid(phone: string): string {
   const digits = phone.replace(/\D/g, '');
   return digits.includes('@') ? phone : `${digits}@s.whatsapp.net`;
 }
 
-/**
- * Send a text message to a number.
- */
 export async function sendMessage(
   companyId: number,
+  slotId: string,
   to: string,
   content: string
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  const client = getClient(companyId);
+  const client = getClient(companyId, slotId);
   if (!client) {
-    return { success: false, error: 'WhatsApp not connected' };
+    return { success: false, error: 'WhatsApp not connected for this slot' };
   }
   try {
     const jid = toJid(to);
     const sent = await client.sendMessage(jid, content);
     const messageId = (sent as any)?.id?.id || (sent as any)?.id;
-    emitToCompany(companyId, 'whatsapp:message_sent', { to, messageId });
+    emitToCompanySlot(companyId, slotId, 'whatsapp:message_sent', { to, messageId });
     return { success: true, messageId };
   } catch (err: any) {
     console.error('WhatsApp send error:', err);
@@ -199,13 +238,17 @@ export async function sendMessage(
 }
 
 /**
- * Handle incoming message from whatsapp-web.js: find or create conversation, save message, emit socket.
+ * Handle incoming message: find or create conversation (with slotId), save message, emit socket.
  */
-export async function handleIncomingMessage(companyId: number, msg: any): Promise<void> {
+export async function handleIncomingMessage(
+  companyId: number,
+  slotId: string,
+  msg: any
+): Promise<void> {
   try {
-    const from = msg.from.replace('@s.whatsapp.net', '');
+    const from = msg.from.replace('@s.whatsapp.net', '').replace('@c.us', '');
     const contact = await msg.getContact();
-    console.log('WhatsApp: Incoming message from', from, 'companyId', companyId);
+    console.log('WhatsApp: Incoming message from', from, 'companyId', companyId, 'slot', slotId);
     const name = contact?.name || contact?.pushname || from;
     let body = '';
     let imageUrl: string | null = null;
@@ -235,20 +278,38 @@ export async function handleIncomingMessage(companyId: number, msg: any): Promis
 
     const now = new Date();
 
+    // Find conversation: same slot, or legacy (null) treated as slot 1
     let conversation = await prisma.socialConversation.findFirst({
-      where: { companyId, platform: 'whatsapp', externalUserId: from },
+      where: {
+        companyId,
+        platform: 'whatsapp',
+        externalUserId: from,
+        ...(slotId === '1'
+          ? { OR: [{ whatsappSlotId: '1' }, { whatsappSlotId: null }] }
+          : { whatsappSlotId: slotId }),
+      },
     });
+
+    if (conversation && conversation.whatsappSlotId === null && slotId === '1') {
+      await prisma.socialConversation.update({
+        where: { id: conversation.id },
+        data: { whatsappSlotId: '1' },
+      });
+    }
+
+    const conversationData: Record<string, unknown> = {
+      companyId,
+      platform: 'whatsapp',
+      externalUserId: from,
+      externalUserName: name,
+      status: 'Open',
+      lastMessageAt: now,
+      whatsappSlotId: slotId,
+    };
 
     if (!conversation) {
       conversation = await prisma.socialConversation.create({
-        data: {
-          companyId,
-          platform: 'whatsapp',
-          externalUserId: from,
-          externalUserName: name,
-          status: 'Open',
-          lastMessageAt: now,
-        },
+        data: conversationData as any,
       });
     } else {
       await prisma.socialConversation.update({
@@ -266,11 +327,11 @@ export async function handleIncomingMessage(companyId: number, msg: any): Promis
         createdAt: now,
       },
     });
-    console.log('WhatsApp: Message saved to inbox conversationId=', conversation.id, 'messageId=', message.id);
+    console.log('WhatsApp: Message saved conversationId=', conversation.id, 'messageId=', message.id);
 
     const io = getIO();
     if (io) {
-      io.to(`whatsapp-${companyId}`).emit('whatsapp:message', {
+      io.to(`whatsapp-${companyId}-${slotId}`).emit('whatsapp:message', {
         conversationId: conversation.id,
         message: {
           id: message.id,

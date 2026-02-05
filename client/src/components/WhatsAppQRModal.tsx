@@ -8,6 +8,7 @@ interface WhatsAppQRModalProps {
   onClose: () => void;
   onConnected?: () => void;
   onRetry?: () => void;
+  slotId?: string;
 }
 
 export default function WhatsAppQRModal({
@@ -15,6 +16,7 @@ export default function WhatsAppQRModal({
   onClose,
   onConnected,
   onRetry,
+  slotId = '1',
 }: WhatsAppQRModalProps) {
   const { socket } = useSocket();
   const [qrCode, setQrCode] = useState<string | null>(null);
@@ -23,6 +25,11 @@ export default function WhatsAppQRModal({
 
   useEffect(() => {
     if (!isOpen || !socket) return;
+
+    const qrEvent = `whatsapp:qr:${slotId}`;
+    const readyEvent = `whatsapp:ready:${slotId}`;
+    const disconnectedEvent = `whatsapp:disconnected:${slotId}`;
+    const authFailureEvent = `whatsapp:auth_failure:${slotId}`;
 
     const onQr = (data: string) => {
       setQrCode(data);
@@ -43,18 +50,18 @@ export default function WhatsAppQRModal({
       setQrCode(null);
     };
 
-    socket.on('whatsapp:qr', onQr);
-    socket.on('whatsapp:ready', onReady);
-    socket.on('whatsapp:disconnected', onDisconnected);
-    socket.on('whatsapp:auth_failure', onAuthFailure);
+    socket.on(qrEvent, onQr);
+    socket.on(readyEvent, onReady);
+    socket.on(disconnectedEvent, onDisconnected);
+    socket.on(authFailureEvent, onAuthFailure);
 
     return () => {
-      socket.off('whatsapp:qr', onQr);
-      socket.off('whatsapp:ready', onReady);
-      socket.off('whatsapp:disconnected', onDisconnected);
-      socket.off('whatsapp:auth_failure', onAuthFailure);
+      socket.off(qrEvent, onQr);
+      socket.off(readyEvent, onReady);
+      socket.off(disconnectedEvent, onDisconnected);
+      socket.off(authFailureEvent, onAuthFailure);
     };
-  }, [isOpen, socket, onConnected]);
+  }, [isOpen, socket, slotId, onConnected]);
 
   if (!isOpen) return null;
 
@@ -62,7 +69,9 @@ export default function WhatsAppQRModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-6 max-w-sm w-full mx-4">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-slate-900">Connect WhatsApp</h3>
+          <h3 className="text-lg font-semibold text-slate-900">
+            Connect WhatsApp {slotId ? `- Slot ${slotId}` : ''}
+          </h3>
           <button
             type="button"
             onClick={onClose}
