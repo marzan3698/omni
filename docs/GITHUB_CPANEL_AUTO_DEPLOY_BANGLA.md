@@ -226,6 +226,17 @@ https://www.yourdomain.com
 ```
 (বা `https://yourdomain.com`)
 
+#### Facebook Webhook (যদি Messenger ব্যবহার করেন)
+
+| Variable | Value |
+|----------|--------|
+| `FACEBOOK_APP_ID` | Facebook App Dashboard → Basic থেকে App ID |
+| `FACEBOOK_APP_SECRET` | Facebook App Dashboard → Basic → App Secret |
+| **`FACEBOOK_VERIFY_TOKEN`** | **আপনি নিজে বেছে নেওয়া গোপন টেক্সট** (যেমন: `omni_crm_webhook_2024_secure`) — একই টেক্সট Facebook App → Messenger → Configure webhooks এ Verify token ফিল্ডে দেবেন |
+| `FACEBOOK_OAUTH_REDIRECT_URI` | `https://api.yourdomain.com/api/integrations/facebook/callback` |
+
+**Verify Token সম্পর্কে বিস্তারিত:** [CPANEL_ENV_AND_FACEBOOK_VERIFY_TOKEN_BANGLA.md](./CPANEL_ENV_AND_FACEBOOK_VERIFY_TOKEN_BANGLA.md)
+
 ### Step 2: Environment Variables Save করুন
 
 1. সব variables add করার পর **Save** click করুন

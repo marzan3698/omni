@@ -213,16 +213,16 @@ export const environmentService = {
       let source: string;
       
       if (envResult.found && envResult.path) {
-        // Read from .env file
+        // Read from .env file, fallback to process.env for empty values (so cPanel env vars work)
         console.log('[Environment Service] Reading from .env file:', envResult.path);
         const content = fs.readFileSync(envResult.path, 'utf-8');
         const env = this.parseEnvFile(content);
-        
+
         config = {
-          FACEBOOK_APP_ID: env.FACEBOOK_APP_ID || '',
-          FACEBOOK_APP_SECRET: env.FACEBOOK_APP_SECRET || '',
-          FACEBOOK_VERIFY_TOKEN: env.FACEBOOK_VERIFY_TOKEN || '',
-          FACEBOOK_OAUTH_REDIRECT_URI: env.FACEBOOK_OAUTH_REDIRECT_URI || '',
+          FACEBOOK_APP_ID: env.FACEBOOK_APP_ID || process.env.FACEBOOK_APP_ID || '',
+          FACEBOOK_APP_SECRET: env.FACEBOOK_APP_SECRET || process.env.FACEBOOK_APP_SECRET || '',
+          FACEBOOK_VERIFY_TOKEN: env.FACEBOOK_VERIFY_TOKEN || process.env.FACEBOOK_VERIFY_TOKEN || '',
+          FACEBOOK_OAUTH_REDIRECT_URI: env.FACEBOOK_OAUTH_REDIRECT_URI || process.env.FACEBOOK_OAUTH_REDIRECT_URI || '',
         };
         source = envResult.path;
       } else {
