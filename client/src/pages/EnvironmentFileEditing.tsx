@@ -328,12 +328,59 @@ export default function EnvironmentFileEditing() {
                 onCopy={() => copyToClipboard(webhookUrls.webhookCallbackUrl, 'callback')}
                 copied={copiedField === 'callback'}
               />
-              <CopyableField
-                label="2. Verify token (Facebook Verify token ফিল্ডে দেবেন)"
-                value={webhookUrls.verifyToken}
-                onCopy={() => copyToClipboard(webhookUrls.verifyToken, 'verify')}
-                copied={copiedField === 'verify'}
-              />
+
+              {/* Verify Token with warning if empty */}
+              <div className="space-y-1">
+                <Label className="text-sm font-medium text-slate-700">
+                  2. Verify token (Facebook Verify token ফিল্ডে দেবেন)
+                </Label>
+                {webhookUrls.verifyToken ? (
+                  <div className="flex gap-2">
+                    <Input readOnly value={webhookUrls.verifyToken} className="font-mono text-sm bg-slate-50" />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => copyToClipboard(webhookUrls.verifyToken, 'verify')}
+                      title="Copy"
+                    >
+                      {copiedField === 'verify' ? (
+                        <Check className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <div className="flex items-center gap-2 text-red-700 mb-2">
+                      <AlertCircle className="h-5 w-5" />
+                      <span className="font-medium">Verify Token খালি!</span>
+                    </div>
+                    <p className="text-sm text-red-600 mb-3">
+                      সার্ভারে <code className="bg-red-100 px-1 rounded">FACEBOOK_VERIFY_TOKEN</code> সেট করা নেই বা পড়া যাচ্ছে না।
+                    </p>
+                    <div className="text-xs text-red-700 space-y-1 bg-red-100 p-3 rounded">
+                      <p className="font-semibold">Debug Info:</p>
+                      {webhookUrls._debug ? (
+                        <ul className="list-disc list-inside space-y-1">
+                          <li>Config Source: <code>{webhookUrls._debug.configSource}</code></li>
+                          <li>Is cPanel: <code>{webhookUrls._debug.isCPanel ? 'Yes' : 'No'}</code></li>
+                          <li>Verify Token in config: <code>{webhookUrls._debug.verifyTokenSet ? 'Yes' : 'No'}</code></li>
+                          <li>process.env.FACEBOOK_VERIFY_TOKEN: <code>{webhookUrls._debug.processEnvVerifyTokenSet ? 'Set' : 'Not Set'}</code></li>
+                          <li>Base URL from: <code>{webhookUrls._debug.baseUrlSource}</code></li>
+                        </ul>
+                      ) : (
+                        <p>No debug info available</p>
+                      )}
+                    </div>
+                    <p className="text-sm text-red-600 mt-3">
+                      <strong>সমাধান:</strong> cPanel → Node.js Selector → আপনার অ্যাপ → Environment variables এ <code>FACEBOOK_VERIFY_TOKEN</code> যোগ করুন (যেমন: <code>omni_crm_webhook_2024_secure</code>)। তারপর অ্যাপ Stop → Start করুন।
+                    </p>
+                  </div>
+                )}
+              </div>
+
               <CopyableField
                 label="3. OAuth Redirect URI (প্রয়োজনে Facebook OAuth settings এ)"
                 value={webhookUrls.oauthRedirectUri}

@@ -13,6 +13,13 @@ export interface WebhookUrls {
   webhookCallbackUrl: string;
   oauthRedirectUri: string;
   verifyToken: string;
+  _debug?: {
+    configSource: string;
+    isCPanel: boolean;
+    verifyTokenSet: boolean;
+    processEnvVerifyTokenSet: boolean;
+    baseUrlSource: string;
+  };
 }
 
 export const environmentApi = {

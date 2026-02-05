@@ -57,7 +57,18 @@ export const environmentController = {
    */
   getWebhookUrls: async (req: AuthRequest, res: Response) => {
     try {
+      console.log('[Webhook URLs] ========== Getting Webhook URLs ==========');
+      
+      // Debug: Log all Facebook-related env vars
+      console.log('[Webhook URLs] process.env.FACEBOOK_VERIFY_TOKEN:', process.env.FACEBOOK_VERIFY_TOKEN ? '***SET***' : '(empty/undefined)');
+      console.log('[Webhook URLs] process.env.FACEBOOK_APP_ID:', process.env.FACEBOOK_APP_ID || '(empty/undefined)');
+      console.log('[Webhook URLs] process.env.API_URL:', process.env.API_URL || '(empty/undefined)');
+      
       const config = environmentService.readFacebookConfig();
+      console.log('[Webhook URLs] Config source:', config.source);
+      console.log('[Webhook URLs] Config isCPanel:', config.isCPanel);
+      console.log('[Webhook URLs] Config FACEBOOK_VERIFY_TOKEN:', config.FACEBOOK_VERIFY_TOKEN ? '***SET***' : '(empty)');
+      
       // Resolve base URL: env (for auto-deploy/domain) or request host
       const fromEnv =
         process.env.API_URL ||
@@ -72,14 +83,30 @@ export const environmentController = {
         );
       const baseUrl = (fromEnv ? fromEnv.replace(/\/$/, '') : fromRequest) || 'https://your-domain.com';
 
+      // Build debug info for troubleshooting
+      const debugInfo = {
+        configSource: config.source,
+        isCPanel: config.isCPanel,
+        verifyTokenSet: !!config.FACEBOOK_VERIFY_TOKEN,
+        processEnvVerifyTokenSet: !!process.env.FACEBOOK_VERIFY_TOKEN,
+        baseUrlSource: fromEnv ? 'env' : 'request',
+      };
+
       const data = {
         baseUrl,
         webhookCallbackUrl: `${baseUrl}/api/webhooks/facebook`,
         oauthRedirectUri: `${baseUrl}/api/integrations/facebook/callback`,
         verifyToken: config.FACEBOOK_VERIFY_TOKEN || '',
+        // Include debug info so frontend can show why token is empty
+        _debug: debugInfo,
       };
+      
+      console.log('[Webhook URLs] Response debug:', debugInfo);
+      console.log('[Webhook URLs] ========== Done ==========');
+      
       return sendSuccess(res, data, 'Webhook URLs retrieved successfully');
     } catch (error: any) {
+      console.error('[Webhook URLs] Error:', error);
       return sendError(res, error.message || 'Failed to get webhook URLs', error.statusCode || 500);
     }
   },
