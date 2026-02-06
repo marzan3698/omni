@@ -43,6 +43,16 @@ const createProductSchema = z.object({
       })
     )
     .optional(),
+  leadPoint: z
+    .union([z.number(), z.string()])
+    .optional()
+    .transform((v) => (v === '' || v === undefined || v === null ? undefined : Number(v)))
+    .refine((v) => v === undefined || (!Number.isNaN(v) && v >= 0), 'Lead point must be a non-negative number'),
+  customerPoint: z
+    .union([z.number(), z.string()])
+    .optional()
+    .transform((v) => (v === '' || v === undefined || v === null ? undefined : Number(v)))
+    .refine((v) => v === undefined || (!Number.isNaN(v) && v >= 0), 'Customer point must be a non-negative number'),
 });
 
 const updateProductSchema = createProductSchema.partial();
@@ -135,7 +145,9 @@ export const productController = {
       if (error instanceof AppError) {
         return sendError(res, error.message, error.statusCode);
       }
-      return sendError(res, 'Failed to create product', 500);
+      console.error('Product create error:', error);
+      const message = error instanceof Error ? error.message : 'Failed to create product';
+      return sendError(res, message, 500);
     }
   },
 
@@ -176,7 +188,9 @@ export const productController = {
       if (error instanceof AppError) {
         return sendError(res, error.message, error.statusCode);
       }
-      return sendError(res, 'Failed to update product', 500);
+      console.error('Product update error:', error);
+      const message = error instanceof Error ? error.message : 'Failed to update product';
+      return sendError(res, message, 500);
     }
   },
 

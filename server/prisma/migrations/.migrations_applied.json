@@ -10,5 +10,7 @@
   "add_campaign_groups_table.sql",
   "add_project_and_group_to_tasks.sql",
   "update_task_status_enum.sql",
-  "add_conversation_labels.sql"
+  "add_conversation_labels.sql",
+  "add_product_lead_customer_points.sql",
+  "add_lead_converted_to_client_id.sql"
 ]

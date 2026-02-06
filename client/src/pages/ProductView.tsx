@@ -22,6 +22,8 @@ interface Product {
     name: string;
   };
   quickReplies: Array<{ type: 'attribute' | 'sales'; key?: string; value: string }> | null;
+  leadPoint?: string | number | null;
+  customerPoint?: string | number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -321,6 +323,27 @@ export default function ProductView() {
                     </div>
                   </div>
                 )}
+                {(productData.leadPoint != null && productData.leadPoint !== '') || (productData.customerPoint != null && productData.customerPoint !== '') ? (
+                  <div className="pt-3 border-t border-gray-200 space-y-2">
+                    <div className="text-xs font-medium text-slate-500 mb-2">Points</div>
+                    {productData.leadPoint != null && productData.leadPoint !== '' && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-slate-600">Lead Point</span>
+                        <span className="text-sm font-medium text-slate-900">
+                          {typeof productData.leadPoint === 'string' ? productData.leadPoint : Number(productData.leadPoint)}
+                        </span>
+                      </div>
+                    )}
+                    {productData.customerPoint != null && productData.customerPoint !== '' && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-slate-600">Customer Point</span>
+                        <span className="text-sm font-medium text-slate-900">
+                          {typeof productData.customerPoint === 'string' ? productData.customerPoint : Number(productData.customerPoint)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ) : null}
               </CardContent>
             </Card>
 

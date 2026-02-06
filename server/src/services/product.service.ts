@@ -13,6 +13,8 @@ interface CreateProductData {
   productCompany?: string;
   imageUrl?: string;
   quickReplies?: Array<{ type: 'attribute' | 'sales'; key?: string; value: string }>;
+  leadPoint?: number;
+  customerPoint?: number;
 }
 
 interface UpdateProductData {
@@ -25,6 +27,8 @@ interface UpdateProductData {
   productCompany?: string;
   imageUrl?: string;
   quickReplies?: Array<{ type: 'attribute' | 'sales'; key?: string; value: string }>;
+  leadPoint?: number;
+  customerPoint?: number;
 }
 
 export const productService = {
@@ -129,6 +133,14 @@ export const productService = {
         productCompany: data.productCompany || null,
         imageUrl: data.imageUrl || null,
         quickReplies: data.quickReplies ? (data.quickReplies as any) : null,
+        leadPoint:
+          data.leadPoint != null && !Number.isNaN(Number(data.leadPoint))
+            ? new Prisma.Decimal(Number(data.leadPoint))
+            : null,
+        customerPoint:
+          data.customerPoint != null && !Number.isNaN(Number(data.customerPoint))
+            ? new Prisma.Decimal(Number(data.customerPoint))
+            : null,
       },
       include: {
         category: {
@@ -182,6 +194,16 @@ export const productService = {
     if (data.productCompany !== undefined) updateData.productCompany = data.productCompany || null;
     if (data.imageUrl !== undefined) updateData.imageUrl = data.imageUrl || null;
     if (data.quickReplies !== undefined) updateData.quickReplies = data.quickReplies ? (data.quickReplies as any) : null;
+    if (data.leadPoint !== undefined)
+      updateData.leadPoint =
+        data.leadPoint != null && !Number.isNaN(Number(data.leadPoint))
+          ? new Prisma.Decimal(Number(data.leadPoint))
+          : null;
+    if (data.customerPoint !== undefined)
+      updateData.customerPoint =
+        data.customerPoint != null && !Number.isNaN(Number(data.customerPoint))
+          ? new Prisma.Decimal(Number(data.customerPoint))
+          : null;
 
     return await prisma.product.update({
       where: { id },

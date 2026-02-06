@@ -8,6 +8,9 @@ const router = Router();
 // All routes require authentication
 router.use(authMiddleware);
 
+// Current user balance/points - no permission required, any authenticated user can see their own
+router.get('/me/balance-points', employeeController.getMyBalancePoints);
+
 // Employee routes
 router.get('/', verifyPermission('can_manage_employees'), employeeController.getAllEmployees);
 router.get('/:id', verifyPermission('can_manage_employees'), employeeController.getEmployeeById);

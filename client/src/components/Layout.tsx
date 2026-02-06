@@ -3,11 +3,11 @@ import { useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Sidebar } from './Sidebar';
 import { MeetingAlert } from './MeetingAlert';
-import { Menu, Bell, Search, User, LogOut, Maximize2, Minimize2, Circle } from 'lucide-react';
+import { Menu, Bell, Search, User, LogOut, Maximize2, Minimize2, Circle, Wallet, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSidebar } from '@/contexts/SidebarContext';
 import { useInboxView } from '@/contexts/InboxViewContext';
-import { meetingApi } from '@/lib/api';
+import { meetingApi, employeeApi } from '@/lib/api';
 import { workSessionApi } from '@/lib/workSession';
 import { cn } from '@/lib/utils';
 
@@ -21,9 +21,21 @@ export function Layout({ children }: LayoutProps) {
   const { hideMainSidebar } = useInboxView();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showBalancePopup, setShowBalancePopup] = useState(false);
   const { user, logout } = useAuth();
 
   const queryClient = useQueryClient();
+
+  // Fetch balance and points for employees (not clients or SuperAdmin viewing other employees)
+  const { data: balanceData } = useQuery({
+    queryKey: ['my-balance-points'],
+    queryFn: async () => {
+      const response = await employeeApi.getMyBalancePoints();
+      return response.data.data;
+    },
+    enabled: !!user?.id && user?.roleName !== 'Client',
+    refetchInterval: 60000, // Refresh every minute
+  });
 
   // Fetch upcoming meeting (within 1 hour)
   const { data: upcomingMeeting } = useQuery({
@@ -173,6 +185,18 @@ export function Layout({ children }: LayoutProps) {
                 </button>
               )}
 
+              {/* Balance & Points button - for employees */}
+              {user?.roleName !== 'Client' && user?.roleName !== 'SuperAdmin' && (
+                <button
+                  onClick={() => setShowBalancePopup(true)}
+                  className="flex items-center gap-1.5 h-8 px-3 text-sm font-medium rounded-full bg-indigo-100 hover:bg-indigo-200 text-indigo-700 transition-all"
+                  title="ব্যালেন্স ও পয়েন্ট দেখুন"
+                >
+                  <Wallet className="w-4 h-4" />
+                  <span className="hidden sm:inline">ব্যালেন্স</span>
+                </button>
+              )}
+
               {/* Fullscreen button */}
               <button
                 onClick={toggleFullscreen}
@@ -256,6 +280,84 @@ export function Layout({ children }: LayoutProps) {
           {children}
         </main>
       </div>
+
+      {/* Balance & Points Popup */}
+      {showBalancePopup && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+                <Wallet className="w-5 h-5 text-indigo-600" />
+                ব্যালেন্স ও পয়েন্ট
+              </h2>
+              <button
+                onClick={() => setShowBalancePopup(false)}
+                className="p-1 hover:bg-gray-100 rounded-md transition-colors"
+              >
+                <X className="w-5 h-5 text-slate-600" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-4 space-y-4">
+              {/* Points Section */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-medium text-slate-600 uppercase tracking-wider">পয়েন্ট</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                    <p className="text-xs text-amber-600 mb-1">রিজার্ভ পয়েন্ট</p>
+                    <p className="text-2xl font-bold text-amber-700">
+                      {balanceData?.reservePoints?.toFixed(2) || '0.00'}
+                    </p>
+                  </div>
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <p className="text-xs text-green-600 mb-1">মেইন পয়েন্ট</p>
+                    <p className="text-2xl font-bold text-green-700">
+                      {balanceData?.mainPoints?.toFixed(2) || '0.00'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Balance Section */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-medium text-slate-600 uppercase tracking-wider">ব্যালেন্স</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <p className="text-xs text-blue-600 mb-1">রিজার্ভ ব্যালেন্স</p>
+                    <p className="text-2xl font-bold text-blue-700">
+                      ৳{balanceData?.reserveBalance?.toFixed(2) || '0.00'}
+                    </p>
+                  </div>
+                  <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+                    <p className="text-xs text-indigo-600 mb-1">মেইন ব্যালেন্স</p>
+                    <p className="text-2xl font-bold text-indigo-700">
+                      ৳{balanceData?.mainBalance?.toFixed(2) || '0.00'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Info */}
+              <div className="bg-gray-50 rounded-lg p-3 text-xs text-slate-600">
+                <p><strong>রিজার্ভ পয়েন্ট:</strong> লিড তৈরি করলে প্রোডাক্টের লিড পয়েন্ট এখানে যোগ হয়।</p>
+                <p className="mt-1"><strong>মেইন পয়েন্ট:</strong> লিড সম্পন্ন (Won) হলে রিজার্ভ থেকে এখানে ট্রান্সফার হয়।</p>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-gray-200">
+              <button
+                onClick={() => setShowBalancePopup(false)}
+                className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md transition-colors"
+              >
+                বন্ধ করুন
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

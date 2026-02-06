@@ -306,5 +306,51 @@ export const employeeService = {
       totalLeadValue: leads.reduce((sum, l) => sum + (Number(l._sum.value) || 0), 0),
     };
   },
+
+  /**
+   * Get employee balance and points by user ID
+   */
+  async getEmployeeBalancePoints(userId: string) {
+    try {
+      const employee = await prisma.employee.findFirst({
+        where: {
+          userId,
+        },
+        select: {
+          id: true,
+          reserveBalance: true,
+          mainBalance: true,
+          reservePoints: true,
+          mainPoints: true,
+        },
+      });
+
+      if (!employee) {
+        // Return default values if employee record doesn't exist
+        return {
+          reserveBalance: 0,
+          mainBalance: 0,
+          reservePoints: 0,
+          mainPoints: 0,
+        };
+      }
+
+      return {
+        reserveBalance: Number(employee.reserveBalance) || 0,
+        mainBalance: Number(employee.mainBalance) || 0,
+        reservePoints: Number(employee.reservePoints) || 0,
+        mainPoints: Number(employee.mainPoints) || 0,
+      };
+    } catch (error) {
+      // If the columns don't exist yet (migration not run), return default values
+      console.error('Error fetching balance/points (migration may not be applied yet):', error);
+      return {
+        reserveBalance: 0,
+        mainBalance: 0,
+        reservePoints: 0,
+        mainPoints: 0,
+      };
+    }
+  },
 };
 

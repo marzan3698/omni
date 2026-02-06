@@ -26,9 +26,9 @@ const createLeadFromInboxSchema = z.object({
   value: z.number().positive().optional(),
   customerName: z.string().min(1, 'Customer name is required'),
   phone: z.string().min(1, 'Phone is required'),
-  categoryId: z.number().int().positive('Category is required'),
-  interestId: z.number().int().positive('Interest is required'),
-  campaignId: z.number().int().positive('Campaign is required'),
+  categoryId: z.number().int().positive().optional(), // Now optional
+  interestId: z.number().int().positive().optional(), // Now optional
+  campaignId: z.number().int().positive().optional(), // Now optional
   productId: z.number().int().positive().optional(),
   purchasePrice: z.number().nonnegative().optional(),
   salePrice: z.number().nonnegative().optional(),
@@ -39,6 +39,7 @@ const convertLeadSchema = z.object({
   name: z.string().min(1).optional(),
   contactInfo: z.any().optional(),
   address: z.string().optional(),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
 export const leadController = {
@@ -69,6 +70,12 @@ export const leadController = {
       if (req.query.interestId) filters.interestId = parseInt(req.query.interestId as string);
       if (req.query.search) filters.search = req.query.search as string;
       if (req.query.createdBy) filters.createdBy = req.query.createdBy as string;
+      // convertedOnly: 'true' = only leads converted to client (Complete tab); otherwise exclude them (All Leads tab)
+      if (req.query.convertedOnly === 'true') {
+        filters.convertedOnly = true;
+      } else {
+        filters.convertedOnly = false;
+      }
 
       const leads = await leadService.getAllLeads(filters);
       return sendSuccess(res, leads, 'Leads retrieved successfully');
@@ -123,32 +130,34 @@ export const leadController = {
       // Convert string numbers to actual numbers, handle empty strings
       const body: any = { ...req.body };
       
+      // Category is now optional
       if (body.categoryId !== undefined && body.categoryId !== null && body.categoryId !== '') {
         body.categoryId = typeof body.categoryId === 'string' ? parseInt(body.categoryId, 10) : body.categoryId;
         if (isNaN(body.categoryId) || body.categoryId <= 0) {
-          return sendError(res, 'Category is required', 400);
+          body.categoryId = undefined;
         }
       } else {
-        return sendError(res, 'Category is required', 400);
+        body.categoryId = undefined;
       }
       
+      // Interest is now optional
       if (body.interestId !== undefined && body.interestId !== null && body.interestId !== '') {
         body.interestId = typeof body.interestId === 'string' ? parseInt(body.interestId, 10) : body.interestId;
         if (isNaN(body.interestId) || body.interestId <= 0) {
-          return sendError(res, 'Interest is required', 400);
+          body.interestId = undefined;
         }
       } else {
-        return sendError(res, 'Interest is required', 400);
+        body.interestId = undefined;
       }
       
-      // Campaign is now required
+      // Campaign is now optional
       if (body.campaignId !== undefined && body.campaignId !== null && body.campaignId !== '') {
         body.campaignId = typeof body.campaignId === 'string' ? parseInt(body.campaignId, 10) : body.campaignId;
         if (isNaN(body.campaignId) || body.campaignId <= 0) {
-          return sendError(res, 'Campaign is required', 400);
+          body.campaignId = undefined;
         }
       } else {
-        return sendError(res, 'Campaign is required', 400);
+        body.campaignId = undefined;
       }
       
       if (body.assignedTo !== undefined && body.assignedTo !== null && body.assignedTo !== '') {

@@ -35,6 +35,8 @@ export default function ProductForm() {
     purchasePrice: '',
     salePrice: '',
     currency: 'BDT' as 'BDT' | 'USD',
+    leadPoint: '',
+    customerPoint: '',
     // Step 2
     categoryId: '',
     productCompany: '',
@@ -76,6 +78,8 @@ export default function ProductForm() {
         purchasePrice: String(productData.purchasePrice || ''),
         salePrice: String(productData.salePrice || ''),
         currency: productData.currency || 'BDT',
+        leadPoint: productData.leadPoint != null ? String(productData.leadPoint) : '',
+        customerPoint: productData.customerPoint != null ? String(productData.customerPoint) : '',
         categoryId: String(productData.categoryId || ''),
         productCompany: productData.productCompany || '',
         imageUrl: productData.imageUrl || '',
@@ -216,6 +220,8 @@ export default function ProductForm() {
       categoryId: parseInt(formData.categoryId),
       productCompany: formData.productCompany?.trim() || undefined,
       quickReplies: formData.quickReplies.length > 0 ? formData.quickReplies : undefined,
+      leadPoint: formData.leadPoint.trim() !== '' ? parseFloat(formData.leadPoint) : undefined,
+      customerPoint: formData.customerPoint.trim() !== '' ? parseFloat(formData.customerPoint) : undefined,
     };
     
     // Only include imageUrl if it has a value (will be set by mutation if image is uploaded)
@@ -413,6 +419,32 @@ export default function ProductForm() {
                       <option value="BDT">BDT (৳)</option>
                       <option value="USD">USD ($)</option>
                     </select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="leadPoint">Lead Point</Label>
+                      <Input
+                        id="leadPoint"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.leadPoint}
+                        onChange={(e) => setFormData({ ...formData, leadPoint: e.target.value })}
+                        placeholder="e.g. 10 or 10.2"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="customerPoint">Customer Point</Label>
+                      <Input
+                        id="customerPoint"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.customerPoint}
+                        onChange={(e) => setFormData({ ...formData, customerPoint: e.target.value })}
+                        placeholder="e.g. 10 or 10.2"
+                      />
+                    </div>
                   </div>
                 </div>
               )}

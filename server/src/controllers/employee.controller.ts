@@ -213,5 +213,27 @@ export const employeeController = {
       return sendError(res, 'Failed to retrieve performance data', 500);
     }
   },
+
+  /**
+   * Get current user's balance and points
+   * GET /api/employees/me/balance-points
+   */
+  getMyBalancePoints: async (req: Request, res: Response) => {
+    try {
+      const userId = (req as AuthRequest).user?.id;
+      
+      if (!userId) {
+        return sendError(res, 'User not authenticated', 401);
+      }
+
+      const balancePoints = await employeeService.getEmployeeBalancePoints(userId);
+      return sendSuccess(res, balancePoints, 'Balance and points retrieved successfully');
+    } catch (error) {
+      if (error instanceof AppError) {
+        return sendError(res, error.message, error.statusCode);
+      }
+      return sendError(res, 'Failed to retrieve balance and points', 500);
+    }
+  },
 };
 

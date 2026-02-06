@@ -32,6 +32,8 @@ export const employeeApi = {
     apiClientInstance.delete<ApiResponse>(`/employees/${id}`, { params: { companyId } }),
   getTasks: (id: number, companyId: number) => 
     apiClientInstance.get<ApiResponse>(`/employees/${id}/tasks`, { params: { companyId } }),
+  getMyBalancePoints: () => 
+    apiClientInstance.get<ApiResponse>('/employees/me/balance-points'),
 };
 
 // Task API
@@ -409,6 +411,10 @@ export const employeeGroupApi = {
 
 // Product API
 export const productApi = {
+  // List products - for all authenticated users (lead creation, etc.)
+  list: (companyId: number, filters?: { categoryId?: number; search?: string }) =>
+    apiClientInstance.get<ApiResponse>('/products/list', { params: { companyId, ...filters } }),
+  // Get all products - requires can_manage_products permission
   getAll: (companyId: number, filters?: { categoryId?: number; search?: string }) =>
     apiClientInstance.get<ApiResponse>('/products', { params: { companyId, ...filters } }),
   getById: (id: number, companyId: number) =>

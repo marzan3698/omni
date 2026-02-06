@@ -10,9 +10,12 @@ import { Target, Plus, Search, Filter, X, Edit, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 
+type LeadListView = 'all' | 'complete';
+
 export function Leads() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [leadListView, setLeadListView] = useState<LeadListView>('all');
   const [activeTab, setActiveTab] = useState<'Inbox' | 'Website' | 'FacebookPixel'>('Inbox');
   const [filters, setFilters] = useState({
     search: '',
@@ -24,11 +27,12 @@ export function Leads() {
   });
   const [showFilters, setShowFilters] = useState(false);
 
-  // Fetch leads with filters
+  // Fetch leads with filters (All Leads excludes converted; Complete Leads shows only converted)
   const { data: leadsResponse, isLoading } = useQuery({
-    queryKey: ['leads', activeTab, filters],
+    queryKey: ['leads', leadListView, activeTab, filters],
     queryFn: async () => {
       const params: any = {};
+      params.convertedOnly = leadListView === 'complete' ? 'true' : 'false';
       if (filters.search) params.search = filters.search;
       if (filters.status) params.status = filters.status;
       params.source =
@@ -40,7 +44,7 @@ export function Leads() {
       if (filters.categoryId) params.categoryId = parseInt(filters.categoryId);
       if (filters.interestId) params.interestId = parseInt(filters.interestId);
       if (filters.createdBy) params.createdBy = filters.createdBy;
-      
+
       const response = await leadApi.getAll(params);
       return response.data.data || [];
     },
@@ -115,6 +119,34 @@ export function Leads() {
           <Plus className="w-4 h-4 mr-2" />
           Add Lead
         </Button>
+      </div>
+
+      {/* All Leads vs Complete Leads */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        <button
+          type="button"
+          onClick={() => setLeadListView('all')}
+          className={cn(
+            'px-4 py-2 rounded-lg text-sm font-medium border',
+            leadListView === 'all'
+              ? 'bg-indigo-600 text-white border-indigo-600'
+              : 'bg-white text-slate-700 border-gray-200 hover:bg-gray-50'
+          )}
+        >
+          সকল লিড (All Leads)
+        </button>
+        <button
+          type="button"
+          onClick={() => setLeadListView('complete')}
+          className={cn(
+            'px-4 py-2 rounded-lg text-sm font-medium border',
+            leadListView === 'complete'
+              ? 'bg-green-600 text-white border-green-600'
+              : 'bg-white text-slate-700 border-gray-200 hover:bg-gray-50'
+          )}
+        >
+          কমপ্লিট লিড (Complete Leads)
+        </button>
       </div>
 
       {/* Source Tabs */}
@@ -274,7 +306,9 @@ export function Leads() {
       <Card className="shadow-sm border-gray-200">
         <CardHeader>
           <CardTitle className="text-lg">
-            All Leads ({leads.length})
+            {leadListView === 'complete'
+              ? `কমপ্লিট লিড (Complete Leads) (${leads.length})`
+              : `সকল লিড (All Leads) (${leads.length})`}
           </CardTitle>
         </CardHeader>
         <CardContent>

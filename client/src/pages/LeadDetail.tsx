@@ -83,12 +83,29 @@ export function LeadDetail() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<number[]>([]);
   const [editingCallNote, setEditingCallNote] = useState<{ callId: number; note: string } | null>(null);
   const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState<string>('');
+
+  // Lead status options with Bengali labels
+  const statusOptions = [
+    { value: 'New', label: 'নতুন (New)', color: 'bg-blue-100 text-blue-700' },
+    { value: 'Contacted', label: 'যোগাযোগ করা হয়েছে (Contacted)', color: 'bg-yellow-100 text-yellow-700' },
+    { value: 'Qualified', label: 'যোগ্য (Qualified)', color: 'bg-purple-100 text-purple-700' },
+    { value: 'Negotiation', label: 'আলোচনা চলছে (Negotiation)', color: 'bg-orange-100 text-orange-700' },
+    { value: 'Won', label: 'সম্পন্ন (Complete)', color: 'bg-green-100 text-green-700' },
+    { value: 'Lost', label: 'ব্যর্থ (Failed)', color: 'bg-red-100 text-red-700' },
+  ];
 
   const convertSchema = z.object({
     name: z.string().min(1, 'Client name is required').optional(),
     address: z.string().optional(),
-    email: z.string().email('Invalid email address').optional().or(z.literal('')),
+    email: z.string().min(1, 'ইমেইল আবশ্যক (লগইনের জন্য)').email('সঠিক ইমেইল দিন'),
     phone: z.string().optional(),
+    password: z.string().min(6, 'পাসওয়ার্ড কমপক্ষে ৬ অক্ষর'),
+    confirmPassword: z.string().min(1, 'পাসওয়ার্ড নিশ্চিত করুন'),
+  }).refine((data) => data.password === data.confirmPassword, {
+    message: 'পাসওয়ার্ড মিলছে না',
+    path: ['confirmPassword'],
   });
 
   type ConvertFormValues = z.infer<typeof convertSchema>;
@@ -105,6 +122,8 @@ export function LeadDetail() {
       address: '',
       email: '',
       phone: '',
+      password: '',
+      confirmPassword: '',
     },
   });
 
@@ -378,10 +397,12 @@ export function LeadDetail() {
         throw new Error('Invalid parameters');
       }
 
-      const clientData: any = {};
+      const clientData: any = {
+        password: values.password,
+      };
       if (values.name) clientData.name = values.name;
       if (values.address) clientData.address = values.address;
-      
+
       const contactInfo: any = {};
       if (values.email) contactInfo.email = values.email;
       if (values.phone) contactInfo.phone = values.phone;
@@ -396,13 +417,47 @@ export function LeadDetail() {
       queryClient.invalidateQueries({ queryKey: ['lead', id, user?.companyId] });
       setIsConvertModalOpen(false);
       resetConvert();
-      // Show success message (you can add a toast notification here)
-      alert('Lead converted to client successfully!');
+      alert(
+        'ক্লায়েন্ট তৈরি হয়েছে। লগইন করতে ইমেইল ও পাসওয়ার্ড ব্যবহার করুন।\nLead converted to client successfully! Client can login with the email and password provided.'
+      );
     },
     onError: (error: any) => {
       alert(error?.response?.data?.message || 'Failed to convert lead to client');
     },
   });
+
+  // Update lead status mutation
+  const updateStatusMutation = useMutation({
+    mutationFn: async (newStatus: string) => {
+      if (!id || !user?.companyId) {
+        throw new Error('Invalid parameters');
+      }
+      const response = await leadApi.updateStatus(parseInt(id), newStatus, user.companyId);
+      return response.data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lead', id, user?.companyId] });
+      queryClient.invalidateQueries({ queryKey: ['my-balance-points'] }); // Refresh balance/points
+      setIsStatusModalOpen(false);
+      setSelectedStatus('');
+    },
+    onError: (error: any) => {
+      alert(error?.response?.data?.message || 'স্ট্যাটাস আপডেট করতে ব্যর্থ হয়েছে');
+    },
+  });
+
+  const openStatusModal = () => {
+    setSelectedStatus(lead?.status || 'New');
+    setIsStatusModalOpen(true);
+  };
+
+  const handleStatusUpdate = () => {
+    if (selectedStatus && selectedStatus !== lead?.status) {
+      updateStatusMutation.mutate(selectedStatus);
+    } else {
+      setIsStatusModalOpen(false);
+    }
+  };
 
   const openConvertModal = () => {
     resetConvert({
@@ -410,6 +465,8 @@ export function LeadDetail() {
       address: '',
       email: '',
       phone: lead?.phone || '',
+      password: '',
+      confirmPassword: '',
     });
     setIsConvertModalOpen(true);
   };
@@ -587,21 +644,34 @@ export function LeadDetail() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <span className={cn(
-            "px-4 py-2 rounded-lg border flex items-center gap-2 font-medium text-sm",
-            getStatusColor(lead.status)
-          )}>
+          {/* Clickable Status Badge */}
+          <button
+            onClick={openStatusModal}
+            className={cn(
+              "px-4 py-2 rounded-lg border flex items-center gap-2 font-medium text-sm cursor-pointer hover:opacity-80 transition-opacity",
+              getStatusColor(lead.status)
+            )}
+            title="স্ট্যাটাস পরিবর্তন করতে ক্লিক করুন"
+          >
             {getStatusIcon(lead.status)}
             {lead.status}
-          </span>
-          {['Qualified', 'Negotiation', 'Won'].includes(lead.status) && (
-            <Button 
-              onClick={openConvertModal}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white"
-            >
-              <UserPlus className="w-4 h-4 mr-2" />
-              Convert to Client
-            </Button>
+            <Edit className="w-3 h-3 ml-1" />
+          </button>
+          {lead.convertedToClientId ? (
+            <span className="px-4 py-2 rounded-lg border border-green-200 bg-green-50 text-green-700 font-medium text-sm flex items-center gap-2">
+              <CheckCircle className="w-4 h-4" />
+              Already added as client
+            </span>
+          ) : (
+            ['Qualified', 'Negotiation', 'Won'].includes(lead.status) && (
+              <Button 
+                onClick={openConvertModal}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white"
+              >
+                <UserPlus className="w-4 h-4 mr-2" />
+                Convert to Client
+              </Button>
+            )
           )}
           <Button variant="outline">
             <Edit className="w-4 h-4 mr-2" />
@@ -1502,7 +1572,7 @@ export function LeadDetail() {
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-slate-600">Email (Optional)</label>
+                  <label className="text-sm font-medium text-slate-600">ইমেইল * (লগইনের জন্য)</label>
                   <Input
                     type="email"
                     {...registerConvert('email')}
@@ -1521,6 +1591,34 @@ export function LeadDetail() {
                     className="mt-1"
                     placeholder={lead?.phone || 'Phone number'}
                   />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-slate-600">পাসওয়ার্ড * (ক্লায়েন্ট লগইনের জন্য)</label>
+                  <Input
+                    type="password"
+                    {...registerConvert('password')}
+                    className="mt-1"
+                    placeholder="কমপক্ষে ৬ অক্ষর"
+                    autoComplete="new-password"
+                  />
+                  {convertErrors.password && (
+                    <p className="text-xs text-red-500 mt-1">{convertErrors.password.message}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-slate-600">পাসওয়ার্ড নিশ্চিত করুন *</label>
+                  <Input
+                    type="password"
+                    {...registerConvert('confirmPassword')}
+                    className="mt-1"
+                    placeholder="পাসওয়ার্ড আবার লিখুন"
+                    autoComplete="new-password"
+                  />
+                  {convertErrors.confirmPassword && (
+                    <p className="text-xs text-red-500 mt-1">{convertErrors.confirmPassword.message}</p>
+                  )}
                 </div>
 
                 <div>
@@ -1554,6 +1652,91 @@ export function LeadDetail() {
                   </Button>
                 </div>
               </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Status Change Modal */}
+      {isStatusModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-md shadow-lg border-gray-200">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-indigo-600" />
+                  স্ট্যাটাস পরিবর্তন করুন
+                </CardTitle>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setIsStatusModalOpen(false)}
+                  className="h-8 w-8"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <p className="text-sm text-slate-600 mb-4">
+                  বর্তমান স্ট্যাটাস: <span className={cn("px-2 py-1 rounded text-xs font-medium", getStatusColor(lead.status))}>{lead.status}</span>
+                </p>
+                
+                <div className="space-y-2">
+                  {statusOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => setSelectedStatus(option.value)}
+                      className={cn(
+                        "w-full p-3 rounded-lg border text-left transition-all",
+                        selectedStatus === option.value
+                          ? "border-indigo-500 bg-indigo-50 ring-2 ring-indigo-200"
+                          : "border-gray-200 hover:border-indigo-300 hover:bg-gray-50",
+                        lead.status === option.value && "opacity-50"
+                      )}
+                      disabled={lead.status === option.value}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className={cn("px-2 py-1 rounded text-sm font-medium", option.color)}>
+                          {option.label}
+                        </span>
+                        {lead.status === option.value && (
+                          <span className="text-xs text-slate-500">(বর্তমান)</span>
+                        )}
+                        {selectedStatus === option.value && lead.status !== option.value && (
+                          <CheckCircle className="w-5 h-5 text-indigo-600" />
+                        )}
+                      </div>
+                      {option.value === 'Won' && lead.status !== 'Won' && (
+                        <p className="text-xs text-green-600 mt-2">
+                          ✨ এই স্ট্যাটাস সিলেক্ট করলে রিজার্ভ পয়েন্ট মেইন পয়েন্টে ট্রান্সফার হবে
+                        </p>
+                      )}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex gap-3 pt-4 border-t">
+                  <Button
+                    onClick={handleStatusUpdate}
+                    className="flex-1 bg-indigo-600 hover:bg-indigo-700"
+                    disabled={updateStatusMutation.isPending || selectedStatus === lead.status}
+                  >
+                    {updateStatusMutation.isPending && (
+                      <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></span>
+                    )}
+                    স্ট্যাটাস আপডেট করুন
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsStatusModalOpen(false)}
+                    disabled={updateStatusMutation.isPending}
+                  >
+                    বাতিল
+                  </Button>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
