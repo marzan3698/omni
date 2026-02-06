@@ -3,6 +3,7 @@ import { AuthRequest } from '../types/index.js';
 import {
   initializeClient,
   disconnectClient,
+  clearSessionForSlot,
   getStatus,
   listSlots,
   sendMessage as sendMessageService,
@@ -33,6 +34,28 @@ export const whatsappController = {
         return sendError(res, result.message || 'Failed to initialize', 400);
       }
       sendSuccess(res, { status: 'initializing', slotId }, 'QR will be sent via socket');
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  connectRefresh: async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return sendError(res, 'Company not found', 400);
+      }
+      const slotId = req.params.slotId;
+      if (!slotId || !isValidSlotId(slotId)) {
+        return sendError(res, 'Invalid slot. Use 1-5.', 400);
+      }
+      await disconnectClient(companyId, slotId);
+      await clearSessionForSlot(companyId, slotId);
+      const result = await initializeClient(companyId, slotId);
+      if (!result.success) {
+        return sendError(res, result.message || 'Failed to initialize', 400);
+      }
+      sendSuccess(res, { status: 'initializing', slotId }, 'New QR will be sent via socket');
     } catch (error) {
       next(error);
     }

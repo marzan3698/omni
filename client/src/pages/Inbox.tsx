@@ -9,9 +9,12 @@ import { Label } from '@/components/ui/label';
 import { MessageSquare, Send, User, Bot, Target, X, Zap, Package, Image as ImageIcon, Check, CheckCheck, Clock, ShoppingCart, Users, Search, BarChart3, ChevronLeft, ChevronRight, Tag, Edit, Trash2, Plus, Filter } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getImageUrl } from '@/lib/imageUtils';
+import { playNotificationSound } from '@/utils/notificationSound';
 import { useAuth } from '@/contexts/AuthContext';
+import { useInboxView } from '@/contexts/InboxViewContext';
 import { PermissionGuard } from '@/components/PermissionGuard';
 import { ErrorAlert } from '@/components/ErrorAlert';
+import { SuperAdminInbox } from '@/components/SuperAdminInbox';
 
 // Facebook Icon Component
 const FacebookIcon = ({ className }: { className?: string }) => (
@@ -45,8 +48,9 @@ const QUICK_REPLIES = [
 ];
 
 export function Inbox() {
-  const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'inbox' | 'taken' | 'complete'>('inbox');
+  const { user, hasPermission } = useAuth();
+  const { setHideMainSidebar } = useInboxView();
+  const [activeTab, setActiveTab] = useState<'inbox' | 'taken' | 'complete'>('taken');
   const [selectedConversationId, setSelectedConversationId] = useState<number | null>(null);
   const [messageText, setMessageText] = useState('');
   const [showLeadModal, setShowLeadModal] = useState(false);
@@ -83,6 +87,7 @@ export function Inbox() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const filterPanelRef = useRef<HTMLDivElement>(null);
+  const lastSeenCustomerMessageIdRef = useRef<number | null>(null);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [error, setError] = useState<any | null>(null);
@@ -95,6 +100,14 @@ export function Inbox() {
     queryKey: ['conversations', activeTab],
     queryFn: () => socialApi.getConversations(activeTab),
     refetchInterval: 10000, // Refresh every 10 seconds
+  });
+
+  // Assignment stats for Customer Care role (round-robin dashboard)
+  const { data: stats } = useQuery({
+    queryKey: ['assignment-stats'],
+    queryFn: () => socialApi.getAssignmentStats(),
+    refetchInterval: 10000,
+    enabled: user?.roleName === 'Customer Care',
   });
 
   // Extract available labels from conversations
@@ -586,6 +599,30 @@ export function Inbox() {
     });
   };
 
+  // Hide main app sidebar when a chat is open; show when no chat selected. Inbox tabs/conversation list stay visible.
+  useEffect(() => {
+    setHideMainSidebar(!!selectedConversationId);
+    return () => setHideMainSidebar(false);
+  }, [selectedConversationId, setHideMainSidebar]);
+
+  // Reset last-seen message when switching conversation
+  useEffect(() => {
+    lastSeenCustomerMessageIdRef.current = null;
+  }, [selectedConversationId]);
+
+  // Play notification sound when a new customer message arrives in the open conversation
+  useEffect(() => {
+    const messages = selectedConversation?.messages;
+    if (!messages || messages.length === 0) return;
+    const lastMsg = messages[messages.length - 1];
+    if (lastMsg.senderType !== 'customer') return;
+    const prevId = lastSeenCustomerMessageIdRef.current;
+    if (prevId !== null && lastMsg.id !== prevId) {
+      playNotificationSound();
+    }
+    lastSeenCustomerMessageIdRef.current = lastMsg.id;
+  }, [selectedConversation?.messages, selectedConversationId]);
+
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -741,11 +778,30 @@ export function Inbox() {
     };
   }, [showFilterPanel]);
 
+  if (user?.roleName === 'SuperAdmin') {
+    return <SuperAdminInbox />;
+  }
+
   return (
     <div className="h-[calc(100vh-8rem)] flex flex-col">
-      <div className="flex-1 flex gap-4 overflow-hidden">
-        {/* Left Column: Conversation List */}
-        <Card className="w-80 flex flex-col shadow-sm border-gray-200">
+      <div className="flex-1 flex gap-4 overflow-hidden min-w-0">
+        {/* Left Column: Conversation List - always visible (do not shrink or hide when a chat is selected) */}
+        <Card className="w-80 flex-shrink-0 flex flex-col shadow-sm border-gray-200">
+          {user?.roleName === 'Customer Care' && stats && (
+            <div className="p-3 bg-indigo-50 border-b border-indigo-100">
+              <div className="flex items-center justify-between text-sm flex-wrap gap-2">
+                <div className="flex gap-4">
+                  <span>Total: <strong>{stats.totalConversations}</strong></span>
+                  <span className="text-green-600">WhatsApp: <strong>{stats.whatsappCount}</strong></span>
+                  <span className="text-blue-600">Messenger: <strong>{stats.messengerCount}</strong></span>
+                </div>
+                <div className="flex gap-4">
+                  <span>Assigned to you: <strong>{stats.assignedToMe}</strong></span>
+                  <span className="text-slate-500">Reps: <strong>{stats.totalCustomerCareReps}</strong></span>
+                </div>
+              </div>
+            </div>
+          )}
           <div className="p-4 border-b border-gray-200">
             <div className="flex items-center justify-between mb-1">
               <h2 className="font-semibold text-slate-900">Conversations</h2>
@@ -839,19 +895,8 @@ export function Inbox() {
                 </span>
               )}
             </p>
-            {/* Tabs */}
+            {/* Tabs: Assigned first, then Complete, Inbox last */}
             <div className="flex gap-2 mt-3">
-              <button
-                onClick={() => setActiveTab('inbox')}
-                className={cn(
-                  'flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
-                  activeTab === 'inbox'
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-gray-100 text-slate-700 hover:bg-gray-200'
-                )}
-              >
-                Inbox
-              </button>
               <button
                 onClick={() => setActiveTab('taken')}
                 className={cn(
@@ -861,7 +906,7 @@ export function Inbox() {
                     : 'bg-gray-100 text-slate-700 hover:bg-gray-200'
                 )}
               >
-                Taken
+                Assigned
               </button>
               <button
                 onClick={() => setActiveTab('complete')}
@@ -873,6 +918,17 @@ export function Inbox() {
                 )}
               >
                 Complete
+              </button>
+              <button
+                onClick={() => setActiveTab('inbox')}
+                className={cn(
+                  'flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
+                  activeTab === 'inbox'
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-gray-100 text-slate-700 hover:bg-gray-200'
+                )}
+              >
+                Inbox
               </button>
             </div>
           </div>
@@ -887,19 +943,42 @@ export function Inbox() {
               </div>
             ) : filteredConversations.length === 0 ? (
               <div className="p-4 text-center text-slate-500">
-                <Filter className="w-12 h-12 mx-auto mb-2 text-slate-300" />
-                <p>No conversations match your filters</p>
-                <Button
-                  onClick={() => {
-                    setStatusFilter('All');
-                    setLabelFilter(null);
-                  }}
-                  variant="outline"
-                  size="sm"
-                  className="mt-2"
-                >
-                  Clear Filters
-                </Button>
+                {activeTab === 'inbox' ? (
+                  <>
+                    <MessageSquare className="w-12 h-12 mx-auto mb-2 text-slate-300" />
+                    <p className="text-sm">No unassigned conversations.</p>
+                    <p className="text-xs mt-1 text-slate-400">New chats are auto-assigned to live agents.</p>
+                    {(statusFilter !== 'All' || labelFilter) && (
+                      <Button
+                        onClick={() => {
+                          setStatusFilter('All');
+                          setLabelFilter(null);
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="mt-3"
+                      >
+                        Clear Filters
+                      </Button>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <Filter className="w-12 h-12 mx-auto mb-2 text-slate-300" />
+                    <p>No conversations match your filters</p>
+                    <Button
+                      onClick={() => {
+                        setStatusFilter('All');
+                        setLabelFilter(null);
+                      }}
+                      variant="outline"
+                      size="sm"
+                      className="mt-2"
+                    >
+                      Clear Filters
+                    </Button>
+                  </>
+                )}
               </div>
             ) : (
               <div className="divide-y divide-gray-200">
@@ -937,9 +1016,6 @@ export function Inbox() {
                               <div className="flex items-center gap-2 flex-1 min-w-0">
                                 {conversation.platform === 'facebook' && (
                                   <FacebookIcon className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                                )}
-                                {conversation.platform === 'chatwoot' && (
-                                  <MessageSquare className="w-4 h-4 text-indigo-600 flex-shrink-0" />
                                 )}
                                 {conversation.platform === 'whatsapp' && (
                                   <>
@@ -1015,19 +1091,6 @@ export function Inbox() {
                     </button>
                       {/* Action buttons */}
                       <div className="px-4 pb-3">
-                        {activeTab === 'inbox' && !isAssigned && (
-                          <Button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              assignConversationMutation.mutate(conversation.id);
-                            }}
-                            disabled={isAssigning || isUnassigning}
-                            size="sm"
-                            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"
-                          >
-                            {isAssigning ? 'Taking...' : 'Take'}
-                          </Button>
-                        )}
                         {activeTab === 'taken' && isAssigned && (
                           <Button
                             onClick={(e) => {
@@ -1052,7 +1115,7 @@ export function Inbox() {
         </Card>
 
         {/* Right Column: Chat Window */}
-        <Card className="flex-1 flex flex-col shadow-sm border-gray-200">
+        <Card className="flex-1 min-w-0 flex flex-col shadow-sm border-gray-200">
           {!selectedConversationId ? (
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center">
@@ -1101,9 +1164,8 @@ export function Inbox() {
                       </div>
                       <p className="text-xs text-slate-500 mb-2 flex items-center gap-1.5">
                         {selectedConversation.platform === 'facebook' && <FacebookIcon className="w-3.5 h-3.5 text-blue-600" />}
-                        {selectedConversation.platform === 'chatwoot' && <MessageSquare className="w-3.5 h-3.5 text-indigo-600" />}
                         {selectedConversation.platform === 'whatsapp' && <WhatsAppIcon className="w-3.5 h-3.5 text-green-500" />}
-                        {selectedConversation.platform === 'chatwoot' ? 'Chatwoot' : selectedConversation.platform === 'facebook' ? 'Facebook' : selectedConversation.platform === 'whatsapp' ? `WhatsApp${selectedConversation.whatsappSlotId ? ` (Slot ${selectedConversation.whatsappSlotId})` : ''}` : selectedConversation.platform}
+                        {selectedConversation.platform === 'facebook' ? 'Facebook' : selectedConversation.platform === 'whatsapp' ? `WhatsApp${selectedConversation.whatsappSlotId ? ` (Slot ${selectedConversation.whatsappSlotId})` : ''}` : selectedConversation.platform}
                       </p>
                       {selectedConversation.labels && selectedConversation.labels.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-2">
@@ -1138,7 +1200,7 @@ export function Inbox() {
                       <Tag className="w-3 h-3 mr-1" />
                       {selectedConversation.labels && selectedConversation.labels.length > 0 ? 'Manage Labels' : 'Add Label'}
                     </Button>
-                    <PermissionGuard permission="can_manage_leads">
+                    {(hasPermission('can_manage_leads') || hasPermission('can_view_leads')) && (
                     <Button
                       variant="outline"
                       size="sm"
@@ -1148,7 +1210,7 @@ export function Inbox() {
                       <Target className="w-4 h-4 mr-2" />
                       Create Lead
                     </Button>
-                    </PermissionGuard>
+                    )}
                     {selectedConversation.status === 'Open' && (
                       <Button
                         variant="outline"

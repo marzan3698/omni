@@ -3,7 +3,7 @@ import type { ApiResponse } from '@/types';
 
 export interface Integration {
   id: number;
-  provider: 'facebook' | 'whatsapp' | 'chatwoot';
+  provider: 'facebook' | 'whatsapp';
   pageId: string;
   accessToken: string;
   accountId?: string | null;
@@ -16,7 +16,7 @@ export interface Integration {
 }
 
 export interface CreateIntegrationData {
-  provider: 'facebook' | 'whatsapp' | 'chatwoot';
+  provider: 'facebook' | 'whatsapp';
   pageId: string;
   accessToken: string;
   accountId?: string;
@@ -98,35 +98,5 @@ export const integrationApi = {
     }
   },
 
-  /**
-   * Sync Chatwoot conversations
-   */
-  async syncChatwootConversations(integrationId?: number): Promise<any> {
-    const response = await apiClient.post<ApiResponse<any>>('/chatwoot/sync', {
-      integrationId,
-    });
-
-    if (response.data.success && response.data.data) {
-      return response.data.data;
-    }
-
-    throw new Error(response.data.message || 'Failed to sync Chatwoot conversations');
-  },
-
-  /**
-   * Get Chatwoot webhook URL
-   */
-  async getChatwootWebhookUrl(integrationId?: number): Promise<string> {
-    const params = integrationId ? `?integrationId=${integrationId}` : '';
-    const response = await apiClient.get<ApiResponse<{ webhookUrl: string }>>(
-      `/utils/chatwoot-webhook-url${params}`
-    );
-
-    if (response.data.success && response.data.data) {
-      return response.data.data.webhookUrl;
-    }
-
-    throw new Error(response.data.message || 'Failed to get webhook URL');
-  },
 };
 

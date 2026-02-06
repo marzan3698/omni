@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { taskApi, leadApi, campaignApi, invoiceApi, adminApi } from '@/lib/api';
-import { integrationApi } from '@/lib/integration';
 import { socialApi } from '@/lib/social';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { CircularProgress } from '@/components/ui/circular-progress';
-import { LayoutDashboard, Users, Briefcase, DollarSign, Target, CheckSquare, Building2, MessageSquare, Copy, Check, MessageSquare as ChatwootIcon, Megaphone, Plus, FileText, X, Clock, CheckCircle2, Circle } from 'lucide-react';
+import { LayoutDashboard, Users, Briefcase, DollarSign, Target, CheckSquare, Building2, MessageSquare, Copy, Check, Megaphone, Plus, FileText, X, Clock, CheckCircle2, Circle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { PermissionGuard } from '@/components/PermissionGuard';
+import { WorkTimeline } from '@/components/WorkTimeline';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,7 +15,6 @@ import { cn } from '@/lib/utils';
 
 export function Dashboard() {
   const { user, hasPermission } = useAuth();
-  const [webhookUrlCopied, setWebhookUrlCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<'live-office' | 'analytics' | 'finance-report'>('live-office');
 
   // Fetch user tasks for dashboard
@@ -27,29 +26,6 @@ export function Dashboard() {
       return response.data.data || [];
     },
     enabled: !!user?.id && !!user?.companyId,
-  });
-
-  // Fetch integrations for Chatwoot webhook URL
-  const { data: integrations = [] } = useQuery({
-    queryKey: ['integrations'],
-    queryFn: () => integrationApi.getIntegrations(),
-    enabled: hasPermission('can_view_integrations'),
-  });
-
-  // Fetch Chatwoot webhook URL
-  const chatwootIntegration = integrations.find((i) => i.provider === 'chatwoot');
-  const { data: webhookUrl } = useQuery({
-    queryKey: ['chatwoot-webhook-url', chatwootIntegration?.id],
-    queryFn: async () => {
-      if (!chatwootIntegration?.id) return null;
-      try {
-        return await integrationApi.getChatwootWebhookUrl(chatwootIntegration.id);
-      } catch (error) {
-        console.error('Error fetching webhook URL:', error);
-        return null;
-      }
-    },
-    enabled: hasPermission('can_view_integrations') && !!chatwootIntegration?.id,
   });
 
   const tasks = tasksResponse || [];
@@ -112,17 +88,6 @@ export function Dashboard() {
     },
     enabled: !!user?.companyId && campaigns.length > 0 && (hasPermission('can_manage_leads') || hasPermission('can_view_leads')),
   });
-
-  const handleCopyWebhookUrl = async () => {
-    if (!webhookUrl) return;
-    try {
-      await navigator.clipboard.writeText(webhookUrl);
-      setWebhookUrlCopied(true);
-      setTimeout(() => setWebhookUrlCopied(false), 2000);
-    } catch (error) {
-      console.error('Failed to copy:', error);
-    }
-  };
 
   const allCampaigns = allCampaignsResponse || [];
 
@@ -343,11 +308,11 @@ export function Dashboard() {
             <div className="space-y-6">
               {/* Conversation Statistics Widgets */}
               <div className="grid gap-4 md:grid-cols-2">
-                {/* Widget 1: Conversations Taken Overview */}
+                {/* Widget 1: Assigned Conversations Overview */}
                 <Card className="shadow-sm border-gray-200">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium text-slate-600">
-                      Conversations Taken
+                      Assigned Conversations
                     </CardTitle>
                     <MessageSquare className="w-4 h-4 text-indigo-600" />
                   </CardHeader>
@@ -505,6 +470,9 @@ export function Dashboard() {
                   </CardContent>
                 </Card>
               )}
+
+              {/* Work Timeline - for employees */}
+              {user?.roleName !== 'Client' && <WorkTimeline />}
             </div>
           )}
 
@@ -822,110 +790,8 @@ export function Dashboard() {
         </Card>
       )}
 
-      {/* Chatwoot Webhook URL Widget - SuperAdmin Only */}
-      <PermissionGuard permission="can_view_integrations">
-        <Card className="shadow-sm border-purple-200 bg-purple-50">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center">
-                <ChatwootIcon className="w-6 h-6 text-white" />
-              </div>
-              <div className="flex-1">
-                <CardTitle>Chatwoot Integration</CardTitle>
-                <CardDescription>
-                  Webhook URL for Chatwoot integration
-                </CardDescription>
-              </div>
-              <div className="flex items-center gap-2">
-                <span
-                  className={cn(
-                    'px-3 py-1 rounded-full text-xs font-medium',
-                    chatwootIntegration?.isActive
-                      ? 'bg-green-100 text-green-700'
-                      : 'bg-gray-100 text-gray-700'
-                  )}
-                >
-                  {chatwootIntegration?.isActive ? 'Active' : 'Inactive'}
-                </span>
-                {chatwootIntegration?.isWebhookActive && (
-                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-                    Webhook Active
-                  </span>
-                )}
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {webhookUrl ? (
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Webhook URL
-                  </label>
-                  <div className="flex gap-2">
-                    <Input
-                      value={webhookUrl}
-                      readOnly
-                      className="flex-1 bg-white font-mono text-sm"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleCopyWebhookUrl}
-                      className="flex items-center gap-2"
-                    >
-                      {webhookUrlCopied ? (
-                        <>
-                          <Check className="w-4 h-4" />
-                          Copied!
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-4 h-4" />
-                          Copy
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                  <p className="text-xs text-slate-500 mt-2">
-                    Copy this URL and add it in Chatwoot Settings → Integrations → Webhooks
-                  </p>
-                </div>
-                {chatwootIntegration && (
-                  <div className="flex items-center justify-between p-2 bg-white rounded border border-purple-200">
-                    <span className="text-xs text-slate-600">Integration Status:</span>
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={cn(
-                          'px-2 py-1 rounded-full text-xs font-medium',
-                          chatwootIntegration.isActive
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-gray-100 text-gray-700'
-                        )}
-                      >
-                        {chatwootIntegration.isActive ? 'Active' : 'Inactive'}
-                      </span>
-                      {chatwootIntegration.isWebhookActive && (
-                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-                          Webhook Enabled
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : chatwootIntegration ? (
-              <div className="text-sm text-slate-500">
-                Webhook URL not available. Please configure the integration in Settings.
-              </div>
-            ) : (
-              <div className="text-sm text-slate-500">
-                No Chatwoot integration found. Please set up the integration in Settings.
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </PermissionGuard>
+          {/* Work Timeline - for employees */}
+          {user?.roleName !== 'Client' && <WorkTimeline />}
 
           {/* Campaign Management Widget - Show for non-SuperAdmin with permission */}
           {(hasPermission('can_manage_campaigns') && !isSuperAdmin) && (

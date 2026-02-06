@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { SidebarProvider } from './contexts/SidebarContext';
+import { InboxViewProvider } from './contexts/InboxViewContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { PermissionGuard } from './components/PermissionGuard';
 import { Layout } from './components/Layout';
@@ -76,6 +77,7 @@ function App() {
     <AuthProvider>
       <SidebarProvider>
         <BrowserRouter>
+          <InboxViewProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route
@@ -637,6 +639,7 @@ function App() {
             {/* Default redirect - will be handled by AuthContext based on role */}
             <Route path="/home" element={<Navigate to="/dashboard" replace />} />
           </Routes>
+          </InboxViewProvider>
         </BrowserRouter>
       </SidebarProvider>
     </AuthProvider>

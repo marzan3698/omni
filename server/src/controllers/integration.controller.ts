@@ -6,24 +6,24 @@ import { z } from 'zod';
 
 // Validation schemas
 const createIntegrationSchema = z.object({
-  provider: z.enum(['facebook', 'whatsapp', 'chatwoot']),
+  provider: z.enum(['facebook', 'whatsapp']),
   pageId: z.string().min(1, 'Page ID is required'),
   accessToken: z.string().min(1, 'Access token is required'),
-  accountId: z.string().optional(), // For Chatwoot
-  baseUrl: z.string().optional(), // For Chatwoot
+  accountId: z.string().optional(),
+  baseUrl: z.string().optional(),
   isActive: z.boolean().optional(),
-  webhookMode: z.enum(['local', 'live']).optional(), // For Chatwoot
-  isWebhookActive: z.boolean().optional(), // For Chatwoot
+  webhookMode: z.enum(['local', 'live']).optional(),
+  isWebhookActive: z.boolean().optional(),
 });
 
 const updateIntegrationSchema = z.object({
   pageId: z.string().min(1).optional(),
   accessToken: z.string().min(1).optional(),
-  accountId: z.string().optional(), // For Chatwoot
-  baseUrl: z.string().optional(), // For Chatwoot
+  accountId: z.string().optional(),
+  baseUrl: z.string().optional(),
   isActive: z.boolean().optional(),
-  webhookMode: z.enum(['local', 'live']).optional(), // For Chatwoot
-  isWebhookActive: z.boolean().optional(), // For Chatwoot
+  webhookMode: z.enum(['local', 'live']).optional(),
+  isWebhookActive: z.boolean().optional(),
 });
 
 export const integrationController = {

@@ -5,10 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { integrationApi, type CreateIntegrationData } from '@/lib/integration';
 import { facebookOAuthApi } from '@/lib/facebookOAuth';
-import { whatsappApi } from '@/lib/whatsapp';
+import { whatsappApi, type SlotInfo } from '@/lib/whatsapp';
 import {
   Facebook,
-  MessageSquare,
   Plug,
   Trash2,
   Edit,
@@ -44,7 +43,7 @@ export default function Integrations() {
     queryKey: ['whatsapp-slots'],
     queryFn: async () => {
       const res = await whatsappApi.listSlots();
-      return res.data?.data as { slotId: string; connected: boolean; phoneNumber?: string }[];
+      return res.data?.data as SlotInfo[];
     },
     enabled: !!user?.companyId,
   });
@@ -105,16 +104,16 @@ export default function Integrations() {
     }
   };
 
-  const handleChatwootSetup = () => {
-    navigate('/settings');
-  };
-
-  const handleWhatsAppConnect = async (slotId: string) => {
+  const handleWhatsAppConnect = async (slotId: string, isReconnect = false) => {
     try {
       setIsConnecting(true);
       setConnectingSlotId(slotId);
       setShowWhatsAppModal(true);
-      await whatsappApi.connect(slotId);
+      if (isReconnect) {
+        await whatsappApi.connectRefresh(slotId);
+      } else {
+        await whatsappApi.connect(slotId);
+      }
     } catch (err: any) {
       alert(err?.response?.data?.message || err?.message || 'Failed to start WhatsApp connection');
       setShowWhatsAppModal(false);
@@ -135,7 +134,6 @@ export default function Integrations() {
   };
 
   const facebookIntegrations = integrations.filter((i) => i.provider === 'facebook');
-  const chatwootIntegrations = integrations.filter((i) => i.provider === 'chatwoot');
   const whatsappIntegrations = integrations.filter((i) => i.provider === 'whatsapp');
 
   return (
@@ -203,47 +201,6 @@ export default function Integrations() {
               </CardContent>
             </Card>
 
-            {/* Chatwoot Card */}
-            <Card className="shadow-sm border-gray-200 hover:shadow-md transition-shadow">
-              <CardHeader>
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 bg-purple-100 rounded-lg">
-                    <MessageSquare className="h-6 w-6 text-purple-600" />
-                  </div>
-                  <CardTitle className="text-xl">Via Chatwoot</CardTitle>
-                </div>
-                <CardDescription>
-                  Chatwoot দিয়ে connect করুন - Multi-channel support
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                      <span>Multi-channel support</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                      <span>Advanced features</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                      <span>Team collaboration</span>
-                    </div>
-                  </div>
-                  <Button
-                    onClick={handleChatwootSetup}
-                    variant="outline"
-                    className="w-full border-purple-300 text-purple-700 hover:bg-purple-50"
-                  >
-                    <MessageSquare className="mr-2 h-4 w-4" />
-                    Configure Chatwoot
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
             {/* WhatsApp Slots Card (max 5) */}
             <Card className="shadow-sm border-gray-200 hover:shadow-md transition-shadow">
               <CardHeader>
@@ -271,14 +228,23 @@ export default function Integrations() {
                     const slot = whatsappSlots.find((s) => s.slotId === slotId);
                     const connected = slot?.connected ?? false;
                     const phone = slot?.phoneNumber;
+                    const persisted = slot?.persisted ?? false;
                     const isThisSlotConnecting = connectingSlotId === slotId && isConnecting;
+                    const slotLabel =
+                      connected && phone
+                        ? `+${phone}`
+                        : persisted
+                          ? phone
+                            ? `+${phone} (Reconnect)`
+                            : 'Disconnected - Reconnect'
+                          : 'Empty';
                     return (
                       <div
                         key={slotId}
                         className="flex items-center justify-between gap-3 py-2 px-3 rounded-lg border border-gray-200 bg-gray-50/50"
                       >
                         <span className="text-sm font-medium text-slate-700">
-                          Slot {slotId}: {connected && phone ? `+${phone}` : 'Empty'}
+                          Slot {slotId}: {slotLabel}
                         </span>
                         {connected ? (
                           <Button
@@ -291,9 +257,9 @@ export default function Integrations() {
                             Disconnect
                           </Button>
                         ) : (
-                          <Button
+                            <Button
                             size="sm"
-                            onClick={() => handleWhatsAppConnect(slotId)}
+                            onClick={() => handleWhatsAppConnect(slotId, persisted && !connected)}
                             disabled={isConnecting}
                             className="bg-green-600 hover:bg-green-700 text-white"
                           >
@@ -337,7 +303,7 @@ export default function Integrations() {
         onRetry={async () => {
           const slot = connectingSlotId ?? '1';
           try {
-            await whatsappApi.connect(slot);
+            await whatsappApi.connectRefresh(slot);
           } catch (e) {
             console.error(e);
           }
@@ -355,9 +321,7 @@ export default function Integrations() {
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
                       <CardTitle className="text-lg flex items-center gap-2">
-                        {integration.provider === 'chatwoot' ? (
-                          <MessageSquare className="h-5 w-5 text-purple-600" />
-                        ) : integration.provider === 'facebook' ? (
+                        {integration.provider === 'facebook' ? (
                           <Facebook className="h-5 w-5 text-blue-600" />
                         ) : integration.provider === 'whatsapp' ? (
                           <Smartphone className="h-5 w-5 text-green-600" />
@@ -368,16 +332,14 @@ export default function Integrations() {
                           ? 'Direct Messenger'
                           : integration.provider === 'whatsapp'
                             ? 'WhatsApp (Web)'
-                            : 'Chatwoot'}
+                            : 'Other'}
                       </CardTitle>
                       <CardDescription className="mt-1">
-                        {integration.provider === 'chatwoot'
-                          ? `Inbox ID: ${integration.pageId}`
-                          : integration.provider === 'whatsapp'
-                            ? (integration.pageId?.match(/whatsapp-slot-(.+)/)
-                                ? `Slot ${integration.pageId.match(/whatsapp-slot-(.+)/)?.[1]}`
-                                : `Page ID: ${integration.pageId}`)
-                            : `Page ID: ${integration.pageId}`}
+                        {integration.provider === 'whatsapp'
+                          ? (integration.pageId?.match(/whatsapp-slot-(.+)/)
+                              ? `Slot ${integration.pageId.match(/whatsapp-slot-(.+)/)?.[1]}`
+                              : `Page ID: ${integration.pageId}`)
+                          : `Page ID: ${integration.pageId}`}
                       </CardDescription>
                       <div className="mt-2 flex items-center gap-2 flex-wrap">
                         <span
@@ -404,7 +366,7 @@ export default function Integrations() {
                             ? 'Direct'
                             : integration.provider === 'whatsapp'
                               ? 'WhatsApp'
-                              : 'Chatwoot'}
+                              : 'Other'}
                         </span>
                       </div>
                     </div>
@@ -529,30 +491,6 @@ export default function Integrations() {
                         </div>
                       </div>
                     </PermissionGuard>
-                    {integration.provider === 'chatwoot' && (
-                      <>
-                        {integration.webhookMode && (
-                          <div className="flex items-center justify-between">
-                            <span className="text-gray-600">Webhook Mode:</span>
-                            <span className="text-gray-700">{integration.webhookMode}</span>
-                          </div>
-                        )}
-                        {integration.isWebhookActive !== null && (
-                          <div className="flex items-center justify-between">
-                            <span className="text-gray-600">Webhook:</span>
-                            <span
-                              className={`px-2 py-1 text-xs rounded-full ${
-                                integration.isWebhookActive
-                                  ? 'bg-purple-100 text-purple-700'
-                                  : 'bg-gray-100 text-gray-700'
-                              }`}
-                            >
-                              {integration.isWebhookActive ? 'Enabled' : 'Disabled'}
-                            </span>
-                          </div>
-                        )}
-                      </>
-                    )}
                   </div>
                 </CardContent>
               </Card>

@@ -5,11 +5,14 @@ export interface SlotInfo {
   slotId: string;
   connected: boolean;
   phoneNumber?: string;
+  persisted?: boolean;
 }
 
 export const whatsappApi = {
   connect: (slotId: string) =>
     apiClient.post<ApiResponse<{ status: string; slotId?: string }>>(`/whatsapp/connect/${slotId}`),
+  connectRefresh: (slotId: string) =>
+    apiClient.post<ApiResponse<{ status: string; slotId?: string }>>(`/whatsapp/connect/${slotId}/refresh`),
   disconnect: (slotId: string) =>
     apiClient.post<ApiResponse>(`/whatsapp/disconnect/${slotId}`),
   getStatus: (slotId: string) =>

@@ -22,6 +22,7 @@ export default function WhatsAppQRModal({
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadingMessage, setLoadingMessage] = useState<string>('Generating QR code...');
 
   useEffect(() => {
     if (!isOpen || !socket) return;
@@ -30,11 +31,13 @@ export default function WhatsAppQRModal({
     const readyEvent = `whatsapp:ready:${slotId}`;
     const disconnectedEvent = `whatsapp:disconnected:${slotId}`;
     const authFailureEvent = `whatsapp:auth_failure:${slotId}`;
+    const qrRetryEvent = `whatsapp:qr_retry:${slotId}`;
 
     const onQr = (data: string) => {
       setQrCode(data);
       setError(null);
       setConnected(false);
+      setLoadingMessage('Generating QR code...');
     };
     const onReady = () => {
       setConnected(true);
@@ -49,17 +52,24 @@ export default function WhatsAppQRModal({
       setError(msg || 'Authentication failed');
       setQrCode(null);
     };
+    const onQrRetry = () => {
+      setQrCode(null);
+      setError(null);
+      setLoadingMessage('Generating new QR...');
+    };
 
     socket.on(qrEvent, onQr);
     socket.on(readyEvent, onReady);
     socket.on(disconnectedEvent, onDisconnected);
     socket.on(authFailureEvent, onAuthFailure);
+    socket.on(qrRetryEvent, onQrRetry);
 
     return () => {
       socket.off(qrEvent, onQr);
       socket.off(readyEvent, onReady);
       socket.off(disconnectedEvent, onDisconnected);
       socket.off(authFailureEvent, onAuthFailure);
+      socket.off(qrRetryEvent, onQrRetry);
     };
   }, [isOpen, socket, slotId, onConnected]);
 
@@ -128,7 +138,7 @@ export default function WhatsAppQRModal({
         ) : (
           <div className="flex flex-col items-center gap-4 py-8">
             <Loader2 className="h-10 w-10 animate-spin text-indigo-600" />
-            <p className="text-sm text-slate-600">Generating QR code...</p>
+            <p className="text-sm text-slate-600">{loadingMessage}</p>
             <Button variant="outline" onClick={onClose}>Cancel</Button>
           </div>
         )}

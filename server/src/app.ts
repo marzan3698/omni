@@ -42,7 +42,6 @@ app.use('/uploads', express.static('uploads'));
 
 // Raw body parser for webhooks (must be before json parser)
 app.use('/api/webhooks/facebook', express.raw({ type: 'application/json' }));
-app.use('/api/chatwoot/webhooks/chatwoot', express.raw({ type: 'application/json' }));
 
 // Increase body parser limit to handle large base64 images (10MB)
 app.use(express.json({ limit: '10mb' }));
@@ -62,7 +61,6 @@ import authRoutes from './routes/auth.routes.js';
 import socialRoutes from './routes/social.routes.js';
 import integrationRoutes from './routes/integration.routes.js';
 import utilsRoutes from './routes/utils.routes.js';
-import chatwootRoutes from './routes/chatwoot.routes.js';
 import companyRoutes from './routes/company.routes.js';
 import employeeRoutes from './routes/employee.routes.js';
 import taskRoutes from './routes/task.routes.js';
@@ -91,13 +89,14 @@ import facebookOAuthRoutes from './routes/facebookOAuth.routes.js';
 import environmentRoutes from './routes/environment.routes.js';
 import inboxReportRoutes from './routes/inbox-report.routes.js';
 import whatsappRoutes from './routes/whatsapp.routes.js';
+import workSessionRoutes from './routes/workSession.routes.js';
 app.use('/api/auth', authRoutes);
+app.use('/api/work-session', workSessionRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api', socialRoutes);
 app.use('/api/integrations', integrationRoutes);
 app.use('/api/integrations/facebook', facebookOAuthRoutes);
 app.use('/api/utils', utilsRoutes);
-app.use('/api/chatwoot', chatwootRoutes);
 app.use('/api/companies', companyRoutes);
 app.use('/api/employees', employeeRoutes);
 app.use('/api/employee-groups', employeeGroupRoutes);

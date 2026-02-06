@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { socialController } from '../controllers/social.controller.js';
-import { authMiddleware } from '../middleware/authMiddleware.js';
+import { authMiddleware, verifyRole } from '../middleware/authMiddleware.js';
 import { singleSocialImage } from '../middleware/upload.js';
 
 const router = Router();
@@ -12,6 +12,9 @@ router.get('/conversations/analytics/public', socialController.getPublicConversa
 
 // Protected endpoints (require authentication)
 router.get('/conversations', authMiddleware, socialController.getConversations);
+router.get('/conversations/assignment-stats', authMiddleware, socialController.getAssignmentStats);
+router.get('/conversations/superadmin-stats', authMiddleware, verifyRole(['SuperAdmin']), socialController.getSuperAdminStats);
+router.post('/conversations/distribute', authMiddleware, verifyRole(['SuperAdmin']), socialController.distributeConversations);
 router.get('/conversations/analytics', authMiddleware, socialController.getConversationAnalytics);
 router.get('/conversations/:id/messages', authMiddleware, socialController.getConversationMessages);
 router.post('/conversations/:id/mark-read', authMiddleware, socialController.markConversationAsRead);

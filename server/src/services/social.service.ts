@@ -1,6 +1,6 @@
 import { prisma } from '../lib/prisma.js';
 import { AppError } from '../middleware/errorHandler.js';
-import { chatwootService } from './chatwoot.service.js';
+import * as autoAssignService from './autoAssign.service.js';
 
 // In-memory storage for typing indicators
 // Key: conversationId, Value: { userId: string, isTyping: boolean, updatedAt: Date }
@@ -77,6 +77,17 @@ export const socialService = {
   },
 
   /**
+   * Resolve companyId for Facebook webhook (first company with active Facebook integration).
+   */
+  async getDefaultCompanyIdForFacebook(): Promise<number | null> {
+    const integration = await prisma.integration.findFirst({
+      where: { provider: 'facebook', isActive: true },
+      select: { companyId: true },
+    });
+    return integration?.companyId ?? null;
+  },
+
+  /**
    * Process incoming Facebook messages
    * Handles both production format (object: 'page') and test format (field: 'messages')
    */
@@ -88,6 +99,12 @@ export const socialService = {
       const value = payload.value;
       if (!value.message || !value.message.text) {
         console.log('Test webhook: No message text, skipping');
+        return { success: true };
+      }
+
+      const companyId = await this.getDefaultCompanyIdForFacebook();
+      if (companyId == null) {
+        console.log('Test webhook: No Facebook integration found, skipping');
         return { success: true };
       }
 
@@ -114,6 +131,7 @@ export const socialService = {
       // Find or create conversation
       let conversation = await prisma.socialConversation.findFirst({
         where: {
+          companyId,
           platform: 'facebook',
           externalUserId: senderId,
         },
@@ -122,6 +140,7 @@ export const socialService = {
       if (!conversation) {
         conversation = await prisma.socialConversation.create({
           data: {
+            companyId,
             platform: 'facebook',
             externalUserId: senderId,
             externalUserName: `Test User ${senderId.substring(0, 8)}`,
@@ -130,6 +149,7 @@ export const socialService = {
           },
         });
         console.log(`Created new conversation: ${conversation.id}`);
+        await autoAssignService.autoAssignConversation(conversation.id, companyId);
       } else {
         await prisma.socialConversation.update({
           where: { id: conversation.id },
@@ -138,6 +158,9 @@ export const socialService = {
             status: 'Open',
           },
         });
+        if (conversation.assignedTo == null) {
+          await autoAssignService.autoAssignConversation(conversation.id, companyId);
+        }
         console.log(`Updated conversation: ${conversation.id}`);
       }
 
@@ -177,6 +200,12 @@ export const socialService = {
     if (payload.object !== 'page' || !payload.entry) {
       console.log('Invalid webhook format or not a page object');
       throw new AppError('Invalid webhook object', 400);
+    }
+
+    const companyId = await this.getDefaultCompanyIdForFacebook();
+    if (companyId == null) {
+      console.log('Production webhook: No Facebook integration found, skipping');
+      return { success: true };
     }
 
     for (const entry of payload.entry) {
@@ -267,6 +296,7 @@ export const socialService = {
           // Find or create conversation
           let conversation = await prisma.socialConversation.findFirst({
             where: {
+              companyId,
               platform: 'facebook',
               externalUserId: senderId,
             },
@@ -275,6 +305,7 @@ export const socialService = {
           if (!conversation) {
             conversation = await prisma.socialConversation.create({
               data: {
+                companyId,
                 platform: 'facebook',
                 externalUserId: senderId,
                 externalUserName: null, // Would be fetched from Facebook API
@@ -283,6 +314,7 @@ export const socialService = {
               },
             });
             console.log(`Created new conversation: ${conversation.id} for user ${senderId}`);
+            await autoAssignService.autoAssignConversation(conversation.id, companyId);
           } else {
             await prisma.socialConversation.update({
               where: { id: conversation.id },
@@ -291,6 +323,9 @@ export const socialService = {
                 status: 'Open', // Reopen if closed
               },
             });
+            if (conversation.assignedTo == null) {
+              await autoAssignService.autoAssignConversation(conversation.id, companyId);
+            }
             console.log(`Updated conversation: ${conversation.id}`);
           }
 
@@ -425,7 +460,6 @@ export const socialService = {
     console.log('✅ getConversations result:', {
       total: conversationsWithUnreadCount.length,
       platforms: conversationsWithUnreadCount.map(c => c.platform),
-      chatwootCount: conversationsWithUnreadCount.filter(c => c.platform === 'chatwoot').length,
       facebookCount: conversationsWithUnreadCount.filter(c => c.platform === 'facebook').length,
     });
 
@@ -502,10 +536,9 @@ export const socialService = {
 
     const platformBreakdown = {
       facebook: platformCounts.find((p) => p.platform === 'facebook')?._count._all || 0,
-      chatwoot: platformCounts.find((p) => p.platform === 'chatwoot')?._count._all || 0,
       whatsapp: platformCounts.find((p) => p.platform === 'whatsapp')?._count._all || 0,
       other: platformCounts.reduce((sum, p) => {
-        if (p.platform === 'facebook' || p.platform === 'chatwoot' || p.platform === 'whatsapp') return sum;
+        if (p.platform === 'facebook' || p.platform === 'whatsapp') return sum;
         return sum + p._count._all;
       }, 0),
     };
@@ -564,247 +597,6 @@ export const socialService = {
     }
 
     console.log('✅ Conversation found:', { id: conversation.id, platform: conversation.platform, externalUserId: conversation.externalUserId });
-
-    // If Chatwoot platform, send via Chatwoot API
-    if (conversation.platform === 'chatwoot') {
-      // Get Chatwoot integration
-      const integration = await prisma.integration.findFirst({
-        where: {
-          provider: 'chatwoot',
-          isActive: true,
-        },
-      });
-
-      if (!integration || !integration.accountId) {
-        throw new AppError('Chatwoot integration not found or not configured', 400);
-      }
-
-      // Extract Chatwoot conversation ID from externalUserId
-      // New format: chatwoot_contactId_conversationId
-      // Old format: chatwoot_contactId (need to find conversation ID from Chatwoot API)
-      let chatwootConversationId: number | null = null;
-      const conversationIdMatch = conversation.externalUserId.match(/chatwoot_\d+_(\d+)/);
-
-      if (conversationIdMatch) {
-        // New format - extract conversation ID directly
-        chatwootConversationId = parseInt(conversationIdMatch[1], 10);
-      } else {
-        // Old format - need to find conversation ID from Chatwoot API
-        const contactIdMatch = conversation.externalUserId.match(/chatwoot_(\d+)/);
-        if (contactIdMatch) {
-          const contactId = contactIdMatch[1];
-          console.log(`Old format detected. Finding conversation for contact ${contactId}...`);
-
-          // Import chatwootService
-          const { chatwootService } = await import('./chatwoot.service.js');
-
-          // Get inbox ID from integration (pageId stores inboxId for Chatwoot)
-          const inboxId = integration.pageId;
-          if (!inboxId) {
-            throw new AppError('Chatwoot inbox ID not configured', 400);
-          }
-
-          // Fetch conversations from Chatwoot to find the one for this contact
-          try {
-            const chatwootConversations = await chatwootService.getChatwootConversations(
-              integration.accountId,
-              inboxId,
-              integration.accessToken,
-              integration.baseUrl
-            );
-
-            // Find conversation for this contact
-            console.log(`Searching ${chatwootConversations.length} conversations for contact ${contactId}`);
-            const chatwootConv = chatwootConversations.find(
-              conv => conv.contact.id.toString() === contactId
-            );
-
-            if (chatwootConv) {
-              chatwootConversationId = chatwootConv.id;
-              console.log(`✅ Found Chatwoot conversation ID: ${chatwootConversationId} for contact ${contactId}`);
-
-              // Update conversation to new format for future use
-              await prisma.socialConversation.update({
-                where: { id: conversation.id },
-                data: {
-                  externalUserId: `chatwoot_${contactId}_${chatwootConversationId}`,
-                },
-              });
-            } else {
-              console.log(`❌ Conversation not found for contact ${contactId}. Available contacts:`,
-                chatwootConversations.map(c => `${c.contact.id} (${c.contact.name})`).join(', '));
-
-              // Fallback: Try to get conversation ID from Chatwoot API directly by contact ID
-              // This might work if the conversation exists but wasn't returned in the list
-              try {
-                const axios = (await import('axios')).default;
-                const getChatwootApiUrl = (baseUrl?: string | null): string => {
-                  const defaultUrl = 'https://app.chatwoot.com';
-                  if (!baseUrl) return defaultUrl;
-                  const url = baseUrl.trim().replace(/\/$/, '');
-                  return url || defaultUrl;
-                };
-
-                const apiUrl = getChatwootApiUrl(integration.baseUrl);
-                // Try to get conversations directly with contact_id filter
-                const convUrl = `${apiUrl}/api/v1/accounts/${integration.accountId}/conversations`;
-                const convResponse = await axios.get(convUrl, {
-                  headers: {
-                    'api_access_token': integration.accessToken,
-                    'Content-Type': 'application/json',
-                  },
-                  params: {
-                    inbox_id: integration.pageId,
-                    contact_id: contactId,
-                  },
-                });
-
-                if (convResponse.data?.payload && convResponse.data.payload.length > 0) {
-                  const conv = convResponse.data.payload[0];
-                  chatwootConversationId = conv.id;
-                  console.log(`✅ Found Chatwoot conversation ID via direct API call: ${chatwootConversationId}`);
-
-                  // Update conversation to new format
-                  await prisma.socialConversation.update({
-                    where: { id: conversation.id },
-                    data: {
-                      externalUserId: `chatwoot_${contactId}_${chatwootConversationId}`,
-                    },
-                  });
-                }
-              } catch (fallbackError: any) {
-                console.error('Fallback API call failed:', fallbackError.message);
-              }
-
-              if (!chatwootConversationId) {
-                // Last resort: Try to get conversation ID from webhook payload stored in logs
-                // Or check if we can create a new conversation
-                console.log(`⚠️ Could not find Chatwoot conversation ID for contact ${contactId}. The conversation may need to be updated via webhook.`);
-                throw new AppError(`Chatwoot conversation not found for contact ${contactId}. Please send a new message from Chatwoot to this contact to update the conversation format, or wait for the next webhook.`, 404);
-              }
-            }
-          } catch (error: any) {
-            console.error('Error fetching Chatwoot conversations:', error);
-            throw new AppError(`Failed to find Chatwoot conversation: ${error.message}`, 500);
-          }
-        }
-      }
-
-      if (!chatwootConversationId || isNaN(chatwootConversationId)) {
-        throw new AppError('Chatwoot conversation ID not found. Please sync conversations first.', 400);
-      }
-
-      // Import chatwootService
-      const { chatwootService } = await import('./chatwoot.service.js');
-
-      // Send message via Chatwoot API first
-      let chatwootMessage;
-      try {
-        // Prepare attachments if image is provided
-        let attachments: Array<{ type: string; data_url: string }> | undefined;
-        if (imageUrl) {
-          try {
-            // Chatwoot requires base64 data URL, not HTTP URL
-            // Read the image file and convert to base64
-            const fs = (await import('fs')).default;
-            const path = (await import('path')).default;
-
-            // Get the local file path
-            const localFilePath = imageUrl.startsWith('/')
-              ? path.join(process.cwd(), imageUrl)
-              : path.join(process.cwd(), 'uploads', 'social', path.basename(imageUrl));
-
-            console.log('📁 Reading image file:', localFilePath);
-
-            // Check if file exists
-            if (!fs.existsSync(localFilePath)) {
-              throw new AppError(`Image file not found: ${localFilePath}`, 404);
-            }
-
-            // Read file and convert to base64
-            const imageBuffer = fs.readFileSync(localFilePath);
-            const base64Image = imageBuffer.toString('base64');
-
-            // Determine MIME type from file extension
-            const ext = path.extname(localFilePath).toLowerCase();
-            const mimeTypes: Record<string, string> = {
-              '.jpg': 'image/jpeg',
-              '.jpeg': 'image/jpeg',
-              '.png': 'image/png',
-              '.gif': 'image/gif',
-              '.webp': 'image/webp',
-            };
-            const mimeType = mimeTypes[ext] || 'image/png';
-
-            // Create data URL format: data:image/png;base64,{base64String}
-            const dataUrl = `data:${mimeType};base64,${base64Image}`;
-
-            attachments = [{
-              type: 'image',
-              data_url: dataUrl,
-            }];
-
-            console.log(`✅ Image converted to base64 (${(imageBuffer.length / 1024).toFixed(2)}KB)`);
-          } catch (imageError: any) {
-            console.error('❌ Error processing image for Chatwoot:', imageError.message);
-            throw new AppError(`Failed to process image: ${imageError.message}`, 500);
-          }
-        }
-
-        console.log('📤 Calling Chatwoot API:', {
-          accountId: integration.accountId,
-          conversationId: chatwootConversationId,
-          hasContent: !!content,
-          hasAttachments: !!attachments,
-          attachmentCount: attachments?.length || 0,
-        });
-
-        chatwootMessage = await chatwootService.sendChatwootMessage(
-          integration.accountId,
-          chatwootConversationId,
-          content || '', // Chatwoot requires content, even if empty
-          integration.accessToken,
-          integration.baseUrl,
-          attachments // Pass attachments
-        );
-        console.log(`✅ Message sent to Chatwoot conversation ${chatwootConversationId}`, {
-          messageId: chatwootMessage?.id,
-          hasAttachments: !!attachments,
-        });
-      } catch (error: any) {
-        console.error('❌ Error sending Chatwoot message via API:', {
-          error: error.message,
-          response: error.response?.data,
-          status: error.response?.status,
-          statusCode: error.statusCode,
-        });
-        throw new AppError(
-          `Failed to send message to Chatwoot: ${error.response?.data?.error || error.message}`,
-          error.response?.status || error.statusCode || 500
-        );
-      }
-
-      // Save agent message locally after successful API send
-      const message = await prisma.socialMessage.create({
-        data: {
-          conversationId,
-          senderType: 'agent',
-          content: content || '', // Allow empty content if only image
-          imageUrl: imageUrl || null,
-          createdAt: new Date(),
-        },
-      });
-
-      // Update conversation last message time
-      await prisma.socialConversation.update({
-        where: { id: conversation.id },
-        data: {
-          lastMessageAt: new Date(),
-        },
-      });
-
-      return message;
-    }
 
     // For WhatsApp platform, send via whatsapp-web.js client
     if (conversation.platform === 'whatsapp') {
@@ -973,7 +765,7 @@ export const socialService = {
           error.response?.status || 500
         );
       }
-    } else if (conversation.platform !== 'whatsapp' && conversation.platform !== 'chatwoot') {
+    } else if (conversation.platform !== 'whatsapp') {
       console.log('⚠️ Unknown conversation platform:', conversation.platform);
       console.log('💡 Conversation details:', {
         id: conversation.id,
@@ -1002,68 +794,6 @@ export const socialService = {
     });
 
     return message;
-  },
-
-  /**
-   * Sync Chatwoot conversations
-   */
-  async syncChatwootConversations() {
-    // Get all active Chatwoot integrations
-    const integrations = await prisma.integration.findMany({
-      where: {
-        provider: 'chatwoot',
-        isActive: true,
-      },
-    });
-
-    if (integrations.length === 0) {
-      return {
-        success: true,
-        message: 'No active Chatwoot integrations found',
-        synced: 0,
-      };
-    }
-
-    const results = [];
-    for (const integration of integrations) {
-      if (!integration.accountId) {
-        console.warn(`Chatwoot integration ${integration.id} missing accountId, skipping`);
-        continue;
-      }
-
-      try {
-        const result = await chatwootService.syncChatwootConversations(
-          integration.accountId,
-          integration.pageId, // inboxId
-          integration.accessToken,
-          integration.baseUrl
-        );
-        results.push({
-          integrationId: integration.id,
-          ...result,
-        });
-      } catch (error: any) {
-        console.error(`Error syncing Chatwoot integration ${integration.id}:`, error);
-        results.push({
-          integrationId: integration.id,
-          success: false,
-          error: error.message,
-        });
-      }
-    }
-
-    const totalSynced = results.reduce((sum, r) => sum + (r.synced || 0), 0);
-    const totalCreated = results.reduce((sum, r) => sum + (r.created || 0), 0);
-    const totalUpdated = results.reduce((sum, r) => sum + (r.updated || 0), 0);
-
-    return {
-      success: true,
-      message: `Synced ${totalSynced} conversations (${totalCreated} created, ${totalUpdated} updated)`,
-      results,
-      totalSynced,
-      totalCreated,
-      totalUpdated,
-    };
   },
 
   /**

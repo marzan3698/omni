@@ -4,6 +4,7 @@ import { authMiddleware } from '../middleware/authMiddleware.js';
 
 const router = Router();
 
+router.post('/connect/:slotId/refresh', authMiddleware, whatsappController.connectRefresh);
 router.post('/connect/:slotId', authMiddleware, whatsappController.connect);
 router.post('/disconnect/:slotId', authMiddleware, whatsappController.disconnect);
 router.get('/status/:slotId', authMiddleware, whatsappController.getStatus);

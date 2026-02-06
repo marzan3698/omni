@@ -10,7 +10,6 @@ router.get('/ngrok-url', utilsController.getNgrokUrl);
 // Protected routes (require authentication)
 router.post('/subscribe-page', authMiddleware, utilsController.subscribePage);
 router.get('/check-subscription', authMiddleware, utilsController.checkSubscription);
-router.get('/chatwoot-webhook-url', authMiddleware, utilsController.getChatwootWebhookUrl);
 
 export default router;
 

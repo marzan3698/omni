@@ -2,14 +2,14 @@ import { prisma } from '../lib/prisma.js';
 import { AppError } from '../middleware/errorHandler.js';
 
 interface CreateIntegrationData {
-  provider: 'facebook' | 'whatsapp' | 'chatwoot';
+  provider: 'facebook' | 'whatsapp';
   pageId: string;
   accessToken: string;
-  accountId?: string; // For Chatwoot: account_id
-  baseUrl?: string; // For Chatwoot: base URL (optional, defaults to cloud)
+  accountId?: string;
+  baseUrl?: string;
   isActive?: boolean;
-  webhookMode?: 'local' | 'live'; // For Chatwoot: webhook mode
-  isWebhookActive?: boolean; // Enable/disable webhook
+  webhookMode?: 'local' | 'live';
+  isWebhookActive?: boolean;
   companyId?: number; // Company ID (required for multi-tenant)
 }
 
@@ -35,22 +35,15 @@ export const integrationService = {
     }
 
     // Validate provider
-    if (!['facebook', 'whatsapp', 'chatwoot'].includes(provider)) {
-      throw new AppError('Invalid provider. Must be facebook, whatsapp, or chatwoot', 400);
-    }
-
-    // Validate Chatwoot-specific fields
-    if (provider === 'chatwoot') {
-      if (!accountId) {
-        throw new AppError('Account ID is required for Chatwoot integration', 400);
-      }
+    if (!['facebook', 'whatsapp'].includes(provider)) {
+      throw new AppError('Invalid provider. Must be facebook or whatsapp', 400);
     }
 
     // Check if integration exists
     const existing = await prisma.integration.findFirst({
       where: {
         companyId,
-        provider: provider as 'facebook' | 'whatsapp' | 'chatwoot',
+        provider: provider as 'facebook' | 'whatsapp',
         pageId,
       },
     });
@@ -83,15 +76,7 @@ export const integrationService = {
       isActive,
       updatedAt: new Date(),
     };
-
-    // Add Chatwoot-specific fields if provider is chatwoot
-    if (provider === 'chatwoot') {
-      integrationData.accountId = accountId;
-      integrationData.baseUrl = baseUrl || 'https://app.chatwoot.com';
-      // Set webhook fields - use defaults if not provided
-      integrationData.webhookMode = webhookMode || 'local';
-      integrationData.isWebhookActive = isWebhookActive ?? false;
-    }
+    if (accountId !== undefined) integrationData.accountId = accountId;
 
     // Update or create
     const integration = existing
@@ -101,7 +86,7 @@ export const integrationService = {
         })
       : await prisma.integration.create({
           data: {
-            provider: provider as 'facebook' | 'whatsapp' | 'chatwoot',
+            provider: provider as 'facebook' | 'whatsapp',
             pageId,
             companyId,
             ...integrationData,
@@ -142,7 +127,7 @@ export const integrationService = {
   /**
    * Get integration by provider and pageId
    */
-  async getIntegrationByProvider(provider: 'facebook' | 'whatsapp' | 'chatwoot', pageId: string) {
+  async getIntegrationByProvider(provider: 'facebook' | 'whatsapp', pageId: string) {
     const integration = await prisma.integration.findUnique({
       where: {
         provider_pageId: {

@@ -164,6 +164,57 @@ export const verifyPermission = (permission: string) => {
 };
 
 /**
+ * Middleware to check if user has any of the given permissions
+ * Usage: verifyPermissionAny(['can_manage_leads', 'can_view_leads'])
+ */
+export const verifyPermissionAny = (permissions: string[]) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const authReq = req as AuthRequest;
+
+      if (!authReq.user) {
+        return res.status(401).json({
+          success: false,
+          message: 'User not authenticated',
+        });
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { id: authReq.user.id },
+        include: { role: true },
+      });
+
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found',
+        });
+      }
+
+      if (user.role.name === 'SuperAdmin') {
+        return next();
+      }
+
+      const rolePerms = user.role.permissions as Record<string, boolean>;
+      const hasAny = permissions.some((p) => rolePerms[p]);
+      if (!hasAny) {
+        return res.status(403).json({
+          success: false,
+          message: 'Permission denied',
+        });
+      }
+
+      next();
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        message: 'Permission check failed',
+      });
+    }
+  };
+};
+
+/**
  * Middleware to check if user can view tasks
  * Allows users to view their own tasks OR users with can_view_tasks permission
  * Also allows users assigned to a specific task (individually or via group) to access it

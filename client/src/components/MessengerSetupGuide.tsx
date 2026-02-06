@@ -264,8 +264,8 @@ export default function MessengerSetupGuide() {
           {/* Comparison */}
           <section>
             <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-              <Settings className="h-5 w-5 text-purple-600" />
-              Direct vs Chatwoot - কোনটি ব্যবহার করবেন?
+              <Settings className="h-5 w-5 text-indigo-600" />
+              Direct Messenger ও WhatsApp
             </h3>
             <div className="grid md:grid-cols-2 gap-4">
               <div className="border border-blue-200 rounded-lg p-4 bg-blue-50">
@@ -292,27 +292,27 @@ export default function MessengerSetupGuide() {
                   </li>
                 </ul>
               </div>
-              <div className="border border-purple-200 rounded-lg p-4 bg-purple-50">
-                <h4 className="font-semibold text-purple-800 mb-2 flex items-center gap-2">
+              <div className="border border-green-200 rounded-lg p-4 bg-green-50">
+                <h4 className="font-semibold text-green-800 mb-2 flex items-center gap-2">
                   <MessageSquare className="h-4 w-4" />
-                  Chatwoot
+                  WhatsApp Slots
                 </h4>
                 <ul className="space-y-2 text-sm text-gray-700">
                   <li className="flex items-start gap-2">
                     <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                    <span>Multi-channel support</span>
+                    <span>সর্বোচ্চ ৫টি নম্বর connect</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                    <span>Advanced features</span>
+                    <span>QR code দিয়ে connect</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                    <span>Team collaboration</span>
+                    <span>সব মেসেজ এক ইনবক্সে</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                    <span>Requires Chatwoot account</span>
+                    <span>WhatsApp Web based</span>
                   </li>
                 </ul>
               </div>
@@ -326,7 +326,7 @@ export default function MessengerSetupGuide() {
               <div>
                 <p className="font-medium text-yellow-800 mb-1">💡 গুরুত্বপূর্ণ নোট</p>
                 <p className="text-sm text-yellow-700">
-                  Direct Messenger এবং Chatwoot - দুটি option-ই একসাথে ব্যবহার করা যায়। আপনি আপনার
+                  Direct Messenger এবং WhatsApp দুটি option-ই একসাথে ব্যবহার করা যায়। আপনি আপনার
                   প্রয়োজন অনুযায়ী যেকোনো একটি বা দুটোই connect করতে পারেন।
                 </p>
               </div>

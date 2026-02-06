@@ -144,31 +144,5 @@ export const utilsController = {
       return sendError(res, error.message || 'Failed to check subscription', 500);
     }
   },
-
-  /**
-   * Get Chatwoot webhook URL
-   * GET /api/utils/chatwoot-webhook-url?integrationId=xxx
-   */
-  getChatwootWebhookUrl: async (req: Request, res: Response) => {
-    try {
-      const integrationId = req.query.integrationId 
-        ? parseInt(req.query.integrationId as string, 10)
-        : undefined;
-
-      if (integrationId && isNaN(integrationId)) {
-        return sendError(res, 'Invalid integration ID', 400);
-      }
-
-      const { getChatwootWebhookUrl } = await import('../utils/webhook.js');
-      const webhookUrl = await getChatwootWebhookUrl(undefined, integrationId);
-
-      return sendSuccess(res, {
-        webhookUrl,
-        integrationId: integrationId || null,
-      }, 'Webhook URL retrieved successfully');
-    } catch (error: any) {
-      return sendError(res, error.message || 'Failed to get webhook URL', 500);
-    }
-  },
 };
 

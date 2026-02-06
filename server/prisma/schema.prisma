@@ -61,6 +61,7 @@ model Company {
   employeeGroups       EmployeeGroup[]
   conversationReleases ConversationRelease[]
   conversationLabels   ConversationLabel[]
+  workSessions         WorkSession[]
   subTasks             SubTask[]
   taskAttachments      TaskAttachment[]
   taskConversations    TaskConversation[]
@@ -98,12 +99,15 @@ model User {
   companyId    Int      @map("company_id")
   profileImage String?  @map("profile_image") @db.Text
   eSignature   String?  @map("e_signature") @db.Text
+  isOnline     Boolean  @default(false) @map("is_online")
+  lastOnlineAt DateTime? @map("last_online_at") @db.DateTime
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
   role                   Role             @relation(fields: [roleId], references: [id], onDelete: Restrict)
   company                Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
   employee               Employee?
+  workSessions           WorkSession[]
   taskComments           TaskComment[]
   createdLeads           Lead[]           @relation("LeadCreator")
   projects               Project[]
@@ -117,6 +121,24 @@ model User {
   @@index([roleId])
   @@index([companyId])
   @@map("users")
+}
+
+model WorkSession {
+  id        Int       @id @default(autoincrement())
+  userId    String    @map("user_id") @db.VarChar(36)
+  companyId Int       @map("company_id")
+  startTime DateTime  @map("start_time") @db.DateTime
+  endTime   DateTime? @map("end_time") @db.DateTime
+  duration  Int?      // Duration in seconds (calculated on end)
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([companyId])
+  @@index([startTime])
+  @@map("work_sessions")
 }
 
 // ============================================
@@ -828,7 +850,6 @@ model AccountReceivable {
 enum IntegrationProvider {
   facebook
   whatsapp
-  chatwoot
 
   @@map("integration_provider")
 }
@@ -865,7 +886,6 @@ model Integration {
 
 enum SocialPlatform {
   facebook
-  chatwoot
   whatsapp
 
   @@map("social_platform")

@@ -13,7 +13,7 @@ export interface ConversationLabel {
 
 export interface SocialConversation {
   id: number;
-  platform: 'facebook' | 'chatwoot' | 'whatsapp';
+  platform: 'facebook' | 'whatsapp';
   externalUserId: string;
   externalUserName: string | null;
   status: 'Open' | 'Closed';
@@ -58,7 +58,7 @@ export interface ConversationAnalytics {
   closedConversations: number;
   platformBreakdown: {
     facebook: number;
-    chatwoot: number;
+    whatsapp: number;
     other: number;
   };
   daily: Array<{
@@ -66,6 +66,22 @@ export interface ConversationAnalytics {
     messages: number;
     conversations: number;
   }>;
+}
+
+export interface AssignmentStats {
+  totalConversations: number;
+  whatsappCount: number;
+  messengerCount: number;
+  assignedToMe: number;
+  totalCustomerCareReps: number;
+  myShare: number;
+}
+
+export interface SuperAdminStats {
+  totalMessages: number;
+  assignedMessages: number;
+  unassignedMessages: number;
+  activeRepsCount: number;
 }
 
 export interface ConversationStats {
@@ -301,6 +317,46 @@ export const socialApi = {
     }
 
     throw new Error(response.data.message || 'Failed to complete conversation');
+  },
+
+  /**
+   * Get assignment stats for Customer Care inbox (round-robin stats)
+   */
+  async getAssignmentStats(): Promise<AssignmentStats> {
+    const response = await apiClient.get<ApiResponse<AssignmentStats>>(
+      '/conversations/assignment-stats'
+    );
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error(response.data.message || 'Failed to fetch assignment stats');
+  },
+
+  /**
+   * Get SuperAdmin inbox stats (total/assigned/unassigned, active reps).
+   */
+  async getSuperAdminStats(): Promise<SuperAdminStats> {
+    const response = await apiClient.get<ApiResponse<SuperAdminStats>>(
+      '/conversations/superadmin-stats'
+    );
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error(response.data.message || 'Failed to fetch SuperAdmin stats');
+  },
+
+  /**
+   * Distribute N unassigned conversations to active Customer Care reps.
+   */
+  async distributeConversations(count: number): Promise<{ distributed: number; failed: number }> {
+    const response = await apiClient.post<ApiResponse<{ distributed: number; failed: number }>>(
+      '/conversations/distribute',
+      { count }
+    );
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error(response.data.message || 'Failed to distribute conversations');
   },
 
   /**

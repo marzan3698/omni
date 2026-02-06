@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { leadController } from '../controllers/lead.controller.js';
 import { leadMeetingController } from '../controllers/leadMeeting.controller.js';
 import { leadCallController } from '../controllers/leadCall.controller.js';
-import { authMiddleware, verifyPermission, verifyLeadAccess } from '../middleware/authMiddleware.js';
+import { authMiddleware, verifyPermission, verifyPermissionAny, verifyLeadAccess } from '../middleware/authMiddleware.js';
 
 const router = Router();
 
@@ -15,7 +15,7 @@ router.get('/pipeline', verifyPermission('can_manage_leads'), leadController.get
 router.get('/client', leadController.getClientLeads); // Client route - no permission check needed, handled in service
 router.get('/:id', verifyLeadAccess, leadController.getLeadById);
 router.post('/', verifyPermission('can_manage_leads'), leadController.createLead);
-router.post('/from-inbox/:conversationId', verifyPermission('can_manage_leads'), leadController.createLeadFromInbox);
+router.post('/from-inbox/:conversationId', verifyPermissionAny(['can_manage_leads', 'can_view_leads']), leadController.createLeadFromInbox);
 router.get('/:leadId/meetings', verifyLeadAccess, leadMeetingController.getLeadMeetings);
 router.post('/:leadId/meetings', verifyPermission('can_manage_leads'), leadMeetingController.createLeadMeeting);
 router.put('/:leadId/meetings/:id', verifyPermission('can_manage_leads'), leadMeetingController.updateLeadMeeting);

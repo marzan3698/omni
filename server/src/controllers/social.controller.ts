@@ -1,7 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
 import { socialService } from '../services/social.service.js';
+import {
+  getAssignmentStats as getAssignmentStatsService,
+  getSuperAdminStats as getSuperAdminStatsService,
+  distributeUnassignedConversations as distributeUnassignedConversationsService,
+} from '../services/autoAssign.service.js';
 import { sendSuccess, sendError } from '../utils/response.js';
 import { AppError } from '../middleware/errorHandler.js';
+import { prisma } from '../lib/prisma.js';
 
 export const socialController = {
   /**
@@ -142,6 +148,69 @@ export const socialController = {
 
       const conversations = await socialService.getConversations(status, companyId, tab, assignedToEmployeeId);
       sendSuccess(res, conversations, 'Conversations retrieved successfully');
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  /**
+   * Get assignment stats for Customer Care inbox dashboard
+   * GET /api/conversations/assignment-stats
+   */
+  getAssignmentStats: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const companyId = (req as any).user?.companyId;
+      const userId = (req as any).user?.id;
+      if (!companyId) {
+        return sendError(res, 'Company context required', 400);
+      }
+      let employeeId: number | undefined;
+      if (userId) {
+        const employee = await prisma.employee.findUnique({
+          where: { userId },
+        });
+        if (employee) employeeId = employee.id;
+      }
+      const stats = await getAssignmentStatsService(companyId, employeeId);
+      sendSuccess(res, stats, 'Assignment stats retrieved successfully');
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  /**
+   * Get SuperAdmin inbox stats (total/assigned/unassigned messages, active reps).
+   * GET /api/conversations/superadmin-stats
+   */
+  getSuperAdminStats: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const companyId = (req as any).user?.companyId;
+      if (!companyId) {
+        return sendError(res, 'Company context required', 400);
+      }
+      const stats = await getSuperAdminStatsService(companyId);
+      sendSuccess(res, stats, 'SuperAdmin stats retrieved successfully');
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  /**
+   * Distribute N unassigned conversations to active Customer Care reps.
+   * POST /api/conversations/distribute
+   */
+  distributeConversations: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const companyId = (req as any).user?.companyId;
+      if (!companyId) {
+        return sendError(res, 'Company context required', 400);
+      }
+      const count = typeof req.body?.count === 'number' ? req.body.count : parseInt(String(req.body?.count ?? 0), 10);
+      if (!Number.isInteger(count) || count < 1 || count > 100) {
+        return sendError(res, 'count must be an integer between 1 and 100', 400);
+      }
+      const result = await distributeUnassignedConversationsService(companyId, count);
+      sendSuccess(res, result, 'Distribution completed');
     } catch (error) {
       next(error);
     }

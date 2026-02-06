@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Sidebar } from './Sidebar';
 import { MeetingAlert } from './MeetingAlert';
-import { Menu, Bell, Search, User, LogOut, Maximize2, Minimize2 } from 'lucide-react';
+import { Menu, Bell, Search, User, LogOut, Maximize2, Minimize2, Circle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSidebar } from '@/contexts/SidebarContext';
+import { useInboxView } from '@/contexts/InboxViewContext';
 import { meetingApi } from '@/lib/api';
+import { workSessionApi } from '@/lib/workSession';
 import { cn } from '@/lib/utils';
 
 interface LayoutProps {
@@ -16,9 +18,12 @@ interface LayoutProps {
 export function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const { isOpen, setIsOpen } = useSidebar();
+  const { hideMainSidebar } = useInboxView();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const { user, logout } = useAuth();
+
+  const queryClient = useQueryClient();
 
   // Fetch upcoming meeting (within 1 hour)
   const { data: upcomingMeeting } = useQuery({
@@ -31,16 +36,30 @@ export function Layout({ children }: LayoutProps) {
     refetchInterval: 30000, // Check every 30 seconds
   });
 
-  // Auto-hide sidebar when on /inbox route, show when navigating away
+  // Work session (live) status - for employees
+  const { data: sessionStatus } = useQuery({
+    queryKey: ['work-session-status'],
+    queryFn: () => workSessionApi.getCurrentSession(),
+    refetchInterval: 30000,
+    enabled: !!user?.id && user?.roleName !== 'Client',
+  });
+
+  const toggleLiveMutation = useMutation({
+    mutationFn: () => workSessionApi.toggleLiveStatus(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['work-session-status'] });
+      queryClient.invalidateQueries({ queryKey: ['assignment-stats'] });
+    },
+  });
+
+  // Hide main sidebar only when on /inbox AND a chat is selected; keep inbox tabs/conversation list visible
   useEffect(() => {
     if (location.pathname === '/inbox') {
-      setIsOpen(false);
+      setIsOpen(!hideMainSidebar);
     } else {
-      // Only auto-show if we're coming from inbox (to avoid interfering with manual toggles)
-      // We'll track this with a ref or just always show when not on inbox
       setIsOpen(true);
     }
-  }, [location.pathname, setIsOpen]);
+  }, [location.pathname, hideMainSidebar, setIsOpen]);
 
   // Check fullscreen status
   useEffect(() => {
@@ -135,7 +154,25 @@ export function Layout({ children }: LayoutProps) {
               {upcomingMeeting && (
                 <MeetingAlert meeting={upcomingMeeting} />
               )}
-              
+
+              {/* Live status button - for employees */}
+              {user?.roleName !== 'Client' && (
+                <button
+                  onClick={() => toggleLiveMutation.mutate()}
+                  disabled={toggleLiveMutation.isPending}
+                  className={cn(
+                    'flex items-center gap-1.5 h-8 px-3 text-sm font-medium rounded-full transition-all',
+                    sessionStatus?.isOnline
+                      ? 'bg-green-500 hover:bg-green-600 text-white'
+                      : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                  )}
+                  title={sessionStatus?.isOnline ? 'Live - receiving messages' : 'Offline - go live to receive messages'}
+                >
+                  <Circle className={cn('w-2 h-2', sessionStatus?.isOnline && 'fill-current')} />
+                  <span className="hidden sm:inline">{sessionStatus?.isOnline ? 'Live' : 'Offline'}</span>
+                </button>
+              )}
+
               {/* Fullscreen button */}
               <button
                 onClick={toggleFullscreen}
