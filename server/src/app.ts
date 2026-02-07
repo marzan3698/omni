@@ -7,33 +7,39 @@ dotenv.config();
 
 const app: Express = express();
 
-// CORS Middleware - must be before routes
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
+// Allowed origins for CORS (production + local)
+const getAllowedOrigins = (): string[] => {
   const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
-
-  // Allow both www and non-www versions of the domain
-  const allowedOrigins = [
+  return [
     clientUrl,
     'https://paaera.com',
     'https://www.paaera.com',
+    'http://paaera.com',
+    'http://www.paaera.com',
     'http://localhost:5173',
+    'http://localhost:3000',
   ];
+};
 
-  // Set CORS headers for all requests
-  if (origin && allowedOrigins.includes(origin)) {
+/** Set CORS headers on response - use in all paths so errors also return CORS */
+function setCorsHeaders(req: Request, res: Response): void {
+  const origin = req.headers.origin;
+  const allowed = getAllowedOrigins();
+  if (origin && allowed.includes(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
   }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
+  res.setHeader('Access-Control-Max-Age', '86400');
+}
 
-  // Handle preflight requests - MUST return headers before sending response
+// CORS Middleware - must be before routes
+app.use((req, res, next) => {
+  setCorsHeaders(req, res);
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
-
   next();
 });
 
@@ -125,7 +131,7 @@ app.use('/api/admin/environment', environmentRoutes);
 app.use('/api/admin/inbox-report', inboxReportRoutes);
 // app.use('/api/users', userRoutes);
 
-// Global error handling middleware
+// Global error handling middleware (CORS headers so browser gets proper response)
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   console.error('Global error handler:', {
     message: err.message,
@@ -135,17 +141,17 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
     name: err.name,
   });
 
-  // Use statusCode from error if available, otherwise default to 500
+  setCorsHeaders(req, res);
   const statusCode = err.statusCode || err.status || 500;
-
   res.status(statusCode).json({
     success: false,
     message: err.message || 'Internal server error',
   });
 });
 
-// 404 handler
+// 404 handler (CORS headers so browser does not show CORS error)
 app.use((req: Request, res: Response) => {
+  setCorsHeaders(req, res);
   res.status(404).json({
     success: false,
     message: 'Route not found',
