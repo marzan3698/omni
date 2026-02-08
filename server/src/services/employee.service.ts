@@ -317,13 +317,14 @@ export const employeeService = {
   },
 
   /**
-   * Get employee balance and points by user ID
+   * Get employee balance and points by user ID (and company when provided)
    */
-  async getEmployeeBalancePoints(userId: string) {
+  async getEmployeeBalancePoints(userId: string, companyId?: number) {
     try {
       const employee = await prisma.employee.findFirst({
         where: {
           userId,
+          ...(companyId != null ? { companyId } : {}),
         },
         select: {
           id: true,

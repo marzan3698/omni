@@ -221,12 +221,13 @@ export const employeeController = {
   getMyBalancePoints: async (req: Request, res: Response) => {
     try {
       const userId = (req as AuthRequest).user?.id;
+      const companyId = (req as AuthRequest).user?.companyId;
       
       if (!userId) {
         return sendError(res, 'User not authenticated', 401);
       }
 
-      const balancePoints = await employeeService.getEmployeeBalancePoints(userId);
+      const balancePoints = await employeeService.getEmployeeBalancePoints(userId, companyId);
       return sendSuccess(res, balancePoints, 'Balance and points retrieved successfully');
     } catch (error) {
       if (error instanceof AppError) {

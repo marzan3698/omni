@@ -515,6 +515,7 @@ export function LeadDetail() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lead', id, user?.companyId] });
+      queryClient.invalidateQueries({ queryKey: ['my-balance-points'] });
       setIsConvertModalOpen(false);
       resetConvert();
       alert(

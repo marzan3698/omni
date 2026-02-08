@@ -63,6 +63,7 @@ export const leadService = {
   async getAllLeads(filters?: {
     createdBy?: string;
     createdByOrAssignedToUserId?: string;
+    leadManagerUserId?: string;
     status?: LeadStatus;
     source?: LeadSource;
     assignedTo?: number;
@@ -106,6 +107,18 @@ export const leadService = {
     }
     if (searchOr && !accessOr) {
       where.OR = searchOr;
+    }
+
+    // Lead Manager: only unassigned leads (no monitoring incharge) OR leads they monitor
+    if (filters?.leadManagerUserId) {
+      const monitoringOr = {
+        OR: [
+          { leadMonitoringUserId: null },
+          { leadMonitoringUserId: filters.leadManagerUserId },
+        ],
+      };
+      if (!where.AND) where.AND = [];
+      where.AND.push(monitoringOr);
     }
 
     if (filters?.status) {

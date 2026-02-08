@@ -66,8 +66,14 @@ export const leadController = {
 
       const filters: any = {};
       
-      // If not Lead Manager or SuperAdmin, show leads created by this user OR assigned to this user
-      if (userRole !== 'Lead Manager' && userRole !== 'SuperAdmin') {
+      // Lead Manager: only unassigned leads + leads they monitor
+      if (userRole === 'Lead Manager') {
+        if (!userId) {
+          return sendError(res, 'User ID not found', 400);
+        }
+        filters.leadManagerUserId = userId;
+      } else if (userRole !== 'SuperAdmin') {
+        // Other roles: show leads created by this user OR assigned to this user
         if (!userId) {
           return sendError(res, 'User ID not found', 400);
         }
