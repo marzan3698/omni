@@ -120,7 +120,7 @@ cd ~/public_html/api && npx prisma migrate deploy
 
 - **Backend not starting:** Check Node.js version, env vars, port
 - **Frontend 404:** Check `.htaccess`, mod_rewrite enabled
-- **CORS errors:** Update `CLIENT_URL` in backend `.env`
+- **CORS errors / 503 on API:** Often the API returns 503 (Node app not running); proxy’s 503 has no CORS headers. Start or Restart Node.js app in cPanel; set `CLIENT_URL` to your frontend origin (e.g. `https://www.paaera.com`). See **docs/PAAERA_CORS_AND_503_FIX.md** for paaera.com.
 - **Database errors:** Verify credentials, run migrations
 - **File upload fails:** Check directory permissions (755)
 

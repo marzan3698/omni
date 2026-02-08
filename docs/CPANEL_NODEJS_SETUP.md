@@ -58,9 +58,10 @@ After creating the app:
    PORT=5001
    DATABASE_URL=mysql://your_username:your_password@localhost:3306/your_database
    JWT_SECRET=your_super_secret_jwt_key_min_32_characters_long
-   CLIENT_URL=https://paaera.com
-   API_URL=https://paaera.com
+   CLIENT_URL=https://www.paaera.com
+   API_URL=https://api.paaera.com
    ```
+   **Important for CORS:** Use `https://www.paaera.com` if your frontend is at www. Use `https://api.paaera.com` for API_URL when using the api subdomain.
 
    **Important:** Replace placeholders:
    - `your_username`: Your MySQL username
@@ -96,6 +97,11 @@ After deployment completes and app is started:
 ---
 
 ## Troubleshooting
+
+### CORS errors / 503 Service Unavailable on api.paaera.com:
+- **503** means the proxy is not getting a response from Node – the app is likely **stopped** or **crashing**.
+- Browser shows "No Access-Control-Allow-Origin" because the 503 response from the proxy has no CORS headers.
+- **Fix:** Start (or Restart) the Node.js app in cPanel. Set `CLIENT_URL=https://www.paaera.com`. See **PAAERA_CORS_AND_503_FIX.md** (and **PAAERA_CORS_AND_503_FIX_BANGLA.md**) for full steps.
 
 ### App won't start:
 - Check that `~/api/dist/server.js` exists (after deployment)

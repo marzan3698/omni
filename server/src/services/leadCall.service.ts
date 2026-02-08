@@ -1,6 +1,7 @@
 import { prisma } from '../lib/prisma.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { LeadCallStatus } from '@prisma/client';
+import { assertEmployeeAvailable } from './booking.service.js';
 
 interface CreateLeadCallData {
   companyId: number;
@@ -96,6 +97,14 @@ export const leadCallService = {
       }
     }
 
+    const durationMinutes = data.durationMinutes ?? 15;
+    await assertEmployeeAvailable({
+      companyId: data.companyId,
+      employeeId: data.assignedTo,
+      startTime: data.callTime,
+      durationMinutes,
+    });
+
     return prisma.leadCall.create({
       data: {
         companyId: data.companyId,
@@ -152,6 +161,17 @@ export const leadCallService = {
         throw new AppError('Assigned employee not found', 404);
       }
     }
+
+    const employeeId = data.assignedTo ?? call.assignedTo;
+    const startTime = data.callTime ?? call.callTime;
+    const durationMinutes = data.durationMinutes ?? call.durationMinutes ?? 15;
+    await assertEmployeeAvailable({
+      companyId,
+      employeeId,
+      startTime,
+      durationMinutes,
+      excludeCallId: id,
+    });
 
     return prisma.leadCall.update({
       where: { id },

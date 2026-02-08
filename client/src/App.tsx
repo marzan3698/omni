@@ -26,11 +26,13 @@ import { UserDetail } from './pages/UserDetail';
 import { Tasks } from './pages/Tasks';
 import { TaskDetail } from './pages/TaskDetail';
 import { Finance } from './pages/Finance';
+import { PendingClients } from './pages/PendingClients';
 import { Leads } from './pages/Leads';
 import { LeadDetail } from './pages/LeadDetail';
 import { MeetingSchedule } from './pages/MeetingSchedule';
 import { CallSchedule } from './pages/CallSchedule';
 import { MyCalls } from './pages/MyCalls';
+import { MyMeetings } from './pages/MyMeetings';
 import Users from './pages/Users';
 import LeadConfig from './pages/LeadConfig';
 import SystemSettings from './pages/SystemSettings';
@@ -205,6 +207,30 @@ function App() {
               }
             />
             <Route
+              path="/finance/pending-clients"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <PermissionGuard permission="can_approve_clients">
+                      <PendingClients />
+                    </PermissionGuard>
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/client-setup/pending-clients"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <PermissionGuard permission="can_approve_clients">
+                      <PendingClients />
+                    </PermissionGuard>
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/payment-management"
               element={
                 <ProtectedRoute>
@@ -264,6 +290,16 @@ function App() {
                 <ProtectedRoute>
                   <Layout>
                     <MyCalls />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/my-meetings"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <MyMeetings />
                   </Layout>
                 </ProtectedRoute>
               }

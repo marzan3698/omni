@@ -134,9 +134,12 @@ export const roleService = {
       throw new AppError('Role not found', 404);
     }
 
-    // Cannot rename SuperAdmin role
+    // Cannot rename SuperAdmin or Lead Manager role
     if (role.name === 'SuperAdmin') {
       throw new AppError('Cannot rename SuperAdmin role', 403);
+    }
+    if (role.name === 'Lead Manager') {
+      throw new AppError('Cannot rename Lead Manager role', 403);
     }
 
     // Check if new name already exists (excluding current role)
@@ -186,9 +189,12 @@ export const roleService = {
       throw new AppError('Role not found', 404);
     }
 
-    // Cannot delete SuperAdmin role
+    // Cannot delete SuperAdmin or Lead Manager role
     if (role.name === 'SuperAdmin') {
       throw new AppError('Cannot delete SuperAdmin role', 403);
+    }
+    if (role.name === 'Lead Manager') {
+      throw new AppError('Cannot delete Lead Manager role', 403);
     }
 
     // Cannot delete if users are assigned

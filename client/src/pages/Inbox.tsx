@@ -15,6 +15,7 @@ import { useInboxView } from '@/contexts/InboxViewContext';
 import { PermissionGuard } from '@/components/PermissionGuard';
 import { ErrorAlert } from '@/components/ErrorAlert';
 import { SuperAdminInbox } from '@/components/SuperAdminInbox';
+import { EmployeeSelector } from '@/components/EmployeeSelector';
 
 // Facebook Icon Component
 const FacebookIcon = ({ className }: { className?: string }) => (
@@ -72,6 +73,7 @@ export function Inbox() {
   const [leadType, setLeadType] = useState<'sales' | 'connection' | 'research' | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
+  const [selectedLeadEmployeeIds, setSelectedLeadEmployeeIds] = useState<number[]>([]);
   
   const [leadFormData, setLeadFormData] = useState({
     title: '',
@@ -173,7 +175,7 @@ export function Inbox() {
   const { data: categoriesResponse } = useQuery({
     queryKey: ['lead-categories'],
     queryFn: async () => {
-      const response = await leadCategoryApi.getAll(user?.companyId || 0);
+      const response = await leadCategoryApi.getAll();
       return response.data.data || [];
     },
     enabled: !!user?.companyId && showLeadModal,
@@ -183,7 +185,7 @@ export function Inbox() {
   const { data: interestsResponse } = useQuery({
     queryKey: ['lead-interests'],
     queryFn: async () => {
-      const response = await leadInterestApi.getAll(user?.companyId || 0);
+      const response = await leadInterestApi.getAll();
       return response.data.data || [];
     },
     enabled: !!user?.companyId && showLeadModal,
@@ -324,7 +326,8 @@ export function Inbox() {
     },
     onSuccess: () => {
       setShowLeadModal(false);
-      setLeadFormData({ title: '', description: '', customerName: '', phone: '', categoryId: '', interestId: '', campaignId: '' });
+      setSelectedLeadEmployeeIds([]);
+      setLeadFormData({ title: '', description: '', value: '', assignedTo: '', customerName: '', phone: '', categoryId: '', interestId: '', campaignId: '' });
       setLeadType(null);
       setCurrentStep(1);
       setSelectedProductId(null);
@@ -452,6 +455,8 @@ export function Inbox() {
     setLeadFormData({
       title: defaultTitle,
       description: '',
+      value: '',
+      assignedTo: '',
       customerName: selectedConversation.externalUserName || '',
       phone: '',
       categoryId: '',
@@ -523,6 +528,7 @@ export function Inbox() {
       categoryId: categoryIdNum,
       interestId: interestIdNum,
       campaignId: campaignIdNum,
+      assignedTo: selectedLeadEmployeeIds.length > 0 ? selectedLeadEmployeeIds : undefined,
     };
 
     // Add product pricing information
@@ -544,9 +550,12 @@ export function Inbox() {
         setLeadType(null);
         setCurrentStep(1);
         setSelectedProductId(null);
+        setSelectedLeadEmployeeIds([]);
         setLeadFormData({
           title: '',
           description: '',
+          value: '',
+          assignedTo: '',
           customerName: '',
           phone: '',
           categoryId: '',
@@ -1265,7 +1274,7 @@ export function Inbox() {
                               </span>
                             )}
                             {!isAgent && message.isRead && (
-                              <CheckCheck className="w-3 h-3 text-slate-400" title="Read" />
+                              <span title="Read"><CheckCheck className="w-3 h-3 text-slate-400" /></span>
                             )}
                           </div>
                         </div>
@@ -1626,6 +1635,7 @@ export function Inbox() {
                     setLeadType(null);
                     setCurrentStep(1);
                     setSelectedProductId(null);
+                    setSelectedLeadEmployeeIds([]);
                   }}
                 >
                   <X className="w-4 h-4" />
@@ -1846,6 +1856,16 @@ export function Inbox() {
                           className="w-full min-h-[80px] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         />
                       </div>
+                      {user?.companyId && (
+                        <div>
+                          <Label>লিড ম্যানেজমেন্টের জন্য অ্যাসাইন করুন</Label>
+                          <EmployeeSelector
+                            companyId={user.companyId}
+                            selectedEmployeeIds={selectedLeadEmployeeIds}
+                            onSelectionChange={setSelectedLeadEmployeeIds}
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -1892,6 +1912,7 @@ export function Inbox() {
                       setLeadType(null);
                       setCurrentStep(1);
                       setSelectedProductId(null);
+                      setSelectedLeadEmployeeIds([]);
                     }}
                   >
                     বাতিল

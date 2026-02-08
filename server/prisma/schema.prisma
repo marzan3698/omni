@@ -31,8 +31,9 @@ model Company {
   users                User[]
   employees            Employee[]
   departments          Department[]
-  clients              Client[]
-  tasks                Task[]
+  clients                  Client[]
+  clientApprovalRequests   ClientApprovalRequest[]
+  tasks                    Task[]
   invoices             Invoice[]
   transactions         Transaction[]
   budgets              Budget[]
@@ -109,12 +110,15 @@ model User {
   employee               Employee?
   workSessions           WorkSession[]
   taskComments           TaskComment[]
-  createdLeads           Lead[]           @relation("LeadCreator")
-  projects               Project[]
-  campaignClients        CampaignClient[]
-  createdEmployeeGroups  EmployeeGroup[]
-  createdTaskAttachments TaskAttachment[] @relation("UserTaskAttachments")
-  taskMessages           TaskMessage[]    @relation("UserTaskMessages")
+  createdLeads                    Lead[]                   @relation("LeadCreator")
+  monitoredLeads                  Lead[]                   @relation("LeadMonitoringManager")
+  projects                       Project[]
+  campaignClients                CampaignClient[]
+  createdEmployeeGroups          EmployeeGroup[]
+  createdTaskAttachments         TaskAttachment[]          @relation("UserTaskAttachments")
+  taskMessages                   TaskMessage[]             @relation("UserTaskMessages")
+  clientApprovalRequestsRequested ClientApprovalRequest[]  @relation("ClientApprovalRequestedBy")
+  clientApprovalRequestsApproved  ClientApprovalRequest[]  @relation("ClientApprovalApprovedBy")
 
   @@unique([email, companyId])
   @@index([email])
@@ -189,12 +193,14 @@ model Employee {
   managedDepartment  Department? @relation("DepartmentManager")
 
   // Relations
-  assignedLeads         Lead[]
+  leadAssignments       LeadAssignment[]
   assignedTasks         Task[]
   assignedConversations SocialConversation[]  @relation("AssignedConversations")
-  assignedCalls         LeadCall[]
-  groups                EmployeeGroupMember[]
-  releases              ConversationRelease[]
+  assignedCalls               LeadCall[]
+  assignedMeetings           LeadMeeting[]
+  groups                     EmployeeGroupMember[]
+  releases                   ConversationRelease[]
+  clientApprovalRequestsRequested ClientApprovalRequest[]
 
   @@index([userId])
   @@index([companyId])
@@ -206,25 +212,71 @@ model Employee {
 // 3. CRM (Sales)
 // ============================================
 
-model Client {
-  id          Int      @id @default(autoincrement())
-  companyId   Int      @map("company_id")
-  name        String   @db.VarChar(255)
-  contactInfo Json?    @map("contact_info") // e.g., {"phone": "+1234567890", "email": "client@example.com"}
-  address     String?  @db.Text
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+enum ClientStatus {
+  Processing
+  Active
 
-  company            Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  invoices           Invoice[]
-  accountsReceivable AccountReceivable[]
-  payments           Payment[]
-  leadMeetings       LeadMeeting[]
-  leadCalls          LeadCall[]
-  convertedLeads     Lead[]
+  @@map("client_status")
+}
+
+enum ClientApprovalStatus {
+  Pending
+  Approved
+  Rejected
+
+  @@map("client_approval_status")
+}
+
+model Client {
+  id          Int         @id @default(autoincrement())
+  companyId   Int         @map("company_id")
+  name        String      @db.VarChar(255)
+  contactInfo Json?       @map("contact_info") // e.g., {"phone": "+1234567890", "email": "client@example.com"}
+  address     String?     @db.Text
+  status      ClientStatus @default(Processing) @map("status")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  company              Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  invoices             Invoice[]
+  accountsReceivable   AccountReceivable[]
+  payments             Payment[]
+  leadMeetings         LeadMeeting[]
+  leadCalls            LeadCall[]
+  convertedLeads       Lead[]
+  clientApprovalRequest ClientApprovalRequest?
 
   @@index([companyId])
+  @@index([status])
   @@map("clients")
+}
+
+model ClientApprovalRequest {
+  id                    Int                   @id @default(autoincrement())
+  companyId             Int                   @map("company_id")
+  leadId                Int                   @unique @map("lead_id")
+  clientId              Int                   @unique @map("client_id")
+  requestedByUserId     String                @map("requested_by_user_id") @db.VarChar(36)
+  requestedByEmployeeId Int                   @map("requested_by_employee_id")
+  email                 String                @db.VarChar(255)
+  passwordHash          String                @map("password_hash") @db.VarChar(255)
+  customerPoints        Decimal               @map("customer_points") @db.Decimal(12, 2)
+  status                ClientApprovalStatus  @default(Pending)
+  approvedByUserId      String?               @map("approved_by_user_id") @db.VarChar(36)
+  approvedAt            DateTime?             @map("approved_at") @db.DateTime
+  createdAt             DateTime              @default(now()) @map("created_at")
+  updatedAt             DateTime              @updatedAt @map("updated_at")
+
+  company               Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  lead                  Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  client                Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  requestedByUser       User      @relation("ClientApprovalRequestedBy", fields: [requestedByUserId], references: [id], onDelete: Restrict)
+  requestedByEmployee   Employee  @relation(fields: [requestedByEmployeeId], references: [id], onDelete: Restrict)
+  approvedByUser        User?     @relation("ClientApprovalApprovedBy", fields: [approvedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([companyId])
+  @@index([companyId, status])
+  @@map("client_approval_requests")
 }
 
 model LeadCategory {
@@ -306,7 +358,6 @@ model Lead {
   description    String?    @db.Text
   source         LeadSource @default(Website)
   status         LeadStatus @default(New)
-  assignedTo     Int?       @map("assigned_to")
   value          Decimal?   @db.Decimal(12, 2)
   conversationId Int?       @map("conversation_id") // Link to SocialConversation if from inbox
   customerName   String?    @map("customer_name") @db.VarChar(255)
@@ -319,24 +370,28 @@ model Lead {
   salePrice      Decimal?   @map("sale_price") @db.Decimal(12, 2) // Sale price from product
   profit               Decimal?   @db.Decimal(12, 2) // Calculated profit (salePrice - purchasePrice)
   convertedToClientId  Int?       @map("converted_to_client_id") // Set when lead is converted to client
+  leadMonitoringUserId          String?   @map("lead_monitoring_user_id") @db.VarChar(36)
+  leadMonitoringAssignedAt      DateTime? @map("lead_monitoring_assigned_at") @db.DateTime
+  leadMonitoringTransferredAt   DateTime? @map("lead_monitoring_transferred_at") @db.DateTime
   createdAt            DateTime   @default(now()) @map("created_at")
   updatedAt            DateTime   @updatedAt @map("updated_at")
 
   company            Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
   createdByUser      User                @relation("LeadCreator", fields: [createdBy], references: [id], onDelete: Cascade)
-  assignedEmployee   Employee?           @relation(fields: [assignedTo], references: [id], onDelete: SetNull)
+  leadMonitoringUser User?               @relation("LeadMonitoringManager", fields: [leadMonitoringUserId], references: [id], onDelete: SetNull)
+  assignments        LeadAssignment[]
   conversation       SocialConversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
   category           LeadCategory?       @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   interest           LeadInterest?       @relation(fields: [interestId], references: [id], onDelete: SetNull)
   campaign           Campaign?           @relation(fields: [campaignId], references: [id], onDelete: SetNull)
   product            Product?            @relation(fields: [productId], references: [id], onDelete: SetNull)
-  convertedToClient  Client?             @relation(fields: [convertedToClientId], references: [id], onDelete: SetNull)
-  meetings           LeadMeeting[]
-  calls              LeadCall[]
+  convertedToClient     Client?                 @relation(fields: [convertedToClientId], references: [id], onDelete: SetNull)
+  clientApprovalRequest ClientApprovalRequest?
+  meetings              LeadMeeting[]
+  calls                 LeadCall[]
 
   @@index([companyId])
   @@index([createdBy])
-  @@index([assignedTo])
   @@index([status])
   @@index([conversationId])
   @@index([categoryId])
@@ -344,7 +399,23 @@ model Lead {
   @@index([campaignId])
   @@index([productId])
   @@index([convertedToClientId])
+  @@index([leadMonitoringUserId])
   @@map("leads")
+}
+
+model LeadAssignment {
+  id         Int      @id @default(autoincrement())
+  leadId     Int      @map("lead_id")
+  employeeId Int      @map("employee_id")
+  assignedAt DateTime @default(now()) @map("assigned_at")
+
+  lead     Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([leadId, employeeId])
+  @@index([leadId])
+  @@index([employeeId])
+  @@map("lead_assignments")
 }
 
 enum LeadMeetingStatus {
@@ -360,6 +431,7 @@ model LeadMeeting {
   companyId       Int               @map("company_id")
   leadId          Int               @map("lead_id")
   clientId        Int?              @map("client_id")
+  assignedTo      Int               @map("assigned_to")
   createdBy       String            @map("created_by") @db.VarChar(36)
   title           String            @db.VarChar(255)
   description     String?           @db.Text
@@ -370,13 +442,15 @@ model LeadMeeting {
   createdAt       DateTime          @default(now()) @map("created_at")
   updatedAt       DateTime          @updatedAt @map("updated_at")
 
-  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  lead    Lead    @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  client  Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  company            Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  lead               Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  client             Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  assignedEmployee   Employee @relation(fields: [assignedTo], references: [id], onDelete: Restrict)
 
   @@index([companyId])
   @@index([leadId])
   @@index([clientId])
+  @@index([assignedTo])
   @@index([status])
   @@index([meetingTime])
   @@map("lead_meetings")

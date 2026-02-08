@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { financeApi } from '@/lib/api';
@@ -6,7 +7,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { DollarSign, Receipt, TrendingUp, TrendingDown } from 'lucide-react';
 
 export function Finance() {
-  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { user, hasPermission } = useAuth();
   const [summary, setSummary] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -113,6 +115,24 @@ export function Finance() {
             </Button>
           </CardContent>
         </Card>
+
+        {hasPermission?.('can_approve_clients') && (
+          <Card className="shadow-sm border-gray-200">
+            <CardHeader>
+              <CardTitle>Pending Clients</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => navigate('/finance/pending-clients')}
+              >
+                <DollarSign className="w-4 h-4 mr-2" />
+                Approve Pending Clients
+              </Button>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

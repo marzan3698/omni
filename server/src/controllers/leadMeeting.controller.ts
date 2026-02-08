@@ -7,6 +7,7 @@ import { AppError } from '../middleware/errorHandler.js';
 import { AuthRequest } from '../types/index.js';
 
 const createLeadMeetingSchema = z.object({
+  assignedTo: z.number().int().positive('Assigned employee is required'),
   title: z.string().min(1, 'Meeting title is required'),
   description: z.string().optional(),
   meetingTime: z.preprocess(
@@ -77,6 +78,7 @@ export const leadMeetingController = {
       const meeting = await leadMeetingService.createLeadMeeting({
         companyId,
         leadId,
+        assignedTo: validatedData.assignedTo,
         clientId: validatedData.clientId,
         createdBy: user.id,
         title: validatedData.title,
@@ -121,7 +123,7 @@ export const leadMeetingController = {
 
       const validatedData = updateLeadMeetingSchema.parse(req.body);
 
-      const updateData: any = {
+      const updateData: Record<string, unknown> = {
         ...validatedData,
       };
 
@@ -130,6 +132,9 @@ export const leadMeetingController = {
           validatedData.meetingTime instanceof Date
             ? validatedData.meetingTime
             : new Date(validatedData.meetingTime);
+      }
+      if (validatedData.assignedTo !== undefined) {
+        updateData.assignedTo = validatedData.assignedTo;
       }
 
       const meeting = await leadMeetingService.updateLeadMeeting(

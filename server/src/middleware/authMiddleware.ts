@@ -143,6 +143,11 @@ export const verifyPermission = (permission: string) => {
         return next();
       }
 
+      // Lead Manager has full lead management (assign, update, delete, etc.) like SuperAdmin
+      if (user.role.name === 'Lead Manager' && permission === 'can_manage_leads') {
+        return next();
+      }
+
       const permissions = user.role.permissions as Record<string, boolean>;
 
       // Check if user has the required permission
@@ -467,6 +472,11 @@ export const verifyLeadAccess = async (req: Request, res: Response, next: NextFu
       return next();
     }
 
+    // Lead Manager has full lead access like SuperAdmin
+    if (user.role.name === 'Lead Manager') {
+      return next();
+    }
+
     const permissions = user.role.permissions as Record<string, boolean>;
 
     // Check if user has can_manage_leads permission
@@ -474,10 +484,29 @@ export const verifyLeadAccess = async (req: Request, res: Response, next: NextFu
       return next();
     }
 
-    // Check if user has assigned calls for this lead
-    // Check leadId first (for routes like /:leadId/calls), then id (for routes like /:id)
     const leadId = parseInt(req.params.leadId || req.params.id);
-    if (!isNaN(leadId) && user.employee) {
+    if (isNaN(leadId)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Permission denied',
+      });
+    }
+
+    // Allow if user is assigned to this lead (LeadAssignment)
+    if (user.employee) {
+      const isAssignedToLead = await prisma.leadAssignment.findFirst({
+        where: {
+          leadId,
+          employeeId: user.employee.id,
+        },
+      });
+      if (isAssignedToLead) {
+        return next();
+      }
+    }
+
+    // Allow if user has assigned calls for this lead
+    if (user.employee) {
       const hasAssignedCall = await prisma.leadCall.findFirst({
         where: {
           leadId,
@@ -485,7 +514,6 @@ export const verifyLeadAccess = async (req: Request, res: Response, next: NextFu
           companyId: authReq.user.companyId,
         },
       });
-
       if (hasAssignedCall) {
         return next();
       }
@@ -494,10 +522,91 @@ export const verifyLeadAccess = async (req: Request, res: Response, next: NextFu
     // Permission denied
     return res.status(403).json({
       success: false,
-      message: 'Permission denied: You can only access leads you have assigned calls for',
+      message: 'Permission denied: You can only access leads you created, are assigned to, or have assigned calls for',
     });
   } catch (error) {
     console.error('Lead access permission check error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Permission check failed',
+    });
+  }
+};
+
+/**
+ * Middleware to check if user can update/delete a lead meeting.
+ * Allows SuperAdmin, Lead Manager, can_manage_leads, or the meeting's assigned employee.
+ */
+export const verifyMeetingAccess = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const authReq = req as AuthRequest;
+
+    if (!authReq.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not authenticated',
+      });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: authReq.user.id },
+      include: { role: true, employee: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    if (user.role.name === 'SuperAdmin') {
+      return next();
+    }
+    if (user.role.name === 'Lead Manager') {
+      return next();
+    }
+
+    const permissions = user.role.permissions as Record<string, boolean>;
+    if (permissions['can_manage_leads']) {
+      return next();
+    }
+
+    const meetingId = parseInt(req.params.id);
+    const leadId = parseInt(req.params.leadId);
+    if (isNaN(meetingId) || isNaN(leadId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid meeting or lead ID',
+      });
+    }
+
+    const meeting = await prisma.leadMeeting.findFirst({
+      where: {
+        id: meetingId,
+        leadId,
+        companyId: authReq.user.companyId,
+      },
+      select: { assignedTo: true },
+    });
+
+    if (!meeting) {
+      return res.status(404).json({
+        success: false,
+        message: 'Meeting not found',
+      });
+    }
+
+    if (user.employee && meeting.assignedTo === user.employee.id) {
+      return next();
+    }
+
+    return res.status(403).json({
+      success: false,
+      message: 'Permission denied: You can only update/delete meetings assigned to you',
+    });
+  } catch (error) {
+    console.error('Meeting access permission check error:', error);
     return res.status(500).json({
       success: false,
       message: 'Permission check failed',

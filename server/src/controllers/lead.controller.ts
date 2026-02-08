@@ -13,16 +13,24 @@ const createLeadSchema = z.object({
   description: z.string().optional(),
   source: z.enum(['Website', 'Referral', 'SocialMedia', 'Email', 'Phone', 'Inbox', 'Other']),
   status: z.enum(['New', 'Contacted', 'Qualified', 'Negotiation', 'Won', 'Lost']).optional(),
-  assignedTo: z.number().int().positive().optional(),
+  assignedTo: z.array(z.number().int().positive()).optional(),
   value: z.number().positive().optional(),
   conversationId: z.number().int().positive().optional(),
   campaignId: z.number().int().positive().optional(),
 });
 
+// IMPORTANT:
+// - Lead status can only be changed via PUT /:id/status by Lead Manager.
+// - Prevent status changes via the generic PUT /:id endpoint.
+const updateLeadSchema = createLeadSchema.partial().omit({
+  status: true,
+  companyId: true,
+});
+
 const createLeadFromInboxSchema = z.object({
   title: z.string().min(1, 'Lead title is required'),
   description: z.string().optional(),
-  assignedTo: z.number().int().positive().optional(),
+  assignedTo: z.array(z.number().int().positive()).optional(),
   value: z.number().positive().optional(),
   customerName: z.string().min(1, 'Customer name is required'),
   phone: z.string().min(1, 'Phone is required'),
@@ -42,6 +50,10 @@ const convertLeadSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
+const transferLeadMonitoringSchema = z.object({
+  newLeadManagerUserId: z.string().uuid('Invalid Lead Manager user ID'),
+});
+
 export const leadController = {
   /**
    * Get all leads
@@ -50,16 +62,16 @@ export const leadController = {
   getAllLeads: async (req: Request, res: Response) => {
     try {
       const userId = (req as AuthRequest).user?.id;
-      const userRole = (req as AuthRequest).user?.roleName;
+      const userRole = (req as AuthRequest).user?.role?.name;
 
       const filters: any = {};
       
-      // If not Lead Manager or SuperAdmin, only show leads created by this user
+      // If not Lead Manager or SuperAdmin, show leads created by this user OR assigned to this user
       if (userRole !== 'Lead Manager' && userRole !== 'SuperAdmin') {
         if (!userId) {
           return sendError(res, 'User ID not found', 400);
         }
-        filters.createdBy = userId;
+        filters.createdByOrAssignedToUserId = userId;
       }
       
       // Apply filters
@@ -218,7 +230,21 @@ export const leadController = {
       const validatedData = createLeadFromInboxSchema.parse(body);
       console.log('Validated data:', JSON.stringify(validatedData, null, 2));
 
-      const lead = await leadService.createLeadFromInbox(conversationId, userId, validatedData);
+      const lead = await leadService.createLeadFromInbox(conversationId, userId, {
+        title: validatedData.title,
+        description: validatedData.description,
+        assignedTo: validatedData.assignedTo,
+        value: validatedData.value,
+        customerName: validatedData.customerName,
+        phone: validatedData.phone,
+        categoryId: validatedData.categoryId,
+        interestId: validatedData.interestId,
+        campaignId: validatedData.campaignId,
+        productId: validatedData.productId,
+        purchasePrice: validatedData.purchasePrice,
+        salePrice: validatedData.salePrice,
+        profit: validatedData.profit,
+      });
       return sendSuccess(res, lead, 'Lead created from inbox successfully', 201);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -249,7 +275,18 @@ export const leadController = {
         return sendError(res, 'User ID not found', 400);
       }
       const validatedData = createLeadSchema.parse(req.body);
-      const lead = await leadService.createLead({ ...validatedData, createdBy: userId });
+      const lead = await leadService.createLead({
+        companyId: validatedData.companyId,
+        createdBy: userId,
+        title: validatedData.title,
+        description: validatedData.description,
+        source: validatedData.source,
+        status: validatedData.status,
+        assignedTo: validatedData.assignedTo,
+        value: validatedData.value,
+        conversationId: validatedData.conversationId,
+        campaignId: validatedData.campaignId,
+      });
       return sendSuccess(res, lead, 'Lead created successfully', 201);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -275,7 +312,7 @@ export const leadController = {
         return sendError(res, 'Invalid ID', 400);
       }
 
-      const validatedData = createLeadSchema.partial().parse(req.body);
+      const validatedData = updateLeadSchema.parse(req.body);
       const lead = await leadService.updateLead(id, companyId, validatedData);
       return sendSuccess(res, lead, 'Lead updated successfully');
     } catch (error) {
@@ -298,21 +335,100 @@ export const leadController = {
       const id = parseInt(req.params.id);
       const companyId = parseInt(req.query.companyId as string || req.body.companyId);
       const status = req.body.status as LeadStatus;
-      
+      const userRole = (req as AuthRequest).user?.role?.name;
+      const userId = (req as AuthRequest).user?.id;
+
       if (isNaN(id) || isNaN(companyId)) {
         return sendError(res, 'Invalid ID', 400);
       }
       if (!status || !['New', 'Contacted', 'Qualified', 'Negotiation', 'Won', 'Lost'].includes(status)) {
         return sendError(res, 'Invalid status', 400);
       }
+      if (!userId) {
+        return sendError(res, 'Unauthorized', 401);
+      }
 
-      const lead = await leadService.updateLeadStatus(id, companyId, status);
+      // Only Lead Manager and SuperAdmin can change lead status
+      if (userRole !== 'Lead Manager' && userRole !== 'SuperAdmin') {
+        return sendError(res, 'Only Lead Manager can change lead status', 403);
+      }
+
+      const lead = await leadService.updateLeadStatus(id, companyId, status, userId, userRole === 'SuperAdmin');
       return sendSuccess(res, lead, 'Lead status updated successfully');
     } catch (error) {
       if (error instanceof AppError) {
         return sendError(res, error.message, error.statusCode);
       }
       return sendError(res, 'Failed to update lead status', 500);
+    }
+  },
+
+  /**
+   * Get Lead Managers list (for monitoring transfer)
+   * GET /api/leads/lead-managers
+   */
+  getLeadManagers: async (req: Request, res: Response) => {
+    try {
+      const authReq = req as AuthRequest;
+      const companyId = authReq.user?.companyId;
+      if (!companyId) {
+        return sendError(res, 'Company ID is required', 400);
+      }
+
+      const list = await leadService.getLeadManagers(companyId);
+      return sendSuccess(res, list, 'Lead managers retrieved successfully');
+    } catch (error) {
+      if (error instanceof AppError) {
+        return sendError(res, error.message, error.statusCode);
+      }
+      return sendError(res, 'Failed to retrieve lead managers', 500);
+    }
+  },
+
+  /**
+   * Transfer lead monitoring incharge to another Lead Manager
+   * PUT /api/leads/:id/monitoring/transfer
+   */
+  transferLeadMonitoring: async (req: Request, res: Response) => {
+    try {
+      const authReq = req as AuthRequest;
+      const companyId = authReq.user?.companyId;
+      const userId = authReq.user?.id;
+      const userRole = authReq.user?.role?.name;
+
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return sendError(res, 'Invalid lead ID', 400);
+      }
+      if (!companyId) {
+        return sendError(res, 'Company ID is required', 400);
+      }
+      if (!userId) {
+        return sendError(res, 'Unauthorized', 401);
+      }
+
+      // Only Lead Manager and SuperAdmin can transfer lead monitoring
+      if (userRole !== 'Lead Manager' && userRole !== 'SuperAdmin') {
+        return sendError(res, 'Only Lead Manager can transfer monitoring responsibility', 403);
+      }
+
+      const { newLeadManagerUserId } = transferLeadMonitoringSchema.parse(req.body);
+      const updated = await leadService.transferLeadMonitoring(
+        id,
+        companyId,
+        userId,
+        newLeadManagerUserId,
+        { bypassMonitoringLock: userRole === 'SuperAdmin' }
+      );
+      return sendSuccess(res, updated, 'Lead monitoring responsibility transferred successfully');
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return sendError(res, error.errors[0].message, 400);
+      }
+      if (error instanceof AppError) {
+        return sendError(res, error.message, error.statusCode);
+      }
+      return sendError(res, 'Failed to transfer monitoring responsibility', 500);
     }
   },
 
@@ -340,21 +456,50 @@ export const leadController = {
   },
 
   /**
-   * Convert lead to client
+   * Convert lead to client (creates pending approval request; no login until Finance approves)
    * POST /api/leads/:id/convert
    */
   convertLeadToClient: async (req: Request, res: Response) => {
     try {
+      const authReq = req as AuthRequest;
+      const userId = authReq.user?.id;
+      const companyId = authReq.user?.companyId ?? parseInt(req.query.companyId as string || req.body.companyId);
+      const userRole = authReq.user?.role?.name;
+
       const id = parseInt(req.params.id);
-      const companyId = parseInt(req.query.companyId as string || req.body.companyId);
-      
-      if (isNaN(id) || isNaN(companyId)) {
-        return sendError(res, 'Invalid ID', 400);
+      if (isNaN(id)) {
+        return sendError(res, 'Invalid lead ID', 400);
+      }
+      if (!companyId || isNaN(companyId)) {
+        return sendError(res, 'Company ID is required', 400);
+      }
+      if (!userId) {
+        return sendError(res, 'User not authenticated', 401);
+      }
+
+      // Only Lead Manager and SuperAdmin can convert lead to client
+      if (userRole !== 'Lead Manager' && userRole !== 'SuperAdmin') {
+        return sendError(res, 'Only Lead Manager can convert lead to client', 403);
       }
 
       const validatedData = convertLeadSchema.parse(req.body);
-      const client = await leadService.convertLeadToClient(id, companyId, validatedData);
-      return sendSuccess(res, client, 'Lead converted to client successfully');
+      const client = await leadService.convertLeadToClient(
+        id,
+        companyId,
+        userId,
+        {
+          name: validatedData.name,
+          contactInfo: validatedData.contactInfo,
+          address: validatedData.address,
+          password: validatedData.password,
+        },
+        { bypassMonitoringLock: userRole === 'SuperAdmin' }
+      );
+      return sendSuccess(
+        res,
+        client,
+        'Client created. Pending approval. Client can login after Finance approves.'
+      );
     } catch (error) {
       if (error instanceof z.ZodError) {
         return sendError(res, error.errors[0].message, 400);
@@ -414,6 +559,58 @@ export const leadController = {
         return sendError(res, error.message, error.statusCode);
       }
       return sendError(res, 'Failed to retrieve leads', 500);
+    }
+  },
+
+  /**
+   * Assign users (employees) to a lead
+   * POST /api/leads/:id/assign
+   */
+  assignUsers: async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const companyId = parseInt(req.query.companyId as string || req.body.companyId);
+      const employeeIds = Array.isArray(req.body.employeeIds) ? req.body.employeeIds : [req.body.employeeIds].filter(Boolean);
+
+      if (isNaN(id) || isNaN(companyId)) {
+        return sendError(res, 'Invalid ID', 400);
+      }
+      const validIds = employeeIds.map((e: unknown) => typeof e === 'number' ? e : parseInt(String(e), 10)).filter((n: number) => !isNaN(n));
+      if (validIds.length === 0) {
+        return sendError(res, 'At least one employee ID is required', 400);
+      }
+
+      const lead = await leadService.assignUsersToLead(id, companyId, validIds);
+      return sendSuccess(res, lead, 'Users assigned to lead successfully');
+    } catch (error) {
+      if (error instanceof AppError) {
+        return sendError(res, error.message, error.statusCode);
+      }
+      return sendError(res, 'Failed to assign users to lead', 500);
+    }
+  },
+
+  /**
+   * Remove a user (employee) from a lead
+   * DELETE /api/leads/:id/assign/:employeeId
+   */
+  removeAssignment: async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const employeeId = parseInt(req.params.employeeId);
+      const companyId = parseInt(req.query.companyId as string || req.body.companyId);
+
+      if (isNaN(id) || isNaN(employeeId) || isNaN(companyId)) {
+        return sendError(res, 'Invalid ID', 400);
+      }
+
+      const lead = await leadService.removeUserFromLead(id, companyId, employeeId);
+      return sendSuccess(res, lead, 'User removed from lead successfully');
+    } catch (error) {
+      if (error instanceof AppError) {
+        return sendError(res, error.message, error.statusCode);
+      }
+      return sendError(res, 'Failed to remove user from lead', 500);
     }
   },
 };

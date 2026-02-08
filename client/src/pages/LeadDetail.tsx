@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { leadApi } from '@/lib/api';
+import { leadApi, bookingApi } from '@/lib/api';
 import { getImageUrl } from '@/lib/imageUtils';
 import { useAuth } from '@/contexts/AuthContext';
 import type { LeadMeeting, LeadMeetingStatus, LeadCall, LeadCallStatus } from '@/types';
@@ -47,10 +47,11 @@ import { cn } from '@/lib/utils';
 export function LeadDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const queryClient = useQueryClient();
 
   const meetingSchema = z.object({
+    assignedTo: z.number().int().positive('Assigned employee is required'),
     title: z.string().min(1, 'Meeting title is required'),
     description: z.string().optional(),
     meetingTime: z.string().min(1, 'Meeting time is required'),
@@ -66,6 +67,7 @@ export function LeadDetail() {
 
   const [editingMeeting, setEditingMeeting] = useState<LeadMeeting | null>(null);
   const [isMeetingFormOpen, setIsMeetingFormOpen] = useState(false);
+  const [selectedMeetingEmployeeId, setSelectedMeetingEmployeeId] = useState<number[]>([]);
 
   const callSchema = z.object({
     title: z.string().optional(),
@@ -85,6 +87,9 @@ export function LeadDetail() {
   const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<string>('');
+  const [leadAssignmentsSelectedIds, setLeadAssignmentsSelectedIds] = useState<number[]>([]);
+  const [isTransferMonitoringModalOpen, setIsTransferMonitoringModalOpen] = useState(false);
+  const [newLeadManagerUserId, setNewLeadManagerUserId] = useState<string>('');
 
   // Lead status options with Bengali labels
   const statusOptions = [
@@ -152,9 +157,11 @@ export function LeadDetail() {
     reset,
     formState: { errors, isSubmitting },
     setValue,
+    watch,
   } = useForm<MeetingFormValues>({
     resolver: zodResolver(meetingSchema),
     defaultValues: {
+      assignedTo: 0,
       title: '',
       description: '',
       meetingTime: '',
@@ -164,6 +171,50 @@ export function LeadDetail() {
     },
   });
 
+  const meetingTime = watch('meetingTime');
+  const meetingDurationMinutes = watch('durationMinutes');
+  const callTime = watchCall('callTime');
+  const callDurationMinutes = watchCall('durationMinutes');
+
+  const callDurationForAvailability = callDurationMinutes && callDurationMinutes >= 1 ? callDurationMinutes : 15;
+  const meetingStartValid = meetingTime && !Number.isNaN(new Date(meetingTime).getTime());
+  const callStartValid = callTime && !Number.isNaN(new Date(callTime).getTime());
+
+  const { data: callAvailabilityData } = useQuery({
+    queryKey: ['booking-availability', user?.companyId, callTime, callDurationForAvailability],
+    queryFn: async () => {
+      if (!user?.companyId || !callStartValid) return { busyEmployeeIds: [] as number[] };
+      const res = await bookingApi.getAvailability(
+        user.companyId,
+        new Date(callTime).toISOString(),
+        callDurationForAvailability,
+        editingCall ? { excludeCallId: editingCall.id } : undefined
+      );
+      return (res.data.data as { busyEmployeeIds: number[] }) ?? { busyEmployeeIds: [] };
+    },
+    enabled: isCallFormOpen && !!user?.companyId && !!callStartValid,
+  });
+
+  const { data: meetingAvailabilityData } = useQuery({
+    queryKey: ['booking-availability', user?.companyId, meetingTime, meetingDurationMinutes],
+    queryFn: async () => {
+      if (!user?.companyId || !meetingTime || !meetingStartValid || !(meetingDurationMinutes >= 1)) {
+        return { busyEmployeeIds: [] as number[] };
+      }
+      const res = await bookingApi.getAvailability(
+        user.companyId,
+        new Date(meetingTime).toISOString(),
+        Number(meetingDurationMinutes),
+        editingMeeting ? { excludeMeetingId: editingMeeting.id } : undefined
+      );
+      return (res.data.data as { busyEmployeeIds: number[] }) ?? { busyEmployeeIds: [] };
+    },
+    enabled: isMeetingFormOpen && !!user?.companyId && !!meetingStartValid && !!(meetingDurationMinutes >= 1),
+  });
+
+  const busyEmployeeIdsCall = callAvailabilityData?.busyEmployeeIds ?? [];
+  const busyEmployeeIdsMeeting = meetingAvailabilityData?.busyEmployeeIds ?? [];
+
   const { data: lead, isLoading, error } = useQuery({
     queryKey: ['lead', id, user?.companyId],
     queryFn: async () => {
@@ -172,6 +223,39 @@ export function LeadDetail() {
       return response.data.data;
     },
     enabled: !!id && !!user?.companyId,
+  });
+
+  const isLeadManagerOrSuperAdmin = user?.roleName === 'Lead Manager' || user?.roleName === 'SuperAdmin';
+  const isMonitoringAllowed =
+    isLeadManagerOrSuperAdmin &&
+    (user?.roleName === 'SuperAdmin' ||
+      !lead?.leadMonitoringUserId ||
+      lead?.leadMonitoringUserId === user?.id);
+
+  const { data: leadManagers = [] } = useQuery({
+    queryKey: ['lead-managers', user?.companyId],
+    queryFn: async () => {
+      const response = await leadApi.getLeadManagers();
+      return (response.data.data as Array<{ id: string; name?: string | null; email: string }>) ?? [];
+    },
+    enabled: isTransferMonitoringModalOpen && isLeadManagerOrSuperAdmin,
+  });
+
+  const transferMonitoringMutation = useMutation({
+    mutationFn: async () => {
+      if (!id) throw new Error('Invalid parameters');
+      if (!newLeadManagerUserId) throw new Error('Please select a Lead Manager');
+      const response = await leadApi.transferMonitoring(parseInt(id), newLeadManagerUserId);
+      return response.data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lead', id, user?.companyId] });
+      setIsTransferMonitoringModalOpen(false);
+      setNewLeadManagerUserId('');
+    },
+    onError: (error: any) => {
+      alert(error?.response?.data?.message || 'Failed to transfer monitoring responsibility');
+    },
   });
 
   const { data: meetings = [], isLoading: isLoadingMeetings } = useQuery<LeadMeeting[]>({
@@ -186,12 +270,13 @@ export function LeadDetail() {
 
   const createMeetingMutation = useMutation({
     mutationFn: async (values: MeetingFormValues) => {
-      if (!id || !user?.companyId) {
+      if (!id || !user?.companyId || !values.assignedTo) {
         throw new Error('Invalid parameters');
       }
 
       const payload = {
         ...values,
+        assignedTo: values.assignedTo,
         meetingTime: new Date(values.meetingTime),
         durationMinutes: Number(values.durationMinutes),
       };
@@ -203,18 +288,20 @@ export function LeadDetail() {
       queryClient.invalidateQueries({ queryKey: ['lead-meetings', id, user?.companyId] });
       setIsMeetingFormOpen(false);
       setEditingMeeting(null);
+      setSelectedMeetingEmployeeId([]);
       reset();
     },
   });
 
   const updateMeetingMutation = useMutation({
     mutationFn: async (values: MeetingFormValues) => {
-      if (!id || !user?.companyId || !editingMeeting) {
+      if (!id || !user?.companyId || !editingMeeting || !values.assignedTo) {
         throw new Error('Invalid parameters');
       }
 
       const payload = {
         ...values,
+        assignedTo: values.assignedTo,
         meetingTime: new Date(values.meetingTime),
         durationMinutes: Number(values.durationMinutes),
       };
@@ -231,6 +318,7 @@ export function LeadDetail() {
       queryClient.invalidateQueries({ queryKey: ['lead-meetings', id, user?.companyId] });
       setIsMeetingFormOpen(false);
       setEditingMeeting(null);
+      setSelectedMeetingEmployeeId([]);
       reset();
     },
   });
@@ -250,7 +338,9 @@ export function LeadDetail() {
 
   const openCreateMeetingForm = () => {
     setEditingMeeting(null);
+    setSelectedMeetingEmployeeId([]);
     reset({
+      assignedTo: 0,
       title: '',
       description: '',
       meetingTime: '',
@@ -263,7 +353,9 @@ export function LeadDetail() {
 
   const openEditMeetingForm = (meeting: LeadMeeting) => {
     setEditingMeeting(meeting);
+    setSelectedMeetingEmployeeId(meeting.assignedTo ? [meeting.assignedTo] : []);
     reset({
+      assignedTo: meeting.assignedTo ?? 0,
       title: meeting.title,
       description: meeting.description || '',
       meetingTime: new Date(meeting.meetingTime).toISOString().slice(0, 16),
@@ -273,6 +365,14 @@ export function LeadDetail() {
     });
     setIsMeetingFormOpen(true);
   };
+
+  useEffect(() => {
+    if (selectedMeetingEmployeeId.length > 0) {
+      setValue('assignedTo', selectedMeetingEmployeeId[0]);
+    } else {
+      setValue('assignedTo', 0);
+    }
+  }, [selectedMeetingEmployeeId, setValue]);
 
   const handleMeetingSubmit = (values: MeetingFormValues) => {
     if (editingMeeting) {
@@ -418,7 +518,7 @@ export function LeadDetail() {
       setIsConvertModalOpen(false);
       resetConvert();
       alert(
-        'ক্লায়েন্ট তৈরি হয়েছে। লগইন করতে ইমেইল ও পাসওয়ার্ড ব্যবহার করুন।\nLead converted to client successfully! Client can login with the email and password provided.'
+        'ক্লায়েন্ট রিকোয়েস্ট তৈরি হয়েছে। ফাইন্যান্স অ্যাপ্রুভের পর ক্লায়েন্ট লগইন করতে পারবে।\nClient created. Pending approval. Client can login after Finance approves.'
       );
     },
     onError: (error: any) => {
@@ -443,6 +543,35 @@ export function LeadDetail() {
     },
     onError: (error: any) => {
       alert(error?.response?.data?.message || 'স্ট্যাটাস আপডেট করতে ব্যর্থ হয়েছে');
+    },
+  });
+
+  const assignUsersMutation = useMutation({
+    mutationFn: async (employeeIds: number[]) => {
+      if (!id || !user?.companyId) throw new Error('Invalid parameters');
+      const response = await leadApi.assignUsers(parseInt(id), employeeIds, user.companyId);
+      return response.data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lead', id, user?.companyId] });
+      setLeadAssignmentsSelectedIds([]);
+    },
+    onError: (error: any) => {
+      alert(error?.response?.data?.message || 'অ্যাসাইন যোগ করতে ব্যর্থ');
+    },
+  });
+
+  const removeAssignmentMutation = useMutation({
+    mutationFn: async (employeeId: number) => {
+      if (!id || !user?.companyId) throw new Error('Invalid parameters');
+      const response = await leadApi.removeAssignment(parseInt(id), employeeId, user.companyId);
+      return response.data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lead', id, user?.companyId] });
+    },
+    onError: (error: any) => {
+      alert(error?.response?.data?.message || 'অ্যাসাইন সরাতে ব্যর্থ');
     },
   });
 
@@ -644,26 +773,43 @@ export function LeadDetail() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          {/* Clickable Status Badge */}
-          <button
-            onClick={openStatusModal}
-            className={cn(
-              "px-4 py-2 rounded-lg border flex items-center gap-2 font-medium text-sm cursor-pointer hover:opacity-80 transition-opacity",
-              getStatusColor(lead.status)
-            )}
-            title="স্ট্যাটাস পরিবর্তন করতে ক্লিক করুন"
-          >
-            {getStatusIcon(lead.status)}
-            {lead.status}
-            <Edit className="w-3 h-3 ml-1" />
-          </button>
+          {/* Clickable Status Badge - only Lead Manager (and SuperAdmin) can change status; locked by monitoring incharge */}
+          {isMonitoringAllowed ? (
+            <button
+              onClick={openStatusModal}
+              className={cn(
+                "px-4 py-2 rounded-lg border flex items-center gap-2 font-medium text-sm cursor-pointer hover:opacity-80 transition-opacity",
+                getStatusColor(lead.status)
+              )}
+              title="স্ট্যাটাস পরিবর্তন করতে ক্লিক করুন"
+            >
+              {getStatusIcon(lead.status)}
+              {lead.status}
+              <Edit className="w-3 h-3 ml-1" />
+            </button>
+          ) : (
+            <span
+              className={cn(
+                "px-4 py-2 rounded-lg border flex items-center gap-2 font-medium text-sm",
+                getStatusColor(lead.status)
+              )}
+              title={
+                isLeadManagerOrSuperAdmin && lead?.leadMonitoringUser
+                  ? `Monitoring Incharge: ${lead.leadMonitoringUser.name || lead.leadMonitoringUser.email}`
+                  : undefined
+              }
+            >
+              {getStatusIcon(lead.status)}
+              {lead.status}
+            </span>
+          )}
           {lead.convertedToClientId ? (
             <span className="px-4 py-2 rounded-lg border border-green-200 bg-green-50 text-green-700 font-medium text-sm flex items-center gap-2">
               <CheckCircle className="w-4 h-4" />
               Already added as client
             </span>
           ) : (
-            ['Qualified', 'Negotiation', 'Won'].includes(lead.status) && (
+            lead.status === 'Won' && isMonitoringAllowed && (
               <Button 
                 onClick={openConvertModal}
                 className="bg-indigo-600 hover:bg-indigo-700 text-white"
@@ -672,6 +818,17 @@ export function LeadDetail() {
                 Convert to Client
               </Button>
             )
+          )}
+          {isLeadManagerOrSuperAdmin && (user?.roleName === 'SuperAdmin' || lead?.leadMonitoringUserId === user?.id) && (
+            <Button
+              variant="outline"
+              onClick={() => setIsTransferMonitoringModalOpen(true)}
+              disabled={!lead?.leadMonitoringUserId}
+              title={!lead?.leadMonitoringUserId ? 'Monitoring incharge is not assigned yet' : 'Transfer monitoring responsibility'}
+            >
+              <Users className="w-4 h-4 mr-2" />
+              Transfer Monitoring
+            </Button>
           )}
           <Button variant="outline">
             <Edit className="w-4 h-4 mr-2" />
@@ -710,6 +867,55 @@ export function LeadDetail() {
                     <p className="mt-1 text-slate-700 whitespace-pre-wrap">{lead.description}</p>
                   </div>
                 )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Monitoring */}
+          <Card className="shadow-sm border-gray-200">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="w-5 h-5 text-indigo-600" />
+                Monitoring
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-start gap-3">
+                  <Users className="w-5 h-5 text-slate-400 mt-0.5" />
+                  <div>
+                    <label className="text-sm font-medium text-slate-600">Lead Monitoring Incharge</label>
+                    <p className="mt-1 text-slate-900 font-medium">
+                      {lead.leadMonitoringUser
+                        ? (lead.leadMonitoringUser.name || lead.leadMonitoringUser.email)
+                        : 'Not assigned yet'}
+                    </p>
+                    {lead.leadMonitoringUser?.email && lead.leadMonitoringUser?.name && (
+                      <p className="text-xs text-slate-500">{lead.leadMonitoringUser.email}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <DollarSign className="w-5 h-5 text-slate-400 mt-0.5" />
+                  <div>
+                    <label className="text-sm font-medium text-slate-600">Finance Monitoring</label>
+                    <p className="mt-1 text-slate-900 font-medium">
+                      {lead.clientApprovalRequest?.status === 'Approved'
+                        ? (lead.clientApprovalRequest.approvedByUser?.name ||
+                            lead.clientApprovalRequest.approvedByUser?.email ||
+                            'Approved')
+                        : lead.clientApprovalRequest?.status === 'Pending'
+                          ? 'Pending approval'
+                          : '—'}
+                    </p>
+                    {lead.clientApprovalRequest?.status === 'Approved' && lead.clientApprovalRequest.approvedAt && (
+                      <p className="text-xs text-slate-500">
+                        Approved at: {new Date(lead.clientApprovalRequest.approvedAt).toLocaleString()}
+                      </p>
+                    )}
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -1115,6 +1321,24 @@ export function LeadDetail() {
                     )}
                   </div>
 
+                  <div>
+                    <label className="text-sm font-medium text-slate-600">Assigned To *</label>
+                    {user?.companyId && (
+                      <EmployeeSelector
+                        companyId={user.companyId}
+                        selectedEmployeeIds={selectedMeetingEmployeeId}
+                        onSelectionChange={setSelectedMeetingEmployeeId}
+                        disabledEmployeeIds={busyEmployeeIdsMeeting}
+                        disabledReasonByEmployeeId={Object.fromEntries(
+                          busyEmployeeIdsMeeting.map((id) => [id, 'Booked'])
+                        )}
+                      />
+                    )}
+                    {errors.assignedTo && (
+                      <p className="text-xs text-red-500 mt-1">{errors.assignedTo.message}</p>
+                    )}
+                  </div>
+
                   <div className="flex items-center justify-end gap-2">
                     <Button
                       type="button"
@@ -1122,6 +1346,7 @@ export function LeadDetail() {
                       onClick={() => {
                         setIsMeetingFormOpen(false);
                         setEditingMeeting(null);
+                        setSelectedMeetingEmployeeId([]);
                         reset();
                       }}
                       disabled={isSubmitting || createMeetingMutation.isPending || updateMeetingMutation.isPending}
@@ -1133,7 +1358,8 @@ export function LeadDetail() {
                       disabled={
                         isSubmitting ||
                         createMeetingMutation.isPending ||
-                        updateMeetingMutation.isPending
+                        updateMeetingMutation.isPending ||
+                        selectedMeetingEmployeeId.length === 0
                       }
                     >
                       {(createMeetingMutation.isPending ||
@@ -1200,30 +1426,65 @@ export function LeadDetail() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {lead.assignedEmployee ? (
-                <div className="flex items-center gap-3">
-                  {lead.assignedEmployee.user?.profileImage ? (
-                    <img
-                      src={lead.assignedEmployee.user.profileImage}
-                      alt={lead.assignedEmployee.user.email}
-                      className="w-10 h-10 rounded-full"
-                    />
-                  ) : (
-                    <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center text-white font-medium">
-                      {lead.assignedEmployee.user?.email?.charAt(0).toUpperCase() || 'E'}
+              {lead.assignments && lead.assignments.length > 0 ? (
+                <div className="space-y-3">
+                  {lead.assignments.map((a) => (
+                    <div key={a.id} className="flex items-center justify-between gap-3 p-2 rounded-lg border border-gray-200 bg-gray-50/50">
+                      <div className="flex items-center gap-3">
+                        {a.employee?.user?.profileImage ? (
+                          <img
+                            src={a.employee.user.profileImage}
+                            alt={a.employee.user.email}
+                            className="w-10 h-10 rounded-full"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center text-white font-medium">
+                            {a.employee?.user?.email?.charAt(0).toUpperCase() || 'E'}
+                          </div>
+                        )}
+                        <div>
+                          <p className="text-sm font-medium text-slate-900">
+                            {a.employee?.user?.email || 'Employee'}
+                          </p>
+                          {a.employee?.user?.role && (
+                            <p className="text-xs text-slate-500">{a.employee.user.role.name}</p>
+                          )}
+                        </div>
+                      </div>
+                      {user?.companyId && (user?.roleName === 'Lead Manager' || user?.roleName === 'SuperAdmin' || hasPermission?.('can_manage_leads')) && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => removeAssignmentMutation.mutate(a.employeeId)}
+                          disabled={removeAssignmentMutation.isPending}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      )}
                     </div>
-                  )}
-                  <div>
-                    <p className="text-sm font-medium text-slate-900">
-                      {lead.assignedEmployee.user?.email || 'Employee'}
-                    </p>
-                    {lead.assignedEmployee.user?.role && (
-                      <p className="text-xs text-slate-500">{lead.assignedEmployee.user.role.name}</p>
-                    )}
-                  </div>
+                  ))}
                 </div>
               ) : (
                 <p className="text-sm text-slate-500">Not assigned</p>
+              )}
+              {user?.companyId && (user?.roleName === 'Lead Manager' || user?.roleName === 'SuperAdmin' || hasPermission?.('can_manage_leads')) && (
+                <div className="pt-2 border-t border-gray-200">
+                  <p className="text-sm font-medium text-slate-600 mb-2">অ্যাসাইন যোগ করুন</p>
+                  <EmployeeSelector
+                    companyId={user.companyId}
+                    selectedEmployeeIds={leadAssignmentsSelectedIds}
+                    onSelectionChange={setLeadAssignmentsSelectedIds}
+                  />
+                  <Button
+                    size="sm"
+                    className="mt-2 bg-indigo-600 hover:bg-indigo-700"
+                    disabled={assignUsersMutation.isPending || leadAssignmentsSelectedIds.length === 0}
+                    onClick={() => assignUsersMutation.mutate(leadAssignmentsSelectedIds)}
+                  >
+                    {assignUsersMutation.isPending ? 'যোগ করা হচ্ছে...' : 'যোগ করুন'}
+                  </Button>
+                </div>
               )}
             </CardContent>
           </Card>
@@ -1476,6 +1737,10 @@ export function LeadDetail() {
                         companyId={user.companyId}
                         selectedEmployeeIds={selectedEmployeeId}
                         onSelectionChange={setSelectedEmployeeId}
+                        disabledEmployeeIds={busyEmployeeIdsCall}
+                        disabledReasonByEmployeeId={Object.fromEntries(
+                          busyEmployeeIdsCall.map((id) => [id, 'Booked'])
+                        )}
                       />
                     )}
                     {callErrors.assignedTo && (
@@ -1736,6 +2001,78 @@ export function LeadDetail() {
                     বাতিল
                   </Button>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Transfer Monitoring Modal */}
+      {isTransferMonitoringModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-md shadow-lg border-gray-200">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="w-5 h-5 text-indigo-600" />
+                  Transfer Monitoring
+                </CardTitle>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    setIsTransferMonitoringModalOpen(false);
+                    setNewLeadManagerUserId('');
+                  }}
+                  className="h-8 w-8"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-slate-600">Select new Lead Manager</label>
+                <select
+                  className="mt-2 w-full border border-gray-200 rounded-md p-2 text-sm"
+                  value={newLeadManagerUserId}
+                  onChange={(e) => setNewLeadManagerUserId(e.target.value)}
+                >
+                  <option value="">-- Select --</option>
+                  {leadManagers
+                    .filter((m) => m.id !== user?.id)
+                    .map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.name ? `${m.name} (${m.email})` : m.email}
+                      </option>
+                    ))}
+                </select>
+                <p className="text-xs text-slate-500 mt-2">
+                  Only the current monitoring incharge can transfer this responsibility to another Lead Manager.
+                </p>
+              </div>
+
+              <div className="flex gap-3 pt-4 border-t">
+                <Button
+                  className="flex-1 bg-indigo-600 hover:bg-indigo-700"
+                  disabled={transferMonitoringMutation.isPending || !newLeadManagerUserId}
+                  onClick={() => transferMonitoringMutation.mutate()}
+                >
+                  {transferMonitoringMutation.isPending && (
+                    <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></span>
+                  )}
+                  Transfer
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsTransferMonitoringModalOpen(false);
+                    setNewLeadManagerUserId('');
+                  }}
+                  disabled={transferMonitoringMutation.isPending}
+                >
+                  Cancel
+                </Button>
               </div>
             </CardContent>
           </Card>

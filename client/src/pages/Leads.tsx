@@ -334,6 +334,7 @@ export function Leads() {
                     <th className="text-left py-3 px-4 font-semibold text-slate-700">Source</th>
                     <th className="text-left py-3 px-4 font-semibold text-slate-700">Value</th>
                     <th className="text-left py-3 px-4 font-semibold text-slate-700">Profit</th>
+                    <th className="text-left py-3 px-4 font-semibold text-slate-700">Assigned</th>
                     <th className="text-left py-3 px-4 font-semibold text-slate-700">Created By</th>
                     <th className="text-left py-3 px-4 font-semibold text-slate-700">Created At</th>
                     <th className="text-left py-3 px-4 font-semibold text-slate-700">Actions</th>
@@ -404,6 +405,33 @@ export function Leads() {
                         ) : (
                           <span className="text-slate-400">-</span>
                         )}
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex flex-wrap gap-1 items-center">
+                          {lead.assignments && lead.assignments.length > 0 ? (
+                            lead.assignments.slice(0, 3).map((a: any) => (
+                              <span
+                                key={a.id}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-xs font-medium"
+                                title={a.employee?.user?.email}
+                              >
+                                {a.employee?.user?.profileImage ? (
+                                  <img src={a.employee.user.profileImage} alt="" className="w-5 h-5 rounded-full" />
+                                ) : (
+                                  <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px]">
+                                    {a.employee?.user?.email?.charAt(0).toUpperCase() || '?'}
+                                  </span>
+                                )}
+                                {a.employee?.user?.email?.split('@')[0] || '-'}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-slate-400 text-sm">-</span>
+                          )}
+                          {lead.assignments?.length > 3 && (
+                            <span className="text-xs text-slate-500">+{lead.assignments.length - 3}</span>
+                          )}
+                        </div>
                       </td>
                       <td className="py-3 px-4">
                         <div className="text-sm text-slate-600">

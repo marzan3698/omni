@@ -1,10 +1,26 @@
 import { prisma } from '../lib/prisma.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { LeadMeetingStatus } from '@prisma/client';
+import { assertEmployeeAvailable } from './booking.service.js';
+
+const assignedEmployeeInclude = {
+  assignedEmployee: {
+    include: {
+      user: {
+        select: {
+          id: true,
+          email: true,
+          profileImage: true,
+        },
+      },
+    },
+  },
+};
 
 interface CreateLeadMeetingData {
   companyId: number;
   leadId: number;
+  assignedTo: number;
   clientId?: number;
   createdBy: string;
   title: string;
@@ -16,6 +32,7 @@ interface CreateLeadMeetingData {
 }
 
 interface UpdateLeadMeetingData {
+  assignedTo?: number;
   title?: string;
   description?: string;
   meetingTime?: Date;
@@ -38,6 +55,7 @@ export const leadMeetingService = {
     return prisma.leadMeeting.findMany({
       where: { leadId, companyId },
       orderBy: { meetingTime: 'asc' },
+      include: assignedEmployeeInclude,
     });
   },
 
@@ -57,6 +75,16 @@ export const leadMeetingService = {
       throw new AppError('Lead not found', 404);
     }
 
+    const employee = await prisma.employee.findFirst({
+      where: {
+        id: data.assignedTo,
+        companyId: data.companyId,
+      },
+    });
+    if (!employee) {
+      throw new AppError('Assigned employee not found', 404);
+    }
+
     if (data.clientId) {
       const client = await prisma.client.findFirst({
         where: {
@@ -70,10 +98,18 @@ export const leadMeetingService = {
       }
     }
 
+    await assertEmployeeAvailable({
+      companyId: data.companyId,
+      employeeId: data.assignedTo,
+      startTime: data.meetingTime,
+      durationMinutes: data.durationMinutes,
+    });
+
     return prisma.leadMeeting.create({
       data: {
         companyId: data.companyId,
         leadId: data.leadId,
+        assignedTo: data.assignedTo,
         clientId: data.clientId,
         createdBy: data.createdBy,
         title: data.title,
@@ -83,6 +119,7 @@ export const leadMeetingService = {
         googleMeetUrl: data.googleMeetUrl,
         status: data.status || 'Scheduled',
       },
+      include: assignedEmployeeInclude,
     });
   },
 
@@ -99,9 +136,33 @@ export const leadMeetingService = {
       throw new AppError('Lead meeting not found', 404);
     }
 
+    if (data.assignedTo !== undefined) {
+      const employee = await prisma.employee.findFirst({
+        where: {
+          id: data.assignedTo,
+          companyId,
+        },
+      });
+      if (!employee) {
+        throw new AppError('Assigned employee not found', 404);
+      }
+    }
+
+    const employeeId = data.assignedTo ?? meeting.assignedTo;
+    const startTime = data.meetingTime ?? meeting.meetingTime;
+    const durationMinutes = data.durationMinutes ?? meeting.durationMinutes;
+    await assertEmployeeAvailable({
+      companyId,
+      employeeId,
+      startTime,
+      durationMinutes,
+      excludeMeetingId: id,
+    });
+
     return prisma.leadMeeting.update({
       where: { id },
       data,
+      include: assignedEmployeeInclude,
     });
   },
 
@@ -141,11 +202,8 @@ export const leadMeetingService = {
       companyId,
     };
 
-    // Role-based filtering
-    if (userRole === 'SuperAdmin' || userRole === 'Admin') {
-      // SuperAdmin and Admin see all company meetings
-    } else if (userId) {
-      // Other users see only meetings for their assigned/created leads
+    // Role-based filtering: managers see all; others see only meetings assigned to them
+    if (userRole !== 'SuperAdmin' && userRole !== 'Admin' && userRole !== 'Lead Manager' && userId) {
       const employee = await prisma.employee.findFirst({
         where: {
           userId,
@@ -155,17 +213,10 @@ export const leadMeetingService = {
       });
 
       if (employee) {
-        where.lead = {
-          OR: [
-            { createdBy: userId },
-            { assignedTo: employee.id },
-          ],
-        };
+        where.assignedTo = employee.id;
       } else {
-        // If user has no employee record, only show meetings for leads they created
-        where.lead = {
-          createdBy: userId,
-        };
+        // No employee record: show nothing (no meetings assigned)
+        where.assignedTo = -1;
       }
     }
 
@@ -195,15 +246,20 @@ export const leadMeetingService = {
       where,
       orderBy: { meetingTime: 'asc' },
       include: {
+        ...assignedEmployeeInclude,
         lead: {
           include: {
-            assignedEmployee: {
+            assignments: {
               include: {
-                user: {
-                  select: {
-                    id: true,
-                    email: true,
-                    profileImage: true,
+                employee: {
+                  include: {
+                    user: {
+                      select: {
+                        id: true,
+                        email: true,
+                        profileImage: true,
+                      },
+                    },
                   },
                 },
               },
@@ -252,36 +308,34 @@ export const leadMeetingService = {
       },
     };
 
-    // Filter by user's assigned/created leads
+    // Filter by user's assigned meetings only
     if (employee) {
-      where.lead = {
-        OR: [
-          { createdBy: userId },
-          { assignedTo: employee.id },
-        ],
-      };
+      where.assignedTo = employee.id;
     } else {
-      // If user has no employee record, only check createdBy
-      where.lead = {
-        createdBy: userId,
-      };
+      // No employee record: no upcoming meeting
+      where.assignedTo = -1;
     }
 
     const meeting = await prisma.leadMeeting.findFirst({
       where,
       orderBy: { meetingTime: 'asc' },
       include: {
+        ...assignedEmployeeInclude,
         lead: {
           select: {
             id: true,
             title: true,
-            assignedEmployee: {
+            assignments: {
               include: {
-                user: {
-                  select: {
-                    id: true,
-                    email: true,
-                    profileImage: true,
+                employee: {
+                  include: {
+                    user: {
+                      select: {
+                        id: true,
+                        email: true,
+                        profileImage: true,
+                      },
+                    },
                   },
                 },
               },

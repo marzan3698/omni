@@ -1,0 +1,41 @@
+---
+description: When and how to restart dev servers (client/server) after code or config changes
+alwaysApply: true
+---
+
+# Restart Servers When Needed
+
+## When to Restart
+
+Restart the **server** (Node/Express backend) when you change:
+
+- Environment variables (`.env`) or env usage
+- Route definitions, middleware, or auth/permission logic
+- Prisma schema or migrations (after running migrations)
+- Server entry point or app setup (`server/src/index.ts` or equivalent)
+- Any change that affects how the Node process loads or runs
+
+Restart the **client** (Vite/React) when you change:
+
+- Vite config, env variables prefixed with `VITE_`, or build config
+- Only if the dev server is behaving incorrectly; usually Vite hot-reloads
+
+Restart **both** when:
+
+- API contract or base URL changes that affect both sides
+- You are unsure which side is affected
+
+## How to Restart
+
+1. **Stop** any running dev process (Ctrl+C in the terminal where it runs).
+2. **Start** again from project root:
+   - Server: `cd server && npm run dev` (or `npm start`)
+   - Client: `cd client && npm run dev`
+
+If using a single terminal, run server and client in **separate** terminals so each can be restarted independently when needed.
+
+## After Making Changes
+
+- After editing **server** routes, middleware, auth, or env: restart the **server** and verify the API (e.g. in browser or with a quick request).
+- After editing **client** config or env: restart the **client** if hot reload does not pick up the change.
+- When in doubt, restart the process you changed; restart both only when the change affects both.

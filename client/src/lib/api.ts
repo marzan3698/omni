@@ -135,18 +135,34 @@ export const financeApi = {
     apiClientInstance.get<ApiResponse>('/finance/transactions/summary', { params: { companyId, startDate, endDate } }),
 };
 
+// Client approval (pending clients – Finance)
+export const clientApprovalApi = {
+  getPending: () =>
+    apiClientInstance.get<ApiResponse>('/client-approvals/pending'),
+  approve: (id: number) =>
+    apiClientInstance.post<ApiResponse>(`/client-approvals/${id}/approve`),
+};
+
 // Lead API
 export const leadApi = {
   getAll: (filters?: any) => 
     apiClientInstance.get<ApiResponse>('/leads', { params: filters }),
   getById: (id: number, companyId: number) => 
     apiClientInstance.get<ApiResponse>(`/leads/${id}`, { params: { companyId } }),
+  getLeadManagers: () =>
+    apiClientInstance.get<ApiResponse>('/leads/lead-managers'),
   create: (data: any) => apiClientInstance.post<ApiResponse>('/leads', data),
   createFromInbox: (conversationId: number, data: any) => 
     apiClientInstance.post<ApiResponse>(`/leads/from-inbox/${conversationId}`, data),
   update: (id: number, data: any) => apiClientInstance.put<ApiResponse>(`/leads/${id}`, data),
   updateStatus: (id: number, status: string, companyId: number) => 
     apiClientInstance.put<ApiResponse>(`/leads/${id}/status`, { status }, { params: { companyId } }),
+  transferMonitoring: (id: number, newLeadManagerUserId: string) =>
+    apiClientInstance.put<ApiResponse>(`/leads/${id}/monitoring/transfer`, { newLeadManagerUserId }),
+  assignUsers: (id: number, employeeIds: number[], companyId: number) =>
+    apiClientInstance.post<ApiResponse>(`/leads/${id}/assign`, { employeeIds }, { params: { companyId } }),
+  removeAssignment: (id: number, employeeId: number, companyId: number) =>
+    apiClientInstance.delete<ApiResponse>(`/leads/${id}/assign/${employeeId}`, { params: { companyId } }),
   convert: (id: number, companyId: number, data?: any) => 
     apiClientInstance.post<ApiResponse>(`/leads/${id}/convert`, data, { params: { companyId } }),
   getPipeline: (companyId: number) => 
@@ -185,6 +201,19 @@ export const callApi = {
     apiClientInstance.get<ApiResponse>('/calls', { params: filters }),
   getUpcoming: () =>
     apiClientInstance.get<ApiResponse>('/calls/upcoming'),
+};
+
+// Booking availability (for call/meeting conflict checks)
+export const bookingApi = {
+  getAvailability: (
+    companyId: number,
+    startTime: string,
+    durationMinutes: number,
+    options?: { excludeCallId?: number; excludeMeetingId?: number }
+  ) =>
+    apiClientInstance.get<ApiResponse>('/bookings/availability', {
+      params: { companyId, startTime, durationMinutes, ...options },
+    }),
 };
 
 // Lead Category API

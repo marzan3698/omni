@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { employeeController } from '../controllers/employee.controller.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
-import { verifyPermission } from '../middleware/authMiddleware.js';
+import { verifyPermission, verifyPermissionAny } from '../middleware/authMiddleware.js';
 
 const router = Router();
 
@@ -11,9 +11,9 @@ router.use(authMiddleware);
 // Current user balance/points - no permission required, any authenticated user can see their own
 router.get('/me/balance-points', employeeController.getMyBalancePoints);
 
-// Employee routes
-router.get('/', verifyPermission('can_manage_employees'), employeeController.getAllEmployees);
-router.get('/:id', verifyPermission('can_manage_employees'), employeeController.getEmployeeById);
+// Employee list/detail: allow can_manage_leads (e.g. Lead Manager) so they can load employees for lead assignment
+router.get('/', verifyPermissionAny(['can_manage_employees', 'can_manage_leads']), employeeController.getAllEmployees);
+router.get('/:id', verifyPermissionAny(['can_manage_employees', 'can_manage_leads']), employeeController.getEmployeeById);
 router.post('/', verifyPermission('can_manage_employees'), employeeController.createEmployee);
 router.put('/:id', verifyPermission('can_manage_employees'), employeeController.updateEmployee);
 router.delete('/:id', verifyPermission('can_manage_employees'), employeeController.deleteEmployee);

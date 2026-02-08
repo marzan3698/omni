@@ -263,13 +263,17 @@ export const adminService = {
                   include: {
                     leads: {
                       include: {
-                        assignedEmployee: {
+                        assignments: {
                           include: {
-                            user: {
-                              select: {
-                                id: true,
-                                name: true,
-                                email: true,
+                            employee: {
+                              include: {
+                                user: {
+                                  select: {
+                                    id: true,
+                                    name: true,
+                                    email: true,
+                                  },
+                                },
                               },
                             },
                           },
@@ -510,13 +514,17 @@ export const adminService = {
           include: {
             leads: {
               include: {
-                assignedEmployee: {
+                assignments: {
                   include: {
-                    user: {
-                      select: {
-                        id: true,
-                        name: true,
-                        email: true,
+                    employee: {
+                      include: {
+                        user: {
+                          select: {
+                            id: true,
+                            name: true,
+                            email: true,
+                          },
+                        },
                       },
                     },
                   },

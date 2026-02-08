@@ -26,12 +26,12 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   }
 
   // Redirect clients trying to access admin routes
-  if (isClient && !window.location.pathname.startsWith('/client')) {
+  if (isClient && !window.location.pathname.startsWith('/client/')) {
     return <Navigate to="/client/dashboard" replace />;
   }
 
   // Redirect non-clients trying to access client routes
-  if (!isClient && window.location.pathname.startsWith('/client')) {
+  if (!isClient && window.location.pathname.startsWith('/client/')) {
     return <Navigate to="/dashboard" replace />;
   }
 

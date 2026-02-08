@@ -43,6 +43,7 @@ interface SubMenuItem {
   label: string;
   path?: string;
   icon?: React.ComponentType<{ className?: string }>;
+  permission?: string;
   submenu?: SubMenuItem[];
 }
 
@@ -102,6 +103,11 @@ const menuSections: MenuSection[] = [
     label: 'Meeting Schedule',
     items: [
       {
+        label: 'My Meetings',
+        icon: Calendar,
+        path: '/my-meetings'
+      },
+      {
         label: 'All Meetings',
         icon: Calendar,
         path: '/meeting-schedule',
@@ -133,6 +139,13 @@ const menuSections: MenuSection[] = [
       { label: 'Projects & Clients', icon: Users, path: '/admin/projects-clients', permission: 'can_manage_companies' },
     ]
   },
+  // Section 3.5: Client Setup (ক্লায়েন্ট সেটাপ)
+  {
+    label: '',
+    items: [
+      { label: 'ক্লায়েন্ট সেটাপ', icon: Users, path: '/client-setup/pending-clients', permission: 'can_approve_clients' },
+    ]
+  },
   // Section 4: Finance (আর্থিক)
   {
     label: 'Finance',
@@ -143,6 +156,7 @@ const menuSections: MenuSection[] = [
         permission: 'can_view_finance',
         submenu: [
           { label: 'Finance Overview', path: '/finance', icon: DollarSign },
+          { label: 'Pending Clients', path: '/finance/pending-clients', icon: DollarSign, permission: 'can_approve_clients' },
           { label: 'Payment Management', path: '/payment-management', icon: DollarSign },
           { label: 'Payment Settings', path: '/payment-settings', icon: CreditCard },
         ]
@@ -378,7 +392,9 @@ export function Sidebar() {
                             )}
                           >
                             <ul className="ml-6 mt-1 mb-1 space-y-1 border-l-2 border-indigo-200 pl-4">
-                              {item.submenu.map((subItem) => {
+                              {item.submenu
+                                .filter((subItem) => !subItem.permission || user?.permissions?.[subItem.permission] || user?.roleName === 'SuperAdmin')
+                                .map((subItem) => {
                                 const SubIcon = subItem.icon || Eye;
                                 const isSubActive = location.pathname === subItem.path;
                                 const hasNestedSubmenu = subItem.submenu && subItem.submenu.length > 0;

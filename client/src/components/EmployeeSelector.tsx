@@ -36,6 +36,10 @@ interface EmployeeSelectorProps {
   selectedEmployeeIds: number[];
   onSelectionChange: (employeeIds: number[]) => void;
   isSuperAdmin?: boolean;
+  /** Employee IDs that cannot be selected (e.g. booked for a time slot) */
+  disabledEmployeeIds?: number[];
+  /** Optional reason per employee (e.g. "Booked" for availability) */
+  disabledReasonByEmployeeId?: Record<number, string>;
 }
 
 export function EmployeeSelector({
@@ -43,6 +47,8 @@ export function EmployeeSelector({
   selectedEmployeeIds,
   onSelectionChange,
   isSuperAdmin = false,
+  disabledEmployeeIds = [],
+  disabledReasonByEmployeeId = {},
 }: EmployeeSelectorProps) {
   const { user: currentUser } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
@@ -154,6 +160,7 @@ export function EmployeeSelector({
   }, [employees, selectedEmployeeIds]);
 
   const handleToggleEmployee = (employeeId: number) => {
+    if (disabledEmployeeIds.includes(employeeId)) return;
     if (selectedEmployeeIds.includes(employeeId)) {
       onSelectionChange(selectedEmployeeIds.filter((id) => id !== employeeId));
     } else {
@@ -240,26 +247,31 @@ export function EmployeeSelector({
             <div className="divide-y divide-gray-200">
               {employees.map((employee) => {
                 const isSelected = selectedEmployeeIds.includes(employee.id);
+                const isDisabled = disabledEmployeeIds.includes(employee.id);
+                const disabledReason = disabledReasonByEmployeeId[employee.id] ?? 'Booked';
                 return (
                   <button
                     key={employee.id}
                     type="button"
                     onClick={() => handleToggleEmployee(employee.id)}
+                    disabled={isDisabled}
                     className={cn(
-                      'w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors',
-                      isSelected && 'bg-indigo-50'
+                      'w-full flex items-center justify-between p-3 transition-colors text-left',
+                      isDisabled && 'cursor-not-allowed opacity-70 bg-slate-50',
+                      !isDisabled && 'hover:bg-gray-50',
+                      isSelected && !isDisabled && 'bg-indigo-50'
                     )}
                   >
-                    <div className="flex items-center gap-3 flex-1 text-left">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
                       <div
                         className={cn(
                           'w-5 h-5 border-2 rounded flex items-center justify-center flex-shrink-0',
-                          isSelected
-                            ? 'border-indigo-600 bg-indigo-600'
-                            : 'border-gray-300'
+                          isDisabled && 'border-slate-200 bg-slate-100',
+                          isSelected && !isDisabled && 'border-indigo-600 bg-indigo-600',
+                          !isSelected && !isDisabled && 'border-gray-300'
                         )}
                       >
-                        {isSelected && <Check className="w-3 h-3 text-white" />}
+                        {isSelected && !isDisabled && <Check className="w-3 h-3 text-white" />}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-slate-900 truncate">
@@ -268,7 +280,7 @@ export function EmployeeSelector({
                         <div className="text-xs text-slate-500 truncate">
                           {getEmployeeEmail(employee)}
                         </div>
-                        <div className="flex items-center gap-2 mt-1">
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
                           {employee.designation && (
                             <span className="text-xs text-slate-400">
                               {employee.designation}
@@ -282,9 +294,14 @@ export function EmployeeSelector({
                               </span>
                             </>
                           )}
+                          {isDisabled && (
+                            <span className="text-xs font-medium text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">
+                              {disabledReason}
+                            </span>
+                          )}
                           {isSuperAdmin && getEmployeeCompany(employee) && (
                             <>
-                              {(employee.designation || employee.department) && (
+                              {(employee.designation || employee.department || isDisabled) && (
                                 <span className="text-xs text-slate-300">•</span>
                               )}
                               <div className="flex items-center gap-1 text-xs text-slate-500">

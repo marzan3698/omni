@@ -28,6 +28,7 @@ const allPermissions = [
   { key: 'can_manage_roles', label: 'Manage Roles' },
   { key: 'can_view_reports', label: 'View Reports' },
   { key: 'can_manage_finance', label: 'Manage Finance' },
+  { key: 'can_approve_clients', label: 'Client Setup (ক্লায়েন্ট সেটাপ - Approve Pending Clients)' },
   { key: 'can_manage_companies', label: 'Manage Companies' },
   { key: 'can_manage_employees', label: 'Manage Employees' },
   { key: 'can_manage_tasks', label: 'Manage Tasks' },
@@ -193,6 +194,10 @@ export default function Roles() {
       alert('Cannot edit SuperAdmin role name');
       return;
     }
+    if (role.name === 'Lead Manager') {
+      alert('Cannot edit Lead Manager role name');
+      return;
+    }
     setEditingRoleName(role);
     setNewRoleName(role.name);
   };
@@ -214,6 +219,10 @@ export default function Roles() {
       alert('Cannot delete SuperAdmin role');
       return;
     }
+    if (role.name === 'Lead Manager') {
+      alert('Cannot delete Lead Manager role');
+      return;
+    }
     setDeletingRole(role);
     setShowDeleteModal(true);
   };
@@ -223,7 +232,7 @@ export default function Roles() {
     deleteRoleMutation.mutate(deletingRole.id);
   };
 
-  const isProtectedRole = (roleName: string) => roleName === 'SuperAdmin';
+  const isProtectedRole = (roleName: string) => roleName === 'SuperAdmin' || roleName === 'Lead Manager';
 
   // Group permissions by category
   const permissionGroups = {
@@ -236,7 +245,8 @@ export default function Roles() {
     ),
     'Access & View': allPermissions.filter((p) => p.key.includes('view') || p.key.includes('report')),
     'Communication': allPermissions.filter((p) => p.key.includes('social') || p.key.includes('inbox')),
-    'Finance': allPermissions.filter((p) => p.key.includes('finance')),
+    'Finance': allPermissions.filter((p) => p.key.includes('finance') || p.key.includes('payment')),
+    'Client Setup (ক্লায়েন্ট সেটাপ)': allPermissions.filter((p) => p.key.includes('client') || p.key.includes('approve')),
   };
 
   return (
@@ -329,7 +339,7 @@ export default function Roles() {
                           size="sm"
                           onClick={() => handleEditName(role)}
                           disabled={isProtectedRole(role.name)}
-                          title={isProtectedRole(role.name) ? 'Cannot edit SuperAdmin role name' : 'Edit role name'}
+                          title={isProtectedRole(role.name) ? `Cannot edit ${role.name} role name` : 'Edit role name'}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -350,7 +360,7 @@ export default function Roles() {
                         className="text-red-600 hover:text-red-700 hover:bg-red-50"
                         title={
                           isProtectedRole(role.name)
-                            ? 'Cannot delete SuperAdmin role'
+                            ? `Cannot delete ${role.name} role`
                             : role._count.users > 0
                             ? `Cannot delete: ${role._count.users} user(s) assigned`
                             : 'Delete role'

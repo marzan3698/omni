@@ -141,6 +141,65 @@ export interface Task {
   unreadMessageCount?: number;
 }
 
+// Lead types
+export interface LeadAssignment {
+  id: number;
+  leadId: number;
+  employeeId: number;
+  assignedAt: string;
+  employee: {
+    id: number;
+    user?: {
+      id: string;
+      email: string;
+      profileImage?: string | null;
+      role?: { id: number; name: string };
+    };
+  };
+}
+
+export interface Lead {
+  id: number;
+  companyId: number;
+  createdBy: string;
+  title: string;
+  description?: string | null;
+  source: string;
+  status: string;
+  value?: number | string | null;
+  conversationId?: number | null;
+  customerName?: string | null;
+  phone?: string | null;
+  categoryId?: number | null;
+  interestId?: number | null;
+  campaignId?: number | null;
+  productId?: number | null;
+  purchasePrice?: number | string | null;
+  salePrice?: number | string | null;
+  profit?: number | string | null;
+  convertedToClientId?: number | null;
+  leadMonitoringUserId?: string | null;
+  leadMonitoringAssignedAt?: string | null;
+  leadMonitoringTransferredAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  createdByUser?: { id: string; email?: string; profileImage?: string | null; name?: string | null; role?: { id: number; name: string } };
+  leadMonitoringUser?: { id: string; name?: string | null; email: string; profileImage?: string | null; role?: { id: number; name: string } } | null;
+  clientApprovalRequest?: {
+    id: number;
+    status: 'Pending' | 'Approved' | 'Rejected';
+    approvedAt?: string | null;
+    client?: { id: number; name: string; status: string };
+    approvedByUser?: { id: string; name?: string | null; email: string } | null;
+  } | null;
+  assignments?: LeadAssignment[];
+  conversation?: unknown;
+  category?: { id: number; name: string } | null;
+  interest?: { id: number; name: string } | null;
+  campaign?: unknown;
+  product?: unknown;
+}
+
 // Lead Meeting types
 export type LeadMeetingStatus = 'Scheduled' | 'Completed' | 'Canceled';
 
@@ -149,6 +208,7 @@ export interface LeadMeeting {
   companyId: number;
   leadId: number;
   clientId?: number | null;
+  assignedTo: number;
   createdBy: string;
   title: string;
   description?: string | null;
@@ -158,6 +218,15 @@ export interface LeadMeeting {
   status: LeadMeetingStatus;
   createdAt: string;
   updatedAt: string;
+  assignedEmployee?: {
+    id: number;
+    user?: {
+      id: string;
+      email: string;
+      name?: string | null;
+      profileImage?: string | null;
+    };
+  };
 }
 
 // Lead Call types

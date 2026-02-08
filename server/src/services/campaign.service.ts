@@ -101,12 +101,16 @@ export const campaignService = {
                 email: true,
               },
             },
-            assignedEmployee: {
+            assignments: {
               include: {
-                user: {
-                  select: {
-                    id: true,
-                    email: true,
+                employee: {
+                  include: {
+                    user: {
+                      select: {
+                        id: true,
+                        email: true,
+                      },
+                    },
                   },
                 },
               },

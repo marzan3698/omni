@@ -57,7 +57,7 @@ export const employeeService = {
         _count: {
           select: {
             assignedTasks: true,
-            assignedLeads: true,
+            leadAssignments: true,
           },
         },
       },
@@ -98,8 +98,17 @@ export const employeeService = {
           },
           orderBy: { createdAt: 'desc' },
         },
-        assignedLeads: {
-          orderBy: { createdAt: 'desc' },
+        leadAssignments: {
+          orderBy: { assignedAt: 'desc' },
+          include: {
+            lead: {
+              select: {
+                id: true,
+                title: true,
+                status: true,
+              },
+            },
+          },
         },
       },
     });
@@ -288,7 +297,7 @@ export const employeeService = {
       prisma.lead.groupBy({
         by: ['status'],
         where: {
-          assignedTo: employeeId,
+          assignments: { some: { employeeId } },
           companyId,
         },
         _count: true,
