@@ -60,7 +60,9 @@ export const integrationController = {
    */
   getIntegrations: async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const integrations = await integrationService.getIntegrations();
+      const companyId = (req as any).user?.companyId;
+      if (!companyId) return sendError(res, 'Company context required', 400);
+      const integrations = await integrationService.getIntegrations(companyId);
       sendSuccess(res, integrations, 'Integrations retrieved successfully');
     } catch (error) {
       next(error);
@@ -74,11 +76,16 @@ export const integrationController = {
   getIntegrationById: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const id = parseInt(req.params.id, 10);
+      const companyId = (req as any).user?.companyId;
       if (isNaN(id)) {
         return sendError(res, 'Invalid integration ID', 400);
       }
+      if (!companyId) return sendError(res, 'Company context required', 400);
 
       const integration = await integrationService.getIntegrationById(id);
+      if ((integration as any)?.companyId !== companyId) {
+        return sendError(res, 'Integration not found', 404);
+      }
       sendSuccess(res, integration, 'Integration retrieved successfully');
     } catch (error) {
       if (error instanceof AppError) {
@@ -95,11 +102,17 @@ export const integrationController = {
   updateIntegration: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const id = parseInt(req.params.id, 10);
+      const companyId = (req as any).user?.companyId;
       if (isNaN(id)) {
         return sendError(res, 'Invalid integration ID', 400);
       }
+      if (!companyId) return sendError(res, 'Company context required', 400);
 
       const validatedData = updateIntegrationSchema.parse(req.body);
+      const existing = await integrationService.getIntegrationById(id);
+      if ((existing as any)?.companyId !== companyId) {
+        return sendError(res, 'Integration not found', 404);
+      }
       const integration = await integrationService.updateIntegration(id, validatedData);
       sendSuccess(res, integration, 'Integration updated successfully');
     } catch (error) {
@@ -120,10 +133,16 @@ export const integrationController = {
   deleteIntegration: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const id = parseInt(req.params.id, 10);
+      const companyId = (req as any).user?.companyId;
       if (isNaN(id)) {
         return sendError(res, 'Invalid integration ID', 400);
       }
+      if (!companyId) return sendError(res, 'Company context required', 400);
 
+      const existing = await integrationService.getIntegrationById(id);
+      if ((existing as any)?.companyId !== companyId) {
+        return sendError(res, 'Integration not found', 404);
+      }
       await integrationService.deleteIntegration(id);
       sendSuccess(res, null, 'Integration deleted successfully');
     } catch (error) {

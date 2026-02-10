@@ -5,6 +5,12 @@ import { restoreActiveWhatsAppClients } from './services/whatsapp.service.js';
 
 const PORT = Number(process.env.PORT) || 5001;
 
+// Fail fast if auth is not configured (prevents confusing 500 on login)
+if (!process.env.JWT_SECRET || process.env.JWT_SECRET.trim() === '') {
+  console.error('❌ JWT_SECRET is not set. Add it to your .env file (e.g. JWT_SECRET=your-secret-key).');
+  process.exit(1);
+}
+
 // Create HTTP server
 const httpServer = createServer(app);
 

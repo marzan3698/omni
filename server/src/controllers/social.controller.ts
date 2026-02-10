@@ -14,7 +14,7 @@ export const socialController = {
    * Facebook Webhook Verification (GET)
    * Facebook sends a GET request to verify the webhook
    */
-  verifyFacebookWebhook: (req: Request, res: Response, next: NextFunction) => {
+  verifyFacebookWebhook: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const mode = req.query['hub.mode'] as string;
       const token = req.query['hub.verify_token'] as string;
@@ -25,27 +25,18 @@ export const socialController = {
       console.log('Token:', token ? '***' : 'missing');
       console.log('Challenge:', challenge);
 
-      // If no query parameters, this might be a direct browser access
-      // Return a simple message instead of error
       if (!mode || !token || !challenge) {
-        console.log('Missing verification parameters - might be direct browser access');
-        // For browser access, return a simple message
-        // For Facebook verification, return error as plain text
         if (req.method === 'GET' && Object.keys(req.query).length === 0) {
           return res.status(200).send('Webhook endpoint is active. This endpoint is for Facebook webhook verification only.');
         }
-        // Facebook expects plain text even for errors during verification
         return res.status(400).send('Missing required parameters');
       }
 
-      const challengeResponse = socialService.verifyWebhook(token, challenge, mode);
-
-      // Facebook expects a plain text response with the challenge
+      const challengeResponse = await socialService.verifyWebhook(token, challenge, mode);
       console.log('✅ Webhook verification successful');
       res.status(200).send(challengeResponse);
     } catch (error) {
       console.error('❌ Webhook verification failed:', error);
-      // For webhook verification, Facebook expects plain text response
       if (error instanceof AppError) {
         return res.status(error.statusCode).send(error.message);
       }

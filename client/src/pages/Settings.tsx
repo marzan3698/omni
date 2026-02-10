@@ -66,20 +66,18 @@ export function Settings() {
       {/* Integrations Tab */}
       {activeTab === 'integrations' && (
         <div className="space-y-6">
-          {/* Active Integration Banner */}
-          {activeIntegration && (
+          {/* Active integrations summary */}
+          {integrations.filter((i) => i.isActive).length > 0 && (
             <div className="p-4 bg-indigo-50 rounded-md border border-indigo-200">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <p className="text-sm font-medium text-indigo-900">
-                    Active Integration: <span className="capitalize">{activeIntegration.provider}</span>
-                  </p>
-                </div>
-                <p className="text-xs text-indigo-700">
-                  Only one integration can be active at a time
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <p className="text-sm font-medium text-indigo-900">
+                  Active: {integrations.filter((i) => i.isActive).map((i) => (i.displayName || i.provider) + (i.provider === 'facebook' ? ' (FB)' : '')).join(', ') || 'None'}
                 </p>
               </div>
+              <p className="text-xs text-indigo-700 mt-1">
+                You can have multiple Facebook Pages and WhatsApp slots active at once.
+              </p>
             </div>
           )}
 

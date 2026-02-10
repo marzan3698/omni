@@ -66,6 +66,9 @@ model Company {
   subTasks             SubTask[]
   taskAttachments      TaskAttachment[]
   taskConversations    TaskConversation[]
+  activityLogs         ActivityLog[]
+  screenCaptures       ScreenCapture[]
+  facebookAppConfigs   FacebookAppConfig[]
 
   @@index([name])
   @@index([isActive])
@@ -119,6 +122,8 @@ model User {
   taskMessages                   TaskMessage[]             @relation("UserTaskMessages")
   clientApprovalRequestsRequested ClientApprovalRequest[]  @relation("ClientApprovalRequestedBy")
   clientApprovalRequestsApproved  ClientApprovalRequest[]  @relation("ClientApprovalApprovedBy")
+  activityLogs                    ActivityLog[]
+  screenCaptures                  ScreenCapture[]
 
   @@unique([email, companyId])
   @@index([email])
@@ -136,13 +141,60 @@ model WorkSession {
   duration  Int?      // Duration in seconds (calculated on end)
   createdAt DateTime  @default(now()) @map("created_at")
 
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company         Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  activityLogs    ActivityLog[]
+  screenCaptures  ScreenCapture[]
 
   @@index([userId])
   @@index([companyId])
   @@index([startTime])
   @@map("work_sessions")
+}
+
+model ActivityLog {
+  id              Int      @id @default(autoincrement())
+  userId          String   @map("user_id") @db.VarChar(36)
+  companyId       Int      @map("company_id")
+  sessionId       Int?     @map("session_id")
+  mouseClicks     Int      @default(0) @map("mouse_clicks")
+  mouseMovements  Int      @default(0) @map("mouse_movements")
+  keystrokes      Int      @default(0) @map("keystrokes")
+  activityScore   Int      @default(0) @map("activity_score")
+  intervalStart   DateTime @map("interval_start") @db.DateTime
+  intervalEnd     DateTime @map("interval_end") @db.DateTime
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  session WorkSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([companyId])
+  @@index([sessionId])
+  @@index([intervalStart])
+  @@map("activity_logs")
+}
+
+model ScreenCapture {
+  id         Int      @id @default(autoincrement())
+  userId     String   @map("user_id") @db.VarChar(36)
+  companyId  Int      @map("company_id")
+  sessionId  Int?     @map("session_id")
+  imageUrl   String   @map("image_url") @db.VarChar(500)
+  pageUrl    String?  @map("page_url") @db.VarChar(500)
+  capturedAt DateTime @map("captured_at") @db.DateTime
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  session WorkSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([companyId])
+  @@index([sessionId])
+  @@index([capturedAt])
+  @@map("screen_captures")
 }
 
 // ============================================
@@ -945,18 +997,23 @@ enum WebhookMode {
 }
 
 model Integration {
-  id              Int                 @id @default(autoincrement())
-  companyId       Int                 @map("company_id")
-  provider        IntegrationProvider
-  pageId          String              @map("page_id") @db.VarChar(255) // For Chatwoot: inbox_id
-  accessToken     String              @map("access_token") @db.Text // Should be encrypted
-  accountId       String?             @map("account_id") @db.VarChar(255) // For Chatwoot: account_id
-  baseUrl         String?             @map("base_url") @db.VarChar(500) // For Chatwoot: base URL (optional, defaults to cloud)
-  isActive        Boolean             @default(true) @map("is_active")
-  webhookMode     WebhookMode?        @default(local) @map("webhook_mode") // For Chatwoot: local or live server mode
-  isWebhookActive Boolean             @default(false) @map("is_webhook_active") // Enable/disable webhook (like live/test mode)
-  createdAt       DateTime            @default(now()) @map("created_at")
-  updatedAt       DateTime            @updatedAt @map("updated_at")
+  id                Int                 @id @default(autoincrement())
+  companyId         Int                 @map("company_id")
+  provider          IntegrationProvider
+  pageId            String              @map("page_id") @db.VarChar(255) // For Chatwoot: inbox_id; for Facebook: page ID
+  accessToken       String              @map("access_token") @db.Text // Should be encrypted
+  accountId         String?             @map("account_id") @db.VarChar(255) // For Chatwoot: account_id
+  baseUrl           String?             @map("base_url") @db.VarChar(500) // For Chatwoot: base URL (optional, defaults to cloud)
+  isActive          Boolean             @default(true) @map("is_active")
+  webhookMode       WebhookMode?        @default(local) @map("webhook_mode") // For Chatwoot: local or live server mode
+  isWebhookActive   Boolean             @default(false) @map("is_webhook_active") // Enable/disable webhook (like live/test mode)
+  displayName       String?             @map("display_name") @db.VarChar(255) // Page name for Facebook
+  metaJson          Json?               @map("meta_json") // Page picture/category etc.
+  lastError         String?             @map("last_error") @db.Text
+  lastValidatedAt   DateTime?           @map("last_validated_at") @db.DateTime
+  lastWebhookAt     DateTime?           @map("last_webhook_at") @db.DateTime
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
 
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
@@ -965,6 +1022,22 @@ model Integration {
   @@index([provider])
   @@index([isActive])
   @@map("integrations")
+}
+
+model FacebookAppConfig {
+  id                   Int      @id @default(autoincrement())
+  companyId            Int      @unique @map("company_id")
+  appId                String   @map("app_id") @db.VarChar(100)
+  appSecret            String   @map("app_secret") @db.VarChar(255)
+  verifyToken          String   @map("verify_token") @db.VarChar(255)
+  redirectUriOverride  String?  @map("redirect_uri_override") @db.VarChar(500)
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@map("facebook_app_configs")
 }
 
 enum SocialPlatform {
@@ -990,18 +1063,20 @@ enum ConversationStatus {
 }
 
 model SocialConversation {
-  id               Int                @id @default(autoincrement())
-  companyId        Int                @map("company_id")
-  platform         SocialPlatform
-  externalUserId   String             @map("external_user_id") @db.VarChar(255) // Sender's PSID from Facebook
-  externalUserName String?            @map("external_user_name") @db.VarChar(255) // Sender's Name
-  status           ConversationStatus @default(Open)
-  lastMessageAt    DateTime?          @map("last_message_at") @db.DateTime
-  assignedTo       Int?               @map("assigned_to")
-  assignedAt       DateTime?          @map("assigned_at") @db.DateTime
-  whatsappSlotId   String?            @map("whatsapp_slot_id") @db.VarChar(10) // Slot 1-5 for multi-WhatsApp
-  createdAt        DateTime           @default(now()) @map("created_at")
-  updatedAt        DateTime           @updatedAt @map("updated_at")
+  id                Int                @id @default(autoincrement())
+  companyId         Int                @map("company_id")
+  platform          SocialPlatform
+  externalUserId    String             @map("external_user_id") @db.VarChar(255) // Sender's PSID from Facebook
+  externalUserName  String?            @map("external_user_name") @db.VarChar(255) // Sender's Name
+  status            ConversationStatus @default(Open)
+  lastMessageAt     DateTime?          @map("last_message_at") @db.DateTime
+  assignedTo        Int?               @map("assigned_to")
+  assignedAt        DateTime?          @map("assigned_at") @db.DateTime
+  whatsappSlotId    String?            @map("whatsapp_slot_id") @db.VarChar(10) // Slot 1-5 for multi-WhatsApp
+  facebookPageId    String?            @map("facebook_page_id") @db.VarChar(255) // Source Page ID for Facebook
+  facebookPageName  String?            @map("facebook_page_name") @db.VarChar(255) // Page display name
+  createdAt         DateTime           @default(now()) @map("created_at")
+  updatedAt         DateTime           @updatedAt @map("updated_at")
 
   company          Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
   assignedEmployee Employee?             @relation("AssignedConversations", fields: [assignedTo], references: [id], onDelete: SetNull)
@@ -1017,6 +1092,7 @@ model SocialConversation {
   @@index([lastMessageAt])
   @@index([assignedTo])
   @@index([whatsappSlotId])
+  @@index([facebookPageId])
   @@map("social_conversations")
 }
 

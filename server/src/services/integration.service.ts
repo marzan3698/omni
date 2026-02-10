@@ -10,7 +10,12 @@ interface CreateIntegrationData {
   isActive?: boolean;
   webhookMode?: 'local' | 'live';
   isWebhookActive?: boolean;
-  companyId?: number; // Company ID (required for multi-tenant)
+  companyId?: number;
+  displayName?: string;
+  metaJson?: object;
+  lastError?: string | null;
+  lastValidatedAt?: Date | null;
+  lastWebhookAt?: Date | null;
 }
 
 interface UpdateIntegrationData {
@@ -21,6 +26,11 @@ interface UpdateIntegrationData {
   isActive?: boolean;
   webhookMode?: 'local' | 'live';
   isWebhookActive?: boolean;
+  displayName?: string;
+  metaJson?: object;
+  lastError?: string | null;
+  lastValidatedAt?: Date | null;
+  lastWebhookAt?: Date | null;
 }
 
 export const integrationService = {
@@ -28,18 +38,31 @@ export const integrationService = {
    * Create or update an integration
    */
   async upsertIntegration(data: CreateIntegrationData) {
-    const { provider, pageId, accessToken, accountId, baseUrl, isActive = true, webhookMode, isWebhookActive = false, companyId } = data;
-    
+    const {
+      provider,
+      pageId,
+      accessToken,
+      accountId,
+      baseUrl,
+      isActive = true,
+      webhookMode,
+      isWebhookActive = false,
+      companyId,
+      displayName,
+      metaJson,
+      lastError,
+      lastValidatedAt,
+      lastWebhookAt,
+    } = data;
+
     if (!companyId) {
       throw new AppError('Company ID is required', 400);
     }
 
-    // Validate provider
     if (!['facebook', 'whatsapp'].includes(provider)) {
       throw new AppError('Invalid provider. Must be facebook or whatsapp', 400);
     }
 
-    // Check if integration exists
     const existing = await prisma.integration.findFirst({
       where: {
         companyId,
@@ -48,41 +71,25 @@ export const integrationService = {
       },
     });
 
-    // If enabling this integration, disable all other integrations
-    if (isActive === true) {
-      const whereClause: any = {
-        isActive: true,
-      };
-      
-      if (existing) {
-        whereClause.id = { not: existing.id };
-      }
-      
-      await prisma.integration.updateMany({
-        where: {
-          ...whereClause,
-          companyId,
-        },
-        data: {
-          isActive: false,
-          updatedAt: new Date(),
-        },
-      });
-    }
-
-    // Prepare data for update/create
-    const integrationData: any = {
+    const integrationData: Record<string, unknown> = {
       accessToken,
       isActive,
       updatedAt: new Date(),
     };
     if (accountId !== undefined) integrationData.accountId = accountId;
+    if (baseUrl !== undefined) integrationData.baseUrl = baseUrl;
+    if (webhookMode !== undefined) integrationData.webhookMode = webhookMode;
+    if (isWebhookActive !== undefined) integrationData.isWebhookActive = isWebhookActive;
+    if (displayName !== undefined) integrationData.displayName = displayName;
+    if (metaJson !== undefined) integrationData.metaJson = metaJson;
+    if (lastError !== undefined) integrationData.lastError = lastError;
+    if (lastValidatedAt !== undefined) integrationData.lastValidatedAt = lastValidatedAt;
+    if (lastWebhookAt !== undefined) integrationData.lastWebhookAt = lastWebhookAt;
 
-    // Update or create
     const integration = existing
       ? await prisma.integration.update({
           where: { id: existing.id },
-          data: integrationData,
+          data: integrationData as any,
         })
       : await prisma.integration.create({
           data: {
@@ -90,7 +97,7 @@ export const integrationService = {
             pageId,
             companyId,
             ...integrationData,
-          },
+          } as any,
         });
 
     return integration;
@@ -99,8 +106,9 @@ export const integrationService = {
   /**
    * Get all integrations
    */
-  async getIntegrations() {
+  async getIntegrations(companyId: number) {
     const integrations = await prisma.integration.findMany({
+      where: { companyId },
       orderBy: {
         createdAt: 'desc',
       },
@@ -152,12 +160,10 @@ export const integrationService = {
       throw new AppError('Integration not found', 404);
     }
 
+    const updatePayload: Record<string, unknown> = { ...data, updatedAt: new Date() };
     const updated = await prisma.integration.update({
       where: { id },
-      data: {
-        ...data,
-        updatedAt: new Date(),
-      },
+      data: updatePayload as any,
     });
 
     return updated;

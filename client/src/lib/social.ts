@@ -21,6 +21,8 @@ export interface SocialConversation {
   assignedTo?: number | null;
   assignedAt?: string | null;
   whatsappSlotId?: string | null;
+  facebookPageId?: string | null;
+  facebookPageName?: string | null;
   assignedEmployee?: {
     id: number;
     user: {

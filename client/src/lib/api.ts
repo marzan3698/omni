@@ -250,6 +250,9 @@ export const userApi = {
   update: (id: string, data: any) => apiClientInstance.put<ApiResponse>(`/users/${id}`, data),
   delete: (id: string, companyId?: number) => 
     apiClientInstance.delete<ApiResponse>(`/users/${id}`, { params: companyId ? { companyId } : {} }),
+  /** Login as another user (SuperAdmin only). Returns { user, token }. Store token and redirect. */
+  loginAsUser: (userId: string) =>
+    apiClientInstance.post<ApiResponse<{ user: any; token: string }>>(`/auth/login-as/${userId}`),
 };
 
 // System Settings API (SuperAdmin only)

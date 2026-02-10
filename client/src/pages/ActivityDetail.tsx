@@ -1,0 +1,257 @@
+import { useState } from 'react';
+import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { activityApi, type EmployeeDetail as EmployeeDetailType } from '@/lib/activityApi';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft, Monitor, Clock, Image, Activity, X } from 'lucide-react';
+import { ErrorAlert } from '@/components/ErrorAlert';
+import { useAuth } from '@/contexts/AuthContext';
+import { getImageUrl } from '@/lib/imageUtils';
+import { cn } from '@/lib/utils';
+
+function formatMinutes(min: number): string {
+  if (min < 60) return `${min}m`;
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return m ? `${h}h ${m}m` : `${h}h`;
+}
+
+function blockColor(score: number): string {
+  if (score === 0) return 'bg-gray-200';
+  if (score <= 20) return 'bg-red-400';
+  if (score <= 50) return 'bg-yellow-400';
+  if (score <= 80) return 'bg-green-400';
+  return 'bg-green-600';
+}
+
+export default function ActivityDetail() {
+  const { userId } = useParams<{ userId: string }>();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const date = searchParams.get('date') ?? new Date().toISOString().slice(0, 10);
+  const [selectedImage, setSelectedImage] = useState<{
+    imageUrl: string;
+    capturedAt: string;
+    pageUrl: string | null;
+  } | null>(null);
+
+  const {
+    data: response,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ['activity-employee-detail', userId, date],
+    queryFn: async () => activityApi.getEmployeeDetail(userId!, date),
+    enabled: !!user && !!userId,
+  });
+
+  const detail = response?.data?.data as EmployeeDetailType | undefined;
+
+  const handleBack = () => {
+    navigate(`/activity-monitor?date=${date}`);
+  };
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <ErrorAlert error={error} />
+      </div>
+    );
+  }
+
+  if (!userId) {
+    return (
+      <div className="p-6">
+        <p className="text-slate-600">Invalid employee.</p>
+        <Button variant="outline" className="mt-4" onClick={handleBack}>
+          Back to monitor
+        </Button>
+      </div>
+    );
+  }
+
+  if (isLoading || !detail) {
+    return (
+      <div className="p-6">
+        <div className="py-8 text-center text-slate-500">Loading...</div>
+      </div>
+    );
+  }
+
+  const { user: emp, totalWorkMinutes, avgActivityScore, screenshotCount, activityByBlock, screenshots } = detail;
+  const idleMinutes = Math.max(0, 24 * 60 - totalWorkMinutes);
+
+  return (
+    <div className="p-6 space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={handleBack} className="shrink-0">
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-xl font-semibold text-slate-900">
+              {emp.name ?? emp.email}
+            </h1>
+            <p className="text-sm text-slate-500">{emp.email} · {emp.roleName}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <label htmlFor="detail-date" className="text-sm text-slate-600">Date</label>
+          <input
+            id="detail-date"
+            type="date"
+            value={date}
+            onChange={(e) => {
+              const d = e.target.value;
+              navigate({ pathname: `/activity-monitor/${userId}`, search: `?date=${d}` });
+            }}
+            className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-indigo-500 focus:border-indigo-500"
+          />
+        </div>
+      </div>
+
+      {/* Stats cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <Card className="shadow-sm border-gray-200">
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-2 text-slate-500">
+              <Clock className="h-4 w-4" />
+              <span className="text-sm">Work time</span>
+            </div>
+            <p className="mt-1 text-lg font-semibold text-slate-900">
+              {formatMinutes(totalWorkMinutes)}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="shadow-sm border-gray-200">
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-2 text-slate-500">
+              <Activity className="h-4 w-4" />
+              <span className="text-sm">Idle (est.)</span>
+            </div>
+            <p className="mt-1 text-lg font-semibold text-slate-900">
+              {formatMinutes(idleMinutes)}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="shadow-sm border-gray-200">
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-2 text-slate-500">
+              <Monitor className="h-4 w-4" />
+              <span className="text-sm">Avg score</span>
+            </div>
+            <p className="mt-1 text-lg font-semibold text-slate-900">{avgActivityScore}</p>
+          </CardContent>
+        </Card>
+        <Card className="shadow-sm border-gray-200">
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-2 text-slate-500">
+              <Image className="h-4 w-4" />
+              <span className="text-sm">Screenshots</span>
+            </div>
+            <p className="mt-1 text-lg font-semibold text-slate-900">{screenshotCount}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Activity timeline (10-min blocks) */}
+      <Card className="shadow-sm border-gray-200">
+        <CardHeader>
+          <CardTitle className="text-base">Activity timeline</CardTitle>
+          <CardContent className="p-0 pt-2 text-sm text-slate-500">
+            Green = active, yellow = low, red = idle, gray = offline (10-min blocks).
+          </CardContent>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-0.5">
+            {activityByBlock.map((block, i) => (
+              <div
+                key={i}
+                className={cn(
+                  'h-6 w-4 rounded-sm shrink-0',
+                  blockColor(block.score)
+                )}
+                title={`${new Date(block.blockStart).toLocaleTimeString([], {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })} - ${block.label} (${block.score})`}
+              />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Screenshots gallery */}
+      <Card className="shadow-sm border-gray-200">
+        <CardHeader>
+          <CardTitle className="text-base">Screenshots</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {screenshots.length === 0 ? (
+            <p className="text-slate-500 py-4">No screenshots for this date.</p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              {screenshots.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() =>
+                    setSelectedImage({
+                      imageUrl: s.imageUrl,
+                      capturedAt: s.capturedAt,
+                      pageUrl: s.pageUrl,
+                    })
+                  }
+                  className="rounded-lg border border-gray-200 overflow-hidden hover:ring-2 hover:ring-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <img
+                    src={getImageUrl(s.imageUrl)}
+                    alt={`Capture ${s.capturedAt}`}
+                    className="w-full aspect-video object-cover"
+                  />
+                  <p className="text-xs text-slate-500 p-1 truncate">
+                    {new Date(s.capturedAt).toLocaleString()}
+                  </p>
+                </button>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Full-size image modal */}
+      {selectedImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={() => setSelectedImage(null)}
+        >
+          <div
+            className="bg-white rounded-lg shadow-lg max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-2 border-b">
+              <p className="text-sm text-slate-600">
+                {new Date(selectedImage.capturedAt).toLocaleString()}
+                {selectedImage.pageUrl && ` · ${selectedImage.pageUrl}`}
+              </p>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSelectedImage(null)}
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
+            <img
+              src={getImageUrl(selectedImage.imageUrl)}
+              alt="Screenshot"
+              className="max-h-[80vh] w-full object-contain"
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -78,7 +78,8 @@ export function Login() {
       await login(data.email, data.password);
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.message || 'Login failed. Please try again.');
+      const serverMessage = err.response?.data?.message;
+      setError(serverMessage || err.message || 'Login failed. Please try again.');
     } finally {
       setIsLoading(false);
     }

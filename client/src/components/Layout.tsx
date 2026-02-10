@@ -9,6 +9,7 @@ import { useSidebar } from '@/contexts/SidebarContext';
 import { useInboxView } from '@/contexts/InboxViewContext';
 import { meetingApi, employeeApi } from '@/lib/api';
 import { workSessionApi } from '@/lib/workSession';
+import { activityTracker } from '@/lib/activityTracker';
 import { cn } from '@/lib/utils';
 
 interface LayoutProps {
@@ -22,6 +23,7 @@ export function Layout({ children }: LayoutProps) {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showBalancePopup, setShowBalancePopup] = useState(false);
+  const [showActivationPopup, setShowActivationPopup] = useState(false);
   const { user, logout } = useAuth();
 
   const queryClient = useQueryClient();
@@ -61,8 +63,43 @@ export function Layout({ children }: LayoutProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['work-session-status'] });
       queryClient.invalidateQueries({ queryKey: ['assignment-stats'] });
+      setShowActivationPopup(false);
     },
   });
+
+  // Activity tracker: start when online, stop when offline (employees only)
+  useEffect(() => {
+    if (!user?.id || user?.roleName === 'Client') return;
+    if (sessionStatus?.isOnline === true) {
+      const sessionId = sessionStatus?.session?.id ?? null;
+      activityTracker.start(sessionId);
+      return () => activityTracker.stop();
+    }
+    activityTracker.stop();
+  }, [user?.id, user?.roleName, sessionStatus?.isOnline, sessionStatus?.session?.id]);
+
+  // Show activation popup on first load when user is offline (not Client)
+  useEffect(() => {
+    if (
+      user?.id &&
+      user?.roleName !== 'Client' &&
+      sessionStatus !== undefined &&
+      sessionStatus?.isOnline === false &&
+      !sessionStorage.getItem('activation_shown')
+    ) {
+      setShowActivationPopup(true);
+    }
+  }, [user?.id, user?.roleName, sessionStatus]);
+
+  const handleActivationLater = () => {
+    sessionStorage.setItem('activation_shown', 'true');
+    setShowActivationPopup(false);
+  };
+
+  const handleActivationActivate = () => {
+    toggleLiveMutation.mutate();
+    sessionStorage.setItem('activation_shown', 'true');
+  };
 
   // Hide main sidebar only when on /inbox AND a chat is selected; keep inbox tabs/conversation list visible
   useEffect(() => {
@@ -280,6 +317,53 @@ export function Layout({ children }: LayoutProps) {
           {children}
         </main>
       </div>
+
+      {/* Activation Popup - show when user is offline after login */}
+      {showActivationPopup && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-300">
+            <div className="p-6 sm:p-8 text-center">
+              <div className="flex justify-center mb-4">
+                <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center animate-pulse">
+                  <Circle className="w-8 h-8 text-green-600 fill-green-600" />
+                </div>
+              </div>
+              <h2 className="text-xl font-semibold text-slate-900 mb-2">
+                আপনার প্যানেল একটিভ করুন
+              </h2>
+              <p className="text-slate-600 text-sm mb-1">
+                আপনার কাজের সময় তখন থেকে গণনা হবে যখন আপনি একটিভ করবেন।
+              </p>
+              <p className="text-slate-500 text-xs mb-6">
+                Your work time starts counting when you activate your panel.
+              </p>
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={handleActivationActivate}
+                  disabled={toggleLiveMutation.isPending}
+                  className="w-full py-3 px-4 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-medium rounded-lg transition-colors shadow-md"
+                >
+                  {toggleLiveMutation.isPending ? (
+                    <span className="inline-flex items-center gap-2">
+                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      একটিভ করা হচ্ছে...
+                    </span>
+                  ) : (
+                    'একটিভ করুন (Go Active)'
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleActivationLater}
+                  className="text-sm text-slate-500 hover:text-slate-700 underline"
+                >
+                  পরে করব (Later)
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Balance & Points Popup */}
       {showBalancePopup && (

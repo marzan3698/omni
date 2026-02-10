@@ -11,6 +11,11 @@ export interface Integration {
   isActive: boolean;
   webhookMode?: 'local' | 'live' | null;
   isWebhookActive?: boolean | null;
+  displayName?: string | null;
+  metaJson?: unknown;
+  lastError?: string | null;
+  lastValidatedAt?: string | null;
+  lastWebhookAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }

@@ -368,3 +368,41 @@ export const uploadHeroAddonImage = multer({
 
 // Single file upload middleware for hero addon images
 export const singleHeroAddonImage = uploadHeroAddonImage.single('addonImage');
+
+// ============================================
+// Activity Screenshot Upload (JPEG, 2MB)
+// ============================================
+
+const screenshotsDir = path.join(process.cwd(), 'uploads', 'screenshots');
+if (!fs.existsSync(screenshotsDir)) {
+  fs.mkdirSync(screenshotsDir, { recursive: true });
+}
+
+const screenshotStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, screenshotsDir),
+  filename: (_req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    cb(null, `screenshot-${uniqueSuffix}.jpg`);
+  },
+});
+
+const screenshotFileFilter = (
+  _req: any,
+  file: Express.Multer.File,
+  cb: multer.FileFilterCallback
+) => {
+  const allowed = ['image/jpeg', 'image/jpg'];
+  if (allowed.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Invalid file type. Only JPEG images are allowed.'));
+  }
+};
+
+export const uploadScreenshot = multer({
+  storage: screenshotStorage,
+  fileFilter: screenshotFileFilter,
+  limits: { fileSize: 2 * 1024 * 1024 },
+});
+
+export const singleScreenshot = uploadScreenshot.single('screenshot');

@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import type { User } from '@/types';
 import { authApi } from '@/lib/auth';
+import { workSessionApi } from '@/lib/workSession';
 
 interface AuthContextType {
   user: User | null;
@@ -55,9 +56,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
-    authApi.logout();
-    setUser(null);
-    window.location.href = '/login';
+    (async () => {
+      try {
+        const session = await workSessionApi.getCurrentSession();
+        if (session?.isOnline) {
+          await workSessionApi.toggleLiveStatus();
+        }
+      } catch {
+        // ignore errors on logout
+      }
+      sessionStorage.removeItem('activation_shown');
+      authApi.logout();
+      setUser(null);
+      window.location.href = '/login';
+    })();
   };
 
   const hasPermission = (permission: string): boolean => {

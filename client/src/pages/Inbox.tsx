@@ -982,7 +982,14 @@ export function Inbox() {
                           <div className="flex items-center justify-between mb-1">
                               <div className="flex items-center gap-2 flex-1 min-w-0">
                                 {conversation.platform === 'facebook' && (
-                                  <FacebookIcon className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                                  <>
+                                    <FacebookIcon className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                                    {(conversation.facebookPageName || conversation.facebookPageId) && (
+                                      <span className="text-[10px] font-medium text-blue-600 bg-blue-50 px-1 rounded" title={conversation.facebookPageName || conversation.facebookPageId || undefined}>
+                                        FB: {conversation.facebookPageName || conversation.facebookPageId || 'Page'}
+                                      </span>
+                                    )}
+                                  </>
                                 )}
                                 {conversation.platform === 'whatsapp' && (
                                   <>
@@ -1135,7 +1142,7 @@ export function Inbox() {
                       <p className="text-xs text-slate-500 mb-2 flex items-center gap-1.5">
                         {selectedConversation.platform === 'facebook' && <FacebookIcon className="w-3.5 h-3.5 text-blue-600" />}
                         {selectedConversation.platform === 'whatsapp' && <WhatsAppIcon className="w-3.5 h-3.5 text-green-500" />}
-                        {selectedConversation.platform === 'facebook' ? 'Facebook' : selectedConversation.platform === 'whatsapp' ? `WhatsApp${selectedConversation.whatsappSlotId ? ` (Slot ${selectedConversation.whatsappSlotId})` : ''}` : selectedConversation.platform}
+                        {selectedConversation.platform === 'facebook' ? (selectedConversation.facebookPageName ? `FB: ${selectedConversation.facebookPageName}` : 'Facebook') : selectedConversation.platform === 'whatsapp' ? `WhatsApp${selectedConversation.whatsappSlotId ? ` (Slot ${selectedConversation.whatsappSlotId})` : ''}` : selectedConversation.platform}
                       </p>
                       {selectedConversation.labels && selectedConversation.labels.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-2">

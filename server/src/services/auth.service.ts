@@ -256,6 +256,10 @@ export const authService = {
       throw new AppError('Invalid email or password', 401);
     }
 
+    if (!user.company) {
+      throw new AppError('Company not found for this account', 403);
+    }
+
     if (!user.company.isActive) {
       throw new AppError('Company account is inactive', 403);
     }
@@ -283,6 +287,54 @@ export const authService = {
         companyId: user.companyId,
         roleName: user.role.name,
         permissions: user.role.permissions,
+        profileImage: user.profileImage,
+        createdAt: user.createdAt,
+      },
+      token,
+    };
+  },
+
+  /**
+   * Login as another user (SuperAdmin only). Returns token and user for target user.
+   */
+  async loginAs(targetUserId: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: targetUserId },
+      include: {
+        role: true,
+        company: {
+          select: {
+            id: true,
+            name: true,
+            isActive: true,
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+
+    if (!user.company.isActive) {
+      throw new AppError('Target user company is inactive', 403);
+    }
+
+    const token = this.generateToken({
+      id: user.id,
+      email: user.email,
+      roleId: user.roleId,
+      companyId: user.companyId,
+    });
+
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        roleId: user.roleId,
+        companyId: user.companyId,
+        roleName: user.role.name,
+        permissions: (user.role.permissions as Record<string, boolean>) || {},
         profileImage: user.profileImage,
         createdAt: user.createdAt,
       },

@@ -18,6 +18,8 @@ import { ClientLeads } from './pages/ClientLeads';
 import { ProjectSign } from './pages/ProjectSign';
 import { Inbox } from './pages/Inbox';
 import InboxReport from './pages/InboxReport';
+import ActivityMonitor from './pages/ActivityMonitor';
+import ActivityDetail from './pages/ActivityDetail';
 import { Settings } from './pages/Settings';
 import { Companies } from './pages/Companies';
 import { Employees } from './pages/Employees';
@@ -46,6 +48,7 @@ import Roles from './pages/Roles';
 import TaskConfig from './pages/TaskConfig';
 import Integrations from './pages/Integrations';
 import FacebookOAuthCallback from './pages/FacebookOAuthCallback';
+import { FacebookAppConfig } from './pages/FacebookAppConfig';
 import EnvironmentFileEditing from './pages/EnvironmentFileEditing';
 import Campaigns from './pages/Campaigns';
 import CampaignForm from './pages/CampaignForm';
@@ -115,12 +118,48 @@ function App() {
               }
             />
             <Route
+              path="/activity-monitor"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <PermissionGuard permission="can_manage_root_items">
+                      <ActivityMonitor />
+                    </PermissionGuard>
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/activity-monitor/:userId"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <PermissionGuard permission="can_manage_root_items">
+                      <ActivityDetail />
+                    </PermissionGuard>
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/settings"
               element={
                 <ProtectedRoute>
                   <Layout>
                     <PermissionGuard permission="can_manage_integrations">
                       <Settings />
+                    </PermissionGuard>
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings/facebook-app-config"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <PermissionGuard permission="can_manage_root_items">
+                      <FacebookAppConfig />
                     </PermissionGuard>
                   </Layout>
                 </ProtectedRoute>
@@ -576,18 +615,7 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/admin/environment"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <PermissionGuard permission="can_manage_root_items">
-                      <EnvironmentFileEditing />
-                    </PermissionGuard>
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
+            <Route path="/admin/environment" element={<Navigate to="/settings/facebook-app-config" replace />} />
             {/* Public routes */}
             <Route path="/" element={<Landing />} />
             <Route path="/install" element={<Navigate to="/" replace />} />

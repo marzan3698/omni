@@ -74,7 +74,11 @@ export const authController = {
       console.error('Login error:', error);
       console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
 
-      return sendError(res, 'Login failed', 500);
+      const message =
+        process.env.NODE_ENV === 'development' && error instanceof Error
+          ? `Login failed: ${error.message}`
+          : 'Login failed';
+      return sendError(res, message, 500);
     }
   },
 
@@ -124,6 +128,30 @@ export const authController = {
       }
 
       return sendError(res, 'Failed to retrieve profile', 500);
+    }
+  },
+
+  /**
+   * Login as another user (SuperAdmin only)
+   * POST /api/auth/login-as/:userId
+   */
+  loginAs: async (req: AuthRequest, res: Response) => {
+    try {
+      const targetUserId = req.params.userId;
+
+      if (!targetUserId) {
+        return sendError(res, 'User ID is required', 400);
+      }
+
+      const result = await authService.loginAs(targetUserId);
+
+      return sendSuccess(res, result, 'Login as user successful');
+    } catch (error) {
+      if (error instanceof AppError) {
+        return sendError(res, error.message, error.statusCode);
+      }
+
+      return sendError(res, 'Login as user failed', 500);
     }
   },
 };

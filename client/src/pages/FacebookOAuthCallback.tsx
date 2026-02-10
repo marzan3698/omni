@@ -3,22 +3,22 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
-import { facebookOAuthApi, type FacebookPage } from '@/lib/facebookOAuth';
+import { facebookIntegrationApi, type FacebookPageOption } from '@/lib/facebookIntegration';
 import { useQueryClient } from '@tanstack/react-query';
 
 export default function FacebookOAuthCallback() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
+  const [status, setStatus] = useState<'loading' | 'success' | 'error' | 'connecting'>('loading');
   const [errorMessage, setErrorMessage] = useState<string>('');
-  const [pages, setPages] = useState<FacebookPage[]>([]);
-  const [tokenData, setTokenData] = useState<{ userAccessToken: string; companyId: number } | null>(null);
+  const [pages, setPages] = useState<FacebookPageOption[]>([]);
+  const [connectSessionId, setConnectSessionId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const error = searchParams.get('error');
-    const pagesParam = searchParams.get('pages');
-    const tokenParam = searchParams.get('token');
+    const sessionId = searchParams.get('connectSessionId');
 
     if (error) {
       setStatus('error');
@@ -26,42 +26,66 @@ export default function FacebookOAuthCallback() {
       return;
     }
 
-    if (pagesParam && tokenParam) {
-      try {
-        const parsedPages = JSON.parse(decodeURIComponent(pagesParam)) as FacebookPage[];
-        const parsedToken = JSON.parse(decodeURIComponent(tokenParam)) as {
-          userAccessToken: string;
-          companyId: number;
-        };
-
-        setPages(parsedPages);
-        setTokenData(parsedToken);
-        setStatus('success');
-      } catch (err) {
-        setStatus('error');
-        setErrorMessage('Failed to parse OAuth response');
-      }
+    if (sessionId) {
+      setConnectSessionId(sessionId);
+      facebookIntegrationApi.getConnectSessionPages(sessionId)
+        .then((res) => {
+          const list = res.data?.data ?? [];
+          setPages(list);
+          setStatus(list.length ? 'success' : 'error');
+          if (list.length === 0) setErrorMessage('No Facebook pages found.');
+        })
+        .catch ((err) => {
+          setStatus('error');
+          setErrorMessage(err?.response?.data?.message || err?.message || 'Failed to load pages');
+        });
     } else {
       setStatus('error');
-      setErrorMessage('Missing OAuth response data');
+      setErrorMessage('Missing connect session');
     }
   }, [searchParams]);
 
-  const handleSelectPage = async (page: FacebookPage) => {
-    if (!tokenData) return;
+  const togglePage = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
+  const handleConnectSelected = async () => {
+    if (!connectSessionId || selectedIds.size === 0) return;
     try {
-      setStatus('loading');
-      await facebookOAuthApi.connectPage(page.id, page.name, page.access_token);
+      setStatus('connecting');
+      const res = await facebookIntegrationApi.connectPages(connectSessionId, Array.from(selectedIds));
+      const results = (res.data?.data ?? []) as Array<{
+        pageId: string;
+        name: string;
+        integrationId?: number;
+        success: boolean;
+        error?: string;
+      }>;
 
-      // Invalidate integrations query to refresh the list
+      const ok = results.filter((r) => r.success);
+      const failed = results.filter((r) => !r.success);
+
+      if (ok.length === 0) {
+        setStatus('error');
+        setErrorMessage(failed[0]?.error || 'Failed to connect pages. Please check Facebook permissions and webhook subscription.');
+        return;
+      }
+
       queryClient.invalidateQueries({ queryKey: ['integrations'] });
-
-      // Redirect to integrations page
+      alert(
+        failed.length > 0
+          ? `Connected ${ok.length} page(s). ${failed.length} failed. Open Integrations → Diagnostics to see the exact reason.`
+          : `Connected ${ok.length} page(s). You can now receive messages in Inbox.`
+      );
       navigate('/integrations', { replace: true });
     } catch (error: any) {
       setStatus('error');
-      setErrorMessage(error.message || 'Failed to connect page');
+      setErrorMessage(error?.response?.data?.message || error?.message || 'Failed to connect pages');
     }
   };
 
@@ -76,7 +100,7 @@ export default function FacebookOAuthCallback() {
           <CardContent className="pt-6">
             <div className="flex flex-col items-center justify-center space-y-4">
               <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
-              <p className="text-sm text-gray-600">Processing OAuth callback...</p>
+              <p className="text-sm text-gray-600">Loading your Facebook pages...</p>
             </div>
           </CardContent>
         </Card>
@@ -91,7 +115,7 @@ export default function FacebookOAuthCallback() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-red-600">
               <XCircle className="h-5 w-5" />
-              OAuth Error
+              Error
             </CardTitle>
             <CardDescription>{errorMessage}</CardDescription>
           </CardHeader>
@@ -111,10 +135,10 @@ export default function FacebookOAuthCallback() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CheckCircle className="h-5 w-5 text-green-600" />
-            Select Facebook Page
+            Select Facebook Pages
           </CardTitle>
           <CardDescription>
-            Choose which Facebook page you want to connect to your inbox
+            এক বা একাধিক পেজ সিলেক্ট করে Connect Selected চাপুন। সব মেসেজ ওই পেজের নামসহ ইনবক্সে আসবে।
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -122,9 +146,6 @@ export default function FacebookOAuthCallback() {
             <div className="text-center py-8">
               <AlertCircle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
               <p className="text-gray-600 mb-4">No Facebook pages found.</p>
-              <p className="text-sm text-gray-500 mb-4">
-                Make sure you have at least one Facebook page and that you granted the necessary permissions.
-              </p>
               <Button onClick={handleCancel} variant="outline">
                 Go Back
               </Button>
@@ -132,24 +153,38 @@ export default function FacebookOAuthCallback() {
           ) : (
             <div className="space-y-3">
               {pages.map((page) => (
-                <div
+                <label
                   key={page.id}
-                  className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
                 >
-                  <div>
-                    <h3 className="font-semibold text-gray-900">{page.name}</h3>
-                    <p className="text-sm text-gray-500">Page ID: {page.id}</p>
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(page.id)}
+                    onChange={() => togglePage(page.id)}
+                    className="rounded border-gray-300"
+                  />
+                  <div className="flex-1">
+                    <span className="font-semibold text-gray-900">{page.name}</span>
+                    <span className="text-sm text-gray-500 ml-2">ID: {page.id}</span>
                   </div>
-                  <Button
-                    onClick={() => handleSelectPage(page)}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white"
-                  >
-                    Connect
-                  </Button>
-                </div>
+                </label>
               ))}
-              <div className="pt-4 border-t">
-                <Button onClick={handleCancel} variant="outline" className="w-full">
+              <div className="pt-4 flex gap-2">
+                <Button
+                  onClick={handleConnectSelected}
+                  disabled={selectedIds.size === 0 || status === 'connecting'}
+                  className="flex-1 bg-indigo-600 hover:bg-indigo-700"
+                >
+                  {status === 'connecting' ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Connecting...
+                    </>
+                  ) : (
+                    `Connect Selected (${selectedIds.size})`
+                  )}
+                </Button>
+                <Button onClick={handleCancel} variant="outline">
                   Cancel
                 </Button>
               </div>

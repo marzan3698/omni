@@ -30,7 +30,8 @@ import {
   Phone,
   Layout,
   Menu,
-  FileCode
+  FileCode,
+  Monitor
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -132,6 +133,18 @@ const menuSections: MenuSection[] = [
       }
     ]
   },
+  // Section 2.7: Time Tracking
+  {
+    label: 'Time Tracking',
+    items: [
+      {
+        label: 'Activity Monitor',
+        icon: Monitor,
+        path: '/activity-monitor',
+        permission: 'can_manage_root_items',
+      },
+    ],
+  },
   // Section 3: Project Management (প্রকল্প ব্যবস্থাপনা)
   {
     label: 'Project Management',
@@ -220,15 +233,15 @@ const menuSections: MenuSection[] = [
       },
     ]
   },
-  // Section 7: Environment File Editing (SuperAdmin Only)
+  // Section 7: Facebook (SuperAdmin – set App ID/Secret before connecting pages)
   {
-    label: 'Environment File Editing',
+    label: 'Facebook',
     items: [
       {
-        label: 'Facebook Webhook Config',
-        icon: FileCode,
-        path: '/admin/environment',
-        permission: 'can_manage_root_items', // SuperAdmin only
+        label: 'App Config',
+        icon: Plug,
+        path: '/settings/facebook-app-config',
+        permission: 'can_manage_root_items',
       },
     ]
   },

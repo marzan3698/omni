@@ -1,6 +1,7 @@
 import { prisma } from '../lib/prisma.js';
 import { AppError } from '../middleware/errorHandler.js';
 import * as autoAssignService from './autoAssign.service.js';
+import * as facebookAppConfig from './facebookAppConfig.service.js';
 
 // In-memory storage for typing indicators
 // Key: conversationId, Value: { userId: string, isTyping: boolean, updatedAt: Date }
@@ -63,22 +64,19 @@ interface FacebookWebhookPayload {
 
 export const socialService = {
   /**
-   * Verify Facebook webhook
-   * Facebook sends a GET request with hub.mode, hub.verify_token, and hub.challenge
+   * Verify Facebook webhook (per-company verify token from DB).
    */
-  verifyWebhook(verifyToken: string, challenge: string, mode: string): string {
-    const expectedToken = process.env.FACEBOOK_VERIFY_TOKEN || 'your_verify_token_here';
-
-    if (mode === 'subscribe' && verifyToken === expectedToken) {
-      return challenge;
+  async verifyWebhook(verifyToken: string, challenge: string, mode: string): Promise<string> {
+    if (mode !== 'subscribe') throw new AppError('Invalid mode', 403);
+    const companyId = await facebookAppConfig.getVerifyTokenForWebhook(verifyToken);
+    if (companyId == null) {
+      const fallback = process.env.FACEBOOK_VERIFY_TOKEN;
+      if (fallback && verifyToken === fallback) return challenge;
+      throw new AppError('Invalid verification token', 403);
     }
-
-    throw new AppError('Invalid verification token', 403);
+    return challenge;
   },
 
-  /**
-   * Resolve companyId for Facebook webhook (first company with active Facebook integration).
-   */
   async getDefaultCompanyIdForFacebook(): Promise<number | null> {
     const integration = await prisma.integration.findFirst({
       where: { provider: 'facebook', isActive: true },
@@ -102,38 +100,37 @@ export const socialService = {
         return { success: true };
       }
 
-      const companyId = await this.getDefaultCompanyIdForFacebook();
-      if (companyId == null) {
+      const defaultIntegration = await prisma.integration.findFirst({
+        where: { provider: 'facebook', isActive: true },
+        select: { companyId: true, pageId: true, displayName: true },
+      });
+      if (!defaultIntegration) {
         console.log('Test webhook: No Facebook integration found, skipping');
         return { success: true };
       }
+      const companyId = defaultIntegration.companyId;
+      const pageId = defaultIntegration.pageId;
+      const pageName = defaultIntegration.displayName || null;
 
       const senderId = value.sender.id;
       const messageText = value.message.text;
-      // Convert timestamp (can be string or number in seconds)
-      // For test webhooks, Facebook sends old timestamps, so use current time
       let timestampMs = typeof value.timestamp === 'string'
         ? parseInt(value.timestamp) * 1000
         : value.timestamp * 1000;
-
-      // If timestamp is too old (before 2020), use current time for test messages
-      const timestampDate = new Date(timestampMs);
       const year2020 = new Date('2020-01-01').getTime();
       if (timestampMs < year2020) {
-        console.log('Test webhook: Using current timestamp instead of old test timestamp');
         timestampMs = Date.now();
       }
-
       const timestamp = new Date(timestampMs);
 
       console.log(`Processing test message from ${senderId}: ${messageText}`);
 
-      // Find or create conversation
       let conversation = await prisma.socialConversation.findFirst({
         where: {
           companyId,
           platform: 'facebook',
           externalUserId: senderId,
+          facebookPageId: pageId,
         },
       });
 
@@ -146,6 +143,8 @@ export const socialService = {
             externalUserName: `Test User ${senderId.substring(0, 8)}`,
             status: 'Open',
             lastMessageAt: timestamp,
+            facebookPageId: pageId,
+            facebookPageName: pageName,
           },
         });
         console.log(`Created new conversation: ${conversation.id}`);
@@ -153,10 +152,7 @@ export const socialService = {
       } else {
         await prisma.socialConversation.update({
           where: { id: conversation.id },
-          data: {
-            lastMessageAt: timestamp,
-            status: 'Open',
-          },
+          data: { lastMessageAt: timestamp, status: 'Open' },
         });
         if (conversation.assignedTo == null) {
           await autoAssignService.autoAssignConversation(conversation.id, companyId);
@@ -202,17 +198,27 @@ export const socialService = {
       throw new AppError('Invalid webhook object', 400);
     }
 
-    const companyId = await this.getDefaultCompanyIdForFacebook();
-    if (companyId == null) {
-      console.log('Production webhook: No Facebook integration found, skipping');
-      return { success: true };
-    }
-
     for (const entry of payload.entry) {
+      const pageId = String(entry.id || '');
+      const integration = pageId
+        ? await prisma.integration.findFirst({
+            where: { provider: 'facebook', isActive: true, pageId },
+            select: { companyId: true, accessToken: true, displayName: true },
+          })
+        : null;
+
+      if (!integration) {
+        console.log(`Production webhook: No integration for page ${pageId}, skipping entry`);
+        continue;
+      }
+
+      const companyId = integration.companyId;
+      const pageAccessToken = integration.accessToken;
+      const pageName = integration.displayName || null;
+
       // Process messaging events
       if (entry.messaging && Array.isArray(entry.messaging)) {
         for (const event of entry.messaging) {
-          // Skip if not a message event
           if (!event.message) {
             console.log('Skipping non-message event:', event);
             continue;
@@ -220,33 +226,25 @@ export const socialService = {
 
           const senderId = event.sender.id;
           const recipientId = event.recipient.id;
-
-          // Convert timestamp (Facebook sends in seconds, JavaScript Date needs milliseconds)
           const timestamp = new Date(event.timestamp * 1000);
 
-          // Handle different message types
           let messageContent = '';
           let imageUrl: string | null = null;
 
           if (event.message.text) {
             messageContent = event.message.text;
           } else if (event.message.attachments && event.message.attachments.length > 0) {
-            // Handle attachments (images, videos, etc.)
             const attachment = event.message.attachments[0];
 
             if (attachment.type === 'image' && attachment.payload && attachment.payload.url) {
-              // Download and save image
               try {
                 const axios = (await import('axios')).default;
                 const fs = (await import('fs')).default;
                 const path = (await import('path')).default;
 
-                // Download image from Facebook CDN
                 const response = await axios.get(attachment.payload.url, {
                   responseType: 'arraybuffer',
-                  params: {
-                    access_token: process.env.FACEBOOK_ACCESS_TOKEN, // May need page access token
-                  },
+                  params: { access_token: pageAccessToken },
                 });
 
                 // Save to local storage
@@ -291,14 +289,14 @@ export const socialService = {
             continue;
           }
 
-          console.log(`Processing message from ${senderId} to ${recipientId}: ${messageContent.substring(0, 50)}`);
+          console.log(`Processing message from ${senderId} to ${recipientId} (page ${pageId}): ${messageContent.substring(0, 50)}`);
 
-          // Find or create conversation
           let conversation = await prisma.socialConversation.findFirst({
             where: {
               companyId,
               platform: 'facebook',
               externalUserId: senderId,
+              facebookPageId: pageId,
             },
           });
 
@@ -308,19 +306,22 @@ export const socialService = {
                 companyId,
                 platform: 'facebook',
                 externalUserId: senderId,
-                externalUserName: null, // Would be fetched from Facebook API
+                externalUserName: null,
                 status: 'Open',
                 lastMessageAt: timestamp,
+                facebookPageId: pageId,
+                facebookPageName: pageName,
               },
             });
-            console.log(`Created new conversation: ${conversation.id} for user ${senderId}`);
+            console.log(`Created new conversation: ${conversation.id} for user ${senderId} page ${pageId}`);
             await autoAssignService.autoAssignConversation(conversation.id, companyId);
           } else {
             await prisma.socialConversation.update({
               where: { id: conversation.id },
               data: {
                 lastMessageAt: timestamp,
-                status: 'Open', // Reopen if closed
+                status: 'Open',
+                ...(pageName && { facebookPageName: pageName }),
               },
             });
             if (conversation.assignedTo == null) {
@@ -626,13 +627,16 @@ export const socialService = {
     if (conversation.platform === 'facebook') {
       console.log('✅ Facebook platform detected, sending via Facebook Messenger API');
 
-      // Get Facebook integration
+      const whereClause: { provider: 'facebook'; isActive: boolean; companyId: number; pageId?: string } = {
+        provider: 'facebook',
+        isActive: true,
+        companyId: conversation.companyId,
+      };
+      if ((conversation as any).facebookPageId) {
+        whereClause.pageId = (conversation as any).facebookPageId;
+      }
       const integration = await prisma.integration.findFirst({
-        where: {
-          provider: 'facebook',
-          isActive: true,
-          companyId: conversation.companyId,
-        },
+        where: whereClause,
       });
 
       if (!integration || !integration.accessToken) {

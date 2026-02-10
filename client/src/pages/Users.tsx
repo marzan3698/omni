@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
 import { PermissionGuard } from '@/components/PermissionGuard';
-import { Plus, Edit, Trash2, Search } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, LogIn } from 'lucide-react';
 
 interface User {
   id: string;
@@ -119,6 +119,26 @@ export default function Users() {
     }
   };
 
+  const handleLoginAs = async (userItem: User) => {
+    if (userItem.id === user?.id) {
+      alert('You are already logged in as this user.');
+      return;
+    }
+    try {
+      const response = await userApi.loginAsUser(userItem.id);
+      if (response.data.success && response.data.data?.token) {
+        const { token, user: targetUser } = response.data.data;
+        localStorage.setItem('token', token);
+        const redirectUrl = targetUser?.roleName === 'Client' ? '/client/dashboard' : '/dashboard';
+        window.location.href = redirectUrl;
+      } else {
+        alert(response.data.message || 'Login as user failed');
+      }
+    } catch (err: any) {
+      alert(err?.response?.data?.message || 'Login as user failed');
+    }
+  };
+
   return (
     <div className="container mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
@@ -181,25 +201,38 @@ export default function Users() {
                       </div>
                     </div>
                   </div>
-                  <PermissionGuard permission="can_manage_users">
-                    <div className="flex gap-2">
+                  <div className="flex gap-2">
+                    {user?.roleName === 'SuperAdmin' && (
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleEdit(userItem)}
+                        onClick={() => handleLoginAs(userItem)}
+                        title="Login as this user"
                       >
-                        <Edit className="h-4 w-4" />
+                        <LogIn className="h-4 w-4 mr-1" />
+                        Login as
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDelete(userItem.id)}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </PermissionGuard>
+                    )}
+                    <PermissionGuard permission="can_manage_users">
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEdit(userItem)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDelete(userItem.id)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </>
+                    </PermissionGuard>
+                  </div>
                 </div>
               </CardContent>
             </Card>

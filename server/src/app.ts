@@ -17,6 +17,7 @@ const getAllowedOrigins = (): string[] => {
     'http://paaera.com',
     'http://www.paaera.com',
     'http://localhost:5173',
+    'http://localhost:5174',
     'http://localhost:3000',
   ];
 };
@@ -93,17 +94,21 @@ import reviewRoutes from './routes/review.routes.js';
 import blogRoutes from './routes/blog.routes.js';
 import paymentGatewayRoutes from './routes/paymentGateway.routes.js';
 import paymentRoutes from './routes/payment.routes.js';
-import facebookOAuthRoutes from './routes/facebookOAuth.routes.js';
+import facebookRoutes from './routes/facebook.routes.js';
+import facebookIntegrationRoutes from './routes/facebookIntegration.routes.js';
 import environmentRoutes from './routes/environment.routes.js';
 import inboxReportRoutes from './routes/inbox-report.routes.js';
 import whatsappRoutes from './routes/whatsapp.routes.js';
 import workSessionRoutes from './routes/workSession.routes.js';
+import activityRoutes from './routes/activity.routes.js';
 app.use('/api/auth', authRoutes);
 app.use('/api/work-session', workSessionRoutes);
+app.use('/api/activity', activityRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api', socialRoutes);
+app.use('/api/integrations/facebook', facebookIntegrationRoutes);
 app.use('/api/integrations', integrationRoutes);
-app.use('/api/integrations/facebook', facebookOAuthRoutes);
+app.use('/api/facebook', facebookRoutes);
 app.use('/api/utils', utilsRoutes);
 app.use('/api/companies', companyRoutes);
 app.use('/api/employees', employeeRoutes);
