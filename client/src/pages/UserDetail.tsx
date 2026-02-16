@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { GamePanel } from '@/components/GamePanel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -255,24 +256,28 @@ export function UserDetail() {
   const permissions = user.role?.permissions || {};
   const permissionEntries = Object.entries(permissions);
 
+  const headerClass = isSuperAdmin ? 'p-4 rounded-xl border border-amber-500/20 bg-slate-800/40' : '';
+  const titleClass = isSuperAdmin ? 'text-amber-100' : 'text-slate-900';
+  const subtitleClass = isSuperAdmin ? 'text-amber-200/80' : 'text-slate-600';
+  const selectDark = 'w-full pl-10 pr-3 py-2 border border-amber-500/20 rounded-md bg-slate-800/60 text-amber-100 focus:ring-amber-500/50 focus:border-amber-500/50';
+
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className={`flex items-center justify-between ${headerClass}`}>
         <div className="flex items-center gap-4">
-          <Button variant="outline" onClick={() => navigate('/employees')}>
+          <Button variant="outline" onClick={() => navigate('/employees')} className={isSuperAdmin ? 'border-amber-500/50 text-amber-100 hover:bg-amber-500/20' : ''}>
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">
+            <h1 className={`text-3xl font-bold ${titleClass}`}>
               {isEditing ? 'Edit User' : 'User Details'}
             </h1>
-            <p className="text-slate-600 mt-1">{user.email}</p>
+            <p className={`${subtitleClass} mt-1`}>{user.email}</p>
           </div>
         </div>
         {isSuperAdmin && !isEditing && (
-          <Button onClick={() => setIsEditing(true)}>
+          <Button onClick={() => setIsEditing(true)} className={isSuperAdmin ? 'bg-amber-600 hover:bg-amber-500 text-white border-amber-500/50' : ''}>
             <Edit className="w-4 h-4 mr-2" />
             Edit User
           </Button>
@@ -280,9 +285,35 @@ export function UserDetail() {
       </div>
 
       {!isEditing ? (
-        /* View Mode */
         <div className="space-y-6">
-          {/* Profile Header */}
+          {isSuperAdmin ? (
+            <GamePanel>
+              <div className="p-6">
+              <div className="flex items-start gap-6">
+                {user.profileImage ? (
+                  <img src={user.profileImage} alt={user.name || user.email} className="w-24 h-24 rounded-full object-cover border-4 border-amber-500/30 shadow-lg" />
+                ) : (
+                  <div className={`w-24 h-24 rounded-full ${getAvatarColor(user.email)} flex items-center justify-center text-white font-bold text-2xl shadow-lg`}>
+                    {getInitials(user.email, user.name)}
+                  </div>
+                )}
+                <div className="flex-1">
+                  <h2 className="text-2xl font-bold text-amber-100">{user.name || user.email}</h2>
+                  <p className="text-amber-200/80 mt-1">{user.email}</p>
+                  <div className="flex items-center gap-4 mt-3">
+                    <span className="px-3 py-1 text-sm font-medium rounded-full bg-amber-500/25 text-amber-200 border border-amber-500/30">
+                      {user.role?.name || 'N/A'}
+                    </span>
+                    <div className="flex items-center gap-2 text-sm text-amber-200/80">
+                      <Building2 className="w-4 h-4" />
+                      <span>{user.company?.name || 'N/A'}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              </div>
+            </GamePanel>
+          ) : (
           <Card className="shadow-sm border-gray-200">
             <CardContent className="p-6">
               <div className="flex items-start gap-6">
@@ -315,8 +346,50 @@ export function UserDetail() {
               </div>
             </CardContent>
           </Card>
+          )}
 
           {/* Basic Information */}
+          {isSuperAdmin ? (
+            <GamePanel>
+              <div className="p-6">
+                <h2 className="text-lg font-semibold text-amber-100 mb-4">Basic Information</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {isSuperAdmin && (
+                    <div>
+                      <Label className="text-sm font-medium text-amber-200/90">User ID</Label>
+                      <p className="text-amber-100 mt-1 font-mono text-xs">{user.id}</p>
+                    </div>
+                  )}
+                  <div>
+                    <Label className="text-sm font-medium text-amber-200/90">Name</Label>
+                    <p className="text-amber-100 mt-1">{user.name || '—'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-amber-200/90">Email</Label>
+                    <p className="text-amber-100 mt-1">{user.email}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-amber-200/90">Phone</Label>
+                    <p className="text-amber-100 mt-1">{user.phone || '—'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-amber-200/90">Address</Label>
+                    <p className="text-amber-100 mt-1 whitespace-pre-wrap">{user.address || '—'}</p>
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label className="text-sm font-medium text-amber-200/90">Education</Label>
+                    <p className="text-amber-100 mt-1 whitespace-pre-wrap">{user.education || '—'}</p>
+                  </div>
+                  {user.createdAt && (
+                    <div>
+                      <Label className="text-sm font-medium text-amber-200/90">Created At</Label>
+                      <p className="text-amber-100 mt-1">{new Date(user.createdAt).toLocaleString()}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </GamePanel>
+          ) : (
           <Card className="shadow-sm border-gray-200">
             <CardHeader>
               <CardTitle>Basic Information</CardTitle>
@@ -380,6 +453,7 @@ export function UserDetail() {
               </div>
             </CardContent>
           </Card>
+          )}
 
           {/* E-Signature */}
           {user.eSignature && (
@@ -591,12 +665,12 @@ export function UserDetail() {
                 <div>
                   <Label htmlFor="roleId">Role</Label>
                   <div className="relative">
-                    <Shield className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Shield className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-amber-500/60" />
                     <select
                       id="roleId"
                       value={formData.roleId}
                       onChange={(e) => setFormData({ ...formData, roleId: parseInt(e.target.value) })}
-                      className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                      className={selectDark}
                       required
                     >
                       <option value={0}>Select a role</option>
@@ -615,12 +689,12 @@ export function UserDetail() {
                 <div>
                   <Label htmlFor="companyId">Company</Label>
                   <div className="relative">
-                    <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-amber-500/60" />
                     <select
                       id="companyId"
                       value={formData.companyId}
                       onChange={(e) => setFormData({ ...formData, companyId: parseInt(e.target.value) })}
-                      className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                      className={selectDark}
                       required
                     >
                       <option value={0}>Select a company</option>

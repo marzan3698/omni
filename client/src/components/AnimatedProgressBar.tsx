@@ -12,6 +12,8 @@ interface AnimatedProgressBarProps {
   };
   className?: string;
   size?: 'sm' | 'md' | 'lg';
+  /** Use dark theme for game-style layouts */
+  theme?: 'light' | 'dark';
 }
 
 export function AnimatedProgressBar({
@@ -21,6 +23,7 @@ export function AnimatedProgressBar({
   breakdown,
   className,
   size = 'md',
+  theme = 'light',
 }: AnimatedProgressBarProps) {
   const [displayProgress, setDisplayProgress] = useState(0);
 
@@ -54,23 +57,25 @@ export function AnimatedProgressBar({
 
   // Determine color based on progress
   const getColorClasses = (prog: number) => {
-    if (prog <= 30) {
-      return 'bg-red-500';
-    } else if (prog <= 70) {
-      return 'bg-yellow-500';
-    } else {
-      return 'bg-green-500';
+    if (theme === 'dark') {
+      if (prog <= 30) return 'bg-red-400';
+      if (prog <= 70) return 'bg-amber-500';
+      return 'bg-emerald-500';
     }
+    if (prog <= 30) return 'bg-red-500';
+    if (prog <= 70) return 'bg-yellow-500';
+    return 'bg-green-500';
   };
 
   const getBgColorClasses = (prog: number) => {
-    if (prog <= 30) {
-      return 'bg-red-50';
-    } else if (prog <= 70) {
-      return 'bg-yellow-50';
-    } else {
-      return 'bg-green-50';
+    if (theme === 'dark') {
+      if (prog <= 30) return 'bg-red-500/10';
+      if (prog <= 70) return 'bg-amber-500/10';
+      return 'bg-emerald-500/10';
     }
+    if (prog <= 30) return 'bg-red-50';
+    if (prog <= 70) return 'bg-yellow-50';
+    return 'bg-green-50';
   };
 
   const heightClasses = {
@@ -111,7 +116,7 @@ export function AnimatedProgressBar({
               className={cn(
                 'font-semibold',
                 textSizeClasses[size],
-                displayProgress > 50 ? 'text-white' : 'text-slate-700'
+                displayProgress > 50 ? 'text-white' : theme === 'dark' ? 'text-amber-100' : 'text-slate-700'
               )}
             >
               {Math.round(displayProgress)}%
@@ -122,7 +127,7 @@ export function AnimatedProgressBar({
 
       {/* Breakdown info (if provided) */}
       {showBreakdown && breakdown && (
-        <div className="mt-2 flex items-center justify-between text-xs text-slate-600">
+        <div className={cn('mt-2 flex items-center justify-between text-xs', theme === 'dark' ? 'text-amber-200/80' : 'text-slate-600')}>
           <span>
             {breakdown.completed} of {breakdown.total} {breakdown.weighted ? 'weighted' : ''} sub-tasks completed
           </span>

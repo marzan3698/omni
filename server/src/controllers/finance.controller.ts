@@ -22,7 +22,21 @@ const createInvoiceSchema = z.object({
     description: z.string().min(1),
     quantity: z.number().positive(),
     unitPrice: z.number().positive(),
+    productId: z.number().int().positive().optional(),
   })).min(1, 'At least one item is required'),
+  notes: z.string().optional(),
+});
+
+const createInvoiceFromProjectSchema = z.object({
+  projectId: z.coerce.number().int().positive(),
+  items: z.array(z.object({
+    description: z.string().min(1),
+    quantity: z.coerce.number().positive(),
+    unitPrice: z.coerce.number().positive(),
+    productId: z.coerce.number().int().positive().optional(),
+  })).min(1, 'At least one item is required'),
+  issueDate: z.union([z.string(), z.coerce.date()]).optional(),
+  dueDate: z.union([z.string(), z.coerce.date()]).optional(),
   notes: z.string().optional(),
 });
 
@@ -194,6 +208,56 @@ export const financeController = {
       if (error instanceof AppError) {
         return sendError(res, error.message, error.statusCode);
       }
+      return sendError(res, 'Failed to create invoice', 500);
+    }
+  },
+
+  renewInvoice: async (req: AuthRequest, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const companyId = req.user?.companyId;
+      const userId = req.user?.id;
+      const roleName = req.user?.role?.name ?? (req.user as any)?.roleName;
+      const hasManageInvoices = (req.user as any)?.permissions?.can_manage_invoices;
+
+      if (isNaN(id) || !companyId) return sendError(res, 'Invalid request', 400);
+
+      if (roleName === 'Client') {
+        const invoice = await prisma.invoice.findFirst({
+          where: { id, companyId },
+          include: { project: true },
+        });
+        if (!invoice) return sendError(res, 'Invoice not found', 404);
+        if (!invoice.projectId || invoice.project?.clientId !== userId) {
+          return sendError(res, 'Unauthorized', 403);
+        }
+      } else if (!hasManageInvoices && roleName !== 'SuperAdmin') {
+        return sendError(res, 'Unauthorized', 403);
+      }
+
+      const invoice = await invoiceService.renewInvoice(id, companyId, userId);
+      return sendSuccess(res, invoice, 'Invoice renewed successfully', 201);
+    } catch (error) {
+      if (error instanceof AppError) return sendError(res, error.message, error.statusCode);
+      return sendError(res, 'Failed to renew invoice', 500);
+    }
+  },
+
+  createInvoiceFromProject: async (req: AuthRequest, res: Response) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) return sendError(res, 'Company ID is required', 400);
+      const validatedData = createInvoiceFromProjectSchema.parse(req.body);
+      const invoice = await invoiceService.createInvoiceFromProject(companyId, validatedData.projectId, {
+        items: validatedData.items,
+        issueDate: validatedData.issueDate ? (validatedData.issueDate instanceof Date ? validatedData.issueDate : new Date(validatedData.issueDate)) : undefined,
+        dueDate: validatedData.dueDate ? (validatedData.dueDate instanceof Date ? validatedData.dueDate : new Date(validatedData.dueDate)) : undefined,
+        notes: validatedData.notes,
+      });
+      return sendSuccess(res, invoice, 'Invoice created successfully', 201);
+    } catch (error) {
+      if (error instanceof z.ZodError) return sendError(res, error.errors[0].message, 400);
+      if (error instanceof AppError) return sendError(res, error.message, error.statusCode);
       return sendError(res, 'Failed to create invoice', 500);
     }
   },

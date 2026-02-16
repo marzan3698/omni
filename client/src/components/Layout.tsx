@@ -161,7 +161,7 @@ export function Layout({ children }: LayoutProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen game-layout-bg">
       <Sidebar />
 
       {/* Main content area */}
@@ -169,30 +169,36 @@ export function Layout({ children }: LayoutProps) {
         "transition-all duration-300",
         isOpen ? "lg:pl-64" : "lg:pl-0"
       )}>
-        {/* Topbar */}
-        <header className="sticky top-0 z-30 h-16 bg-white border-b border-gray-200 shadow-sm">
+        {/* Topbar - game-style to match FIFA theme */}
+        <header
+          className="sticky top-0 z-30 h-16 border-b border-amber-500/20 backdrop-blur-md"
+          style={{
+            background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.85) 100%)',
+            boxShadow: '0 1px 0 rgba(217, 119, 6, 0.15), 0 4px 20px -4px rgba(0,0,0,0.4)',
+          }}
+        >
           <div className="flex items-center justify-between h-full px-4 md:px-6">
             {/* Left: Menu button */}
             {/* Show on mobile always, or on desktop when sidebar is hidden and on /inbox */}
             <button
               onClick={() => setIsOpen(!isOpen)}
               className={cn(
-                "p-2 hover:bg-gray-100 rounded-md transition-colors",
+                "p-2 hover:bg-amber-500/20 rounded-lg transition-colors text-amber-200/90 hover:text-white",
                 location.pathname === '/inbox' && !isOpen ? "" : "lg:hidden"
               )}
               aria-label="Toggle sidebar"
             >
-              <Menu className="w-5 h-5 text-slate-600" />
+              <Menu className="w-5 h-5" />
             </button>
 
             {/* Search bar - hidden on mobile, visible on md+ */}
             <div className="hidden md:flex flex-1 max-w-md mx-4">
               <div className="relative w-full">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-amber-500/60" />
                 <input
                   type="text"
                   placeholder="Search..."
-                  className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-2 bg-slate-800/60 border border-amber-500/20 rounded-lg text-sm text-amber-100 placeholder-amber-500/50 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500/40"
                 />
               </div>
             </div>
@@ -212,8 +218,8 @@ export function Layout({ children }: LayoutProps) {
                   className={cn(
                     'flex items-center gap-1.5 h-8 px-3 text-sm font-medium rounded-full transition-all',
                     sessionStatus?.isOnline
-                      ? 'bg-green-500 hover:bg-green-600 text-white'
-                      : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                      ? 'bg-emerald-600/90 hover:bg-emerald-500 text-white border border-emerald-500/50'
+                      : 'bg-slate-700/80 hover:bg-slate-600 text-slate-300 border border-slate-600/50'
                   )}
                   title={sessionStatus?.isOnline ? 'Live - receiving messages' : 'Offline - go live to receive messages'}
                 >
@@ -226,7 +232,7 @@ export function Layout({ children }: LayoutProps) {
               {user?.roleName !== 'Client' && user?.roleName !== 'SuperAdmin' && (
                 <button
                   onClick={() => setShowBalancePopup(true)}
-                  className="flex items-center gap-1.5 h-8 px-3 text-sm font-medium rounded-full bg-indigo-100 hover:bg-indigo-200 text-indigo-700 transition-all"
+                  className="flex items-center gap-1.5 h-8 px-3 text-sm font-medium rounded-full bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 transition-all"
                   title="ব্যালেন্স ও পয়েন্ট দেখুন"
                 >
                   <Wallet className="w-4 h-4" />
@@ -237,23 +243,23 @@ export function Layout({ children }: LayoutProps) {
               {/* Fullscreen button */}
               <button
                 onClick={toggleFullscreen}
-                className="p-2 hover:bg-gray-100 rounded-md transition-colors"
+                className="p-2 hover:bg-amber-500/20 rounded-lg transition-colors text-amber-200/90 hover:text-white"
                 aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
                 title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
               >
                 {isFullscreen ? (
-                  <Minimize2 className="w-5 h-5 text-slate-600" />
+                  <Minimize2 className="w-5 h-5" />
                 ) : (
-                  <Maximize2 className="w-5 h-5 text-slate-600" />
+                  <Maximize2 className="w-5 h-5" />
                 )}
               </button>
 
               {/* Notifications */}
               <button
-                className="relative p-2 hover:bg-gray-100 rounded-md transition-colors"
+                className="relative p-2 hover:bg-amber-500/20 rounded-lg transition-colors text-amber-200/90 hover:text-white"
                 aria-label="Notifications"
               >
-                <Bell className="w-5 h-5 text-slate-600" />
+                <Bell className="w-5 h-5" />
                 <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
               </button>
 
@@ -261,21 +267,21 @@ export function Layout({ children }: LayoutProps) {
               <div className="relative">
                 <button
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className="flex items-center gap-2 p-2 hover:bg-gray-100 rounded-md transition-colors"
+                  className="flex items-center gap-2 p-2 hover:bg-amber-500/20 rounded-lg transition-colors"
                   aria-label="User menu"
                 >
-                  <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center border-2 border-amber-500/50 overflow-hidden bg-slate-800">
                     {user?.profileImage ? (
                       <img
                         src={user.profileImage}
                         alt={user.email}
-                        className="w-8 h-8 rounded-full object-cover"
+                        className="w-full h-full object-cover"
                       />
                     ) : (
-                      <User className="w-4 h-4 text-white" />
+                      <User className="w-4 h-4 text-amber-200" />
                     )}
                   </div>
-                  <span className="hidden md:block text-sm font-medium text-slate-700">
+                  <span className="hidden md:block text-sm font-medium text-amber-100">
                     {user?.email || 'User'}
                   </span>
                 </button>
@@ -287,18 +293,24 @@ export function Layout({ children }: LayoutProps) {
                       className="fixed inset-0 z-10"
                       onClick={() => setUserMenuOpen(false)}
                     />
-                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-20">
+                    <div
+                      className="absolute right-0 mt-2 w-48 rounded-lg border border-amber-500/30 z-20 overflow-hidden"
+                      style={{
+                        background: 'linear-gradient(180deg, #1e293b 0%, #0f172a 100%)',
+                        boxShadow: '0 4px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(217,119,6,0.2)',
+                      }}
+                    >
                       <div className="py-1">
-                        <div className="px-4 py-2 border-b border-gray-200">
-                          <p className="text-sm font-medium text-slate-900">{user?.email}</p>
-                          <p className="text-xs text-slate-500">{user?.roleName || 'User'}</p>
+                        <div className="px-4 py-2 border-b border-amber-500/20">
+                          <p className="text-sm font-medium text-amber-100">{user?.email}</p>
+                          <p className="text-xs text-amber-500/80">{user?.roleName || 'User'}</p>
                         </div>
                         <button
                           onClick={() => {
                             logout();
                             setUserMenuOpen(false);
                           }}
-                          className="w-full flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-gray-100 transition-colors"
+                          className="w-full flex items-center gap-2 px-4 py-2 text-sm text-amber-200/90 hover:bg-amber-500/20 transition-colors"
                         >
                           <LogOut className="w-4 h-4" />
                           <span>Logout</span>

@@ -97,7 +97,11 @@ export function Finance() {
             <CardTitle>Invoices</CardTitle>
           </CardHeader>
           <CardContent>
-            <Button variant="outline" className="w-full">
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => navigate('/invoice')}
+            >
               <Receipt className="w-4 h-4 mr-2" />
               Manage Invoices
             </Button>

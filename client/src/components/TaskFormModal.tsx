@@ -192,239 +192,104 @@ export function TaskFormModal({ isOpen, onClose, task }: TaskFormModalProps) {
     taskMutation.mutate(data);
   };
 
+  const btnOutline = 'bg-slate-800/60 border-amber-500/50 text-amber-100 hover:bg-amber-500/20 hover:border-amber-500/70';
+  const inputDark = 'bg-slate-800/60 border-amber-500/20 text-amber-100 focus:border-amber-500/50 focus:ring-amber-500/30';
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-slate-900">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="game-panel rounded-xl overflow-hidden w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-amber-500/30">
+        <div className="sticky top-0 border-b border-amber-500/20 px-6 py-4 flex items-center justify-between bg-slate-900/95 z-10">
+          <h2 className="text-xl font-bold text-amber-100">
             {task ? 'Edit Task' : 'Create New Task'}
           </h2>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 transition-colors"
-          >
-            <X className="w-6 h-6" />
+          <button onClick={onClose} className="text-amber-200/80 hover:text-amber-100 hover:bg-amber-500/20 rounded p-1 transition-colors">
+            <X className="w-5 h-5" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-6">
-          {/* Title */}
           <div>
-            <Label htmlFor="title" className="text-slate-700 font-medium">
-              Title <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="title"
-              {...register('title')}
-              className={cn('mt-1', errors.title && 'border-red-500')}
-              placeholder="Enter task title"
-            />
-            {errors.title && (
-              <p className="text-red-500 text-sm mt-1">{errors.title.message}</p>
-            )}
+            <Label htmlFor="title" className="text-amber-200/90">Title <span className="text-red-400">*</span></Label>
+            <Input id="title" {...register('title')} className={cn('mt-1', inputDark, errors.title && 'border-red-500/50')} placeholder="Enter task title" />
+            {errors.title && <p className="text-red-400 text-sm mt-1">{errors.title.message}</p>}
           </div>
 
-          {/* Description */}
           <div>
-            <Label htmlFor="description" className="text-slate-700 font-medium">
-              Description
-            </Label>
-            <textarea
-              id="description"
-              {...register('description')}
-              className={cn(
-                'mt-1 w-full min-h-[100px] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent',
-                errors.description && 'border-red-500'
-              )}
-              placeholder="Enter task description"
-            />
-            {errors.description && (
-              <p className="text-red-500 text-sm mt-1">{errors.description.message}</p>
-            )}
+            <Label htmlFor="description" className="text-amber-200/90">Description</Label>
+            <textarea id="description" {...register('description')} className={cn('mt-1 w-full min-h-[100px] px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500/50', inputDark, errors.description && 'border-red-500/50')} placeholder="Enter task description" />
+            {errors.description && <p className="text-red-400 text-sm mt-1">{errors.description.message}</p>}
           </div>
 
-          {/* Priority and Due Date */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="priority" className="text-slate-700 font-medium">
-                Priority <span className="text-red-500">*</span>
-              </Label>
-              <select
-                id="priority"
-                {...register('priority')}
-                className={cn(
-                  'mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent',
-                  errors.priority && 'border-red-500'
-                )}
-              >
+              <Label htmlFor="priority" className="text-amber-200/90">Priority <span className="text-red-400">*</span></Label>
+              <select id="priority" {...register('priority')} className={cn('mt-1 w-full px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500/50', inputDark, errors.priority && 'border-red-500/50')}>
                 <option value="Low">Low</option>
                 <option value="Medium">Medium</option>
                 <option value="High">High</option>
               </select>
-              {errors.priority && (
-                <p className="text-red-500 text-sm mt-1">{errors.priority.message}</p>
-              )}
+              {errors.priority && <p className="text-red-400 text-sm mt-1">{errors.priority.message}</p>}
             </div>
-
             <div>
-              <Label htmlFor="dueDate" className="text-slate-700 font-medium">
-                Due Date
-              </Label>
-              <Input
-                id="dueDate"
-                type="date"
-                {...register('dueDate')}
-                className={cn('mt-1', errors.dueDate && 'border-red-500')}
-              />
-              {errors.dueDate && (
-                <p className="text-red-500 text-sm mt-1">{errors.dueDate.message}</p>
-              )}
+              <Label htmlFor="dueDate" className="text-amber-200/90">Due Date</Label>
+              <Input id="dueDate" type="date" {...register('dueDate')} className={cn('mt-1', inputDark, errors.dueDate && 'border-red-500/50')} />
+              {errors.dueDate && <p className="text-red-400 text-sm mt-1">{errors.dueDate.message}</p>}
             </div>
           </div>
 
-          {/* Project Selection */}
           <div>
-            <Label htmlFor="projectId" className="text-slate-700 font-medium">
-              Project (Optional)
-            </Label>
-            <select
-              id="projectId"
-              {...register('projectId', {
-                setValueAs: (value) => {
-                  if (value === '' || value === null) return null;
-                  return parseInt(value);
-                },
-              })}
-              className={cn(
-                'mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent',
-                errors.projectId && 'border-red-500'
-              )}
-            >
+            <Label htmlFor="projectId" className="text-amber-200/90">Project (Optional)</Label>
+            <select id="projectId" {...register('projectId', { setValueAs: (v) => (v === '' || v === null ? null : parseInt(v)) })} className={cn('mt-1 w-full px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500/50', inputDark, errors.projectId && 'border-red-500/50')}>
               <option value="">Select a project (optional)</option>
-              {projects.map((project: any) => (
-                <option key={project.id} value={project.id}>
-                  {project.title}
-                </option>
-              ))}
+              {projects.map((p: any) => <option key={p.id} value={p.id}>{p.title}</option>)}
             </select>
-            {errors.projectId && (
-              <p className="text-red-500 text-sm mt-1">{errors.projectId.message}</p>
-            )}
+            {errors.projectId && <p className="text-red-400 text-sm mt-1">{errors.projectId.message}</p>}
           </div>
 
-          {/* Assignment Type */}
           <div>
-            <Label className="text-slate-700 font-medium block mb-3">
-              Assignment Type <span className="text-red-500">*</span>
-            </Label>
+            <Label className="text-amber-200/90 block mb-3">Assignment Type <span className="text-red-400">*</span></Label>
             <div className="flex gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  value="individual"
-                  {...register('assignmentType')}
-                  className="w-4 h-4 text-indigo-600 focus:ring-indigo-500"
-                />
-                <User className="w-5 h-5 text-slate-600" />
-                <span className="text-slate-700">Individual Employee</span>
+              <label className="flex items-center gap-2 cursor-pointer text-amber-200/90">
+                <input type="radio" value="individual" {...register('assignmentType')} className="w-4 h-4 text-amber-500 focus:ring-amber-500" />
+                <User className="w-5 h-5" />
+                <span>Individual Employee</span>
               </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  value="group"
-                  {...register('assignmentType')}
-                  className="w-4 h-4 text-indigo-600 focus:ring-indigo-500"
-                />
-                <Users className="w-5 h-5 text-slate-600" />
-                <span className="text-slate-700">Employee Group</span>
+              <label className="flex items-center gap-2 cursor-pointer text-amber-200/90">
+                <input type="radio" value="group" {...register('assignmentType')} className="w-4 h-4 text-amber-500 focus:ring-amber-500" />
+                <Users className="w-5 h-5" />
+                <span>Employee Group</span>
               </label>
             </div>
-            {errors.assignmentType && (
-              <p className="text-red-500 text-sm mt-1">{errors.assignmentType.message}</p>
-            )}
+            {errors.assignmentType && <p className="text-red-400 text-sm mt-1">{errors.assignmentType.message}</p>}
           </div>
 
-          {/* Individual Employee Selection */}
           {assignmentType === 'individual' && (
             <div>
-              <Label htmlFor="assignedTo" className="text-slate-700 font-medium">
-                Assign To Employee <span className="text-red-500">*</span>
-              </Label>
-              <select
-                id="assignedTo"
-                {...register('assignedTo', {
-                  setValueAs: (value) => {
-                    if (value === '' || value === null) return null;
-                    return parseInt(value);
-                  },
-                })}
-                className={cn(
-                  'mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent',
-                  errors.assignedTo && 'border-red-500'
-                )}
-              >
+              <Label htmlFor="assignedTo" className="text-amber-200/90">Assign To Employee <span className="text-red-400">*</span></Label>
+              <select id="assignedTo" {...register('assignedTo', { setValueAs: (v) => (v === '' || v === null ? null : parseInt(v)) })} className={cn('mt-1 w-full px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500/50', inputDark, errors.assignedTo && 'border-red-500/50')}>
                 <option value="">Select an employee</option>
-                {employees.map((employee: any) => (
-                  <option key={employee.id} value={employee.id}>
-                    {employee.user?.email || `Employee #${employee.id}`}
-                  </option>
-                ))}
+                {employees.map((e: any) => <option key={e.id} value={e.id}>{e.user?.email || `Employee #${e.id}`}</option>)}
               </select>
-              {errors.assignedTo && (
-                <p className="text-red-500 text-sm mt-1">{errors.assignedTo.message}</p>
-              )}
+              {errors.assignedTo && <p className="text-red-400 text-sm mt-1">{errors.assignedTo.message}</p>}
             </div>
           )}
 
-          {/* Employee Group Selection */}
           {assignmentType === 'group' && (
             <div>
-              <Label htmlFor="groupId" className="text-slate-700 font-medium">
-                Assign To Group <span className="text-red-500">*</span>
-              </Label>
-              <select
-                id="groupId"
-                {...register('groupId', {
-                  setValueAs: (value) => {
-                    if (value === '' || value === null) return null;
-                    return parseInt(value);
-                  },
-                })}
-                className={cn(
-                  'mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent',
-                  errors.groupId && 'border-red-500'
-                )}
-              >
+              <Label htmlFor="groupId" className="text-amber-200/90">Assign To Group <span className="text-red-400">*</span></Label>
+              <select id="groupId" {...register('groupId', { setValueAs: (v) => (v === '' || v === null ? null : parseInt(v)) })} className={cn('mt-1 w-full px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500/50', inputDark, errors.groupId && 'border-red-500/50')}>
                 <option value="">Select an employee group</option>
-                {groups.map((group: any) => (
-                  <option key={group.id} value={group.id}>
-                    {group.name} ({group._count?.members || 0} members)
-                  </option>
-                ))}
+                {groups.map((g: any) => <option key={g.id} value={g.id}>{g.name} ({g._count?.members || 0} members)</option>)}
               </select>
-              {errors.groupId && (
-                <p className="text-red-500 text-sm mt-1">{errors.groupId.message}</p>
-              )}
+              {errors.groupId && <p className="text-red-400 text-sm mt-1">{errors.groupId.message}</p>}
             </div>
           )}
 
-          {/* Form Actions */}
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              className="bg-indigo-600 hover:bg-indigo-700"
-            >
+          <div className="flex justify-end gap-3 pt-4 border-t border-amber-500/20">
+            <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting} className={btnOutline}>Cancel</Button>
+            <Button type="submit" disabled={isSubmitting} className="bg-amber-500/80 hover:bg-amber-500 text-slate-900 font-medium">
               {isSubmitting ? 'Saving...' : task ? 'Update Task' : 'Create Task'}
             </Button>
           </div>

@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { systemSettingApi } from '@/lib/api';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { GamePanel } from '@/components/GamePanel';
+import { GameCard } from '@/components/GameCard';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
@@ -85,15 +86,20 @@ export default function SystemSettings() {
     }
   };
 
+  const darkModal = {
+    background: 'linear-gradient(180deg, #1e293b 0%, #0f172a 100%)',
+    boxShadow: '0 0 0 1px rgba(217,119,6,0.3), 0 25px 50px -12px rgba(0,0,0,0.7)',
+  };
+
   return (
-    <div className="container mx-auto p-6">
-      <div className="flex justify-between items-center mb-6">
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex justify-between items-center p-4 rounded-xl border border-amber-500/20 bg-slate-800/40">
         <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Settings className="h-8 w-8" />
+          <h1 className="text-3xl font-bold flex items-center gap-2 text-amber-100">
+            <Settings className="h-8 w-8 text-amber-400" />
             System Settings
           </h1>
-          <p className="text-gray-600 mt-1">Manage root items and system configuration</p>
+          <p className="text-amber-200/80 mt-1">Manage root items and system configuration</p>
         </div>
         <PermissionGuard permission="can_manage_root_items">
           <Button
@@ -102,6 +108,7 @@ export default function SystemSettings() {
               setFormData({ key: '', value: '', description: '' });
               setIsModalOpen(true);
             }}
+            className="bg-amber-600 hover:bg-amber-500 text-white border-amber-500/50"
           >
             <Plus className="mr-2 h-4 w-4" />
             Add Setting
@@ -110,23 +117,21 @@ export default function SystemSettings() {
       </div>
 
       {isLoading ? (
-        <div className="text-center py-12">Loading settings...</div>
+        <div className="text-center py-12 text-amber-200/80">Loading settings...</div>
       ) : settings.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center text-gray-500">
-            No settings found. Add your first setting to get started.
-          </CardContent>
-        </Card>
+        <GamePanel>
+          <div className="py-12 text-center text-amber-200/70">No settings found. Add your first setting to get started.</div>
+        </GamePanel>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {settings.map((setting) => (
-            <Card key={setting.id}>
-              <CardHeader>
+          {settings.map((setting, idx) => (
+            <GameCard key={setting.id} index={idx}>
+              <div className="p-6">
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
-                    <CardTitle className="text-lg">{setting.key}</CardTitle>
+                    <h3 className="text-lg font-semibold text-amber-100">{setting.key}</h3>
                     {setting.description && (
-                      <CardDescription className="mt-1">{setting.description}</CardDescription>
+                      <p className="mt-1 text-sm text-amber-200/70">{setting.description}</p>
                     )}
                   </div>
                   <PermissionGuard permission="can_manage_root_items">
@@ -135,6 +140,7 @@ export default function SystemSettings() {
                         variant="outline"
                         size="sm"
                         onClick={() => handleEdit(setting)}
+                        className="border-amber-500/50 text-amber-100 hover:bg-amber-500/20 bg-transparent"
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -142,31 +148,29 @@ export default function SystemSettings() {
                         variant="outline"
                         size="sm"
                         onClick={() => handleDelete(setting.key)}
-                        className="text-red-600 hover:text-red-700"
+                        className="border-red-500/50 text-red-400 hover:bg-red-500/20 bg-transparent"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </PermissionGuard>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="bg-gray-50 p-3 rounded-md">
-                  <p className="text-sm text-gray-700 break-words">{setting.value}</p>
+                <div className="mt-4 p-3 rounded-md bg-slate-800/60 border border-amber-500/20">
+                  <p className="text-sm text-amber-100 break-words">{setting.value}</p>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </GameCard>
           ))}
         </div>
       )}
 
       {/* Create/Edit Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <Card className="w-full max-w-md">
-            <CardHeader>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-md rounded-xl overflow-hidden" style={darkModal}>
+            <div className="p-6 border-b border-amber-500/20">
               <div className="flex items-center justify-between">
-                <CardTitle>{editingSetting ? 'Edit Setting' : 'Create Setting'}</CardTitle>
+                <h2 className="text-xl font-semibold text-amber-100">{editingSetting ? 'Edit Setting' : 'Create Setting'}</h2>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -174,15 +178,16 @@ export default function SystemSettings() {
                     setIsModalOpen(false);
                     setEditingSetting(null);
                   }}
+                  className="text-amber-100 hover:bg-amber-500/20"
                 >
                   <X className="h-4 w-4" />
                 </Button>
               </div>
-            </CardHeader>
-            <CardContent>
+            </div>
+            <div className="p-6">
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <Label htmlFor="setting-key">Key</Label>
+                  <Label htmlFor="setting-key" className="text-amber-200/90">Key</Label>
                   <Input
                     id="setting-key"
                     value={formData.key}
@@ -190,32 +195,34 @@ export default function SystemSettings() {
                     required
                     disabled={!!editingSetting}
                     placeholder="e.g., site_name"
+                    className="bg-slate-800/60 border-amber-500/20 text-amber-100 placeholder-amber-500/50 mt-1"
                   />
                   {editingSetting && (
-                    <p className="text-xs text-gray-500 mt-1">Key cannot be changed after creation</p>
+                    <p className="text-xs text-amber-200/60 mt-1">Key cannot be changed after creation</p>
                   )}
                 </div>
                 <div>
-                  <Label htmlFor="setting-value">Value</Label>
+                  <Label htmlFor="setting-value" className="text-amber-200/90">Value</Label>
                   <textarea
                     id="setting-value"
                     value={formData.value}
                     onChange={(e) => setFormData({ ...formData, value: e.target.value })}
                     required
-                    className="w-full min-h-[100px] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full min-h-[100px] px-3 py-2 border border-amber-500/20 rounded-md bg-slate-800/60 text-amber-100 placeholder-amber-500/50 focus:outline-none focus:ring-2 focus:ring-amber-500/50 mt-1"
                     placeholder="Enter setting value"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="setting-description">Description (Optional)</Label>
+                  <Label htmlFor="setting-description" className="text-amber-200/90">Description (Optional)</Label>
                   <Input
                     id="setting-description"
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     placeholder="Brief description of this setting"
+                    className="bg-slate-800/60 border-amber-500/20 text-amber-100 placeholder-amber-500/50 mt-1"
                   />
                 </div>
-                <div className="flex gap-2 justify-end">
+                <div className="flex gap-2 justify-end pt-2">
                   <Button
                     type="button"
                     variant="outline"
@@ -223,16 +230,21 @@ export default function SystemSettings() {
                       setIsModalOpen(false);
                       setEditingSetting(null);
                     }}
+                    className="border-amber-500/50 text-amber-100 hover:bg-amber-500/20 bg-transparent"
                   >
                     Cancel
                   </Button>
-                  <Button type="submit" disabled={upsertMutation.isPending}>
+                  <Button
+                    type="submit"
+                    disabled={upsertMutation.isPending}
+                    className="bg-amber-600 hover:bg-amber-500 text-white border-amber-500/50"
+                  >
                     {editingSetting ? 'Update' : 'Create'}
                   </Button>
                 </div>
               </form>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       )}
     </div>

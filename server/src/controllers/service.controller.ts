@@ -10,20 +10,34 @@ const createServiceSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   details: z.string().min(1, 'Details are required'),
   pricing: z.number().positive('Pricing must be greater than 0'),
-  deliveryStartDate: z.string().transform((str) => new Date(str)),
-  deliveryEndDate: z.string().transform((str) => new Date(str)),
+  useDeliveryDate: z.boolean().default(true),
+  durationDays: z.number().int().positive().optional(),
+  deliveryStartDate: z.union([z.string(), z.date()]).optional().transform((v) => (v ? new Date(v) : undefined)),
+  deliveryEndDate: z.union([z.string(), z.date()]).optional().transform((v) => (v ? new Date(v) : undefined)),
+  currency: z.enum(['BDT', 'USD']).default('BDT'),
   attributes: z.object({
     keyValuePairs: z.record(z.string()).optional(),
     tags: z.array(z.string()).optional(),
   }).optional(),
-});
+}).refine(
+  (data) => {
+    if (data.useDeliveryDate) {
+      return !!data.deliveryStartDate && !!data.deliveryEndDate;
+    }
+    return data.durationDays != null && data.durationDays > 0;
+  },
+  { message: 'When useDeliveryDate is ON, provide both dates. When OFF, provide durationDays.' }
+);
 
 const updateServiceSchema = z.object({
   title: z.string().min(1).optional(),
   details: z.string().min(1).optional(),
   pricing: z.number().positive().optional(),
-  deliveryStartDate: z.string().transform((str) => new Date(str)).optional(),
-  deliveryEndDate: z.string().transform((str) => new Date(str)).optional(),
+  useDeliveryDate: z.boolean().optional(),
+  durationDays: z.number().int().positive().nullable().optional(),
+  deliveryStartDate: z.union([z.string(), z.date()]).optional().nullable().transform((v) => (v ? new Date(v) : null)),
+  deliveryEndDate: z.union([z.string(), z.date()]).optional().nullable().transform((v) => (v ? new Date(v) : null)),
+  currency: z.enum(['BDT', 'USD']).optional(),
   attributes: z.object({
     keyValuePairs: z.record(z.string()).optional(),
     tags: z.array(z.string()).optional(),

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Download, DollarSign, Calendar, Link as LinkIcon, BadgeCheck, CreditCard, CheckCircle2, XCircle, Clock, Loader2 } from 'lucide-react';
+import { ArrowLeft, Download, DollarSign, Calendar, Link as LinkIcon, BadgeCheck, CreditCard, CheckCircle2, XCircle, Clock, Loader2, RefreshCw } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -63,6 +63,20 @@ export function InvoiceView() {
     const project = invoice?.project;
     const gateways = gatewaysResponse || [];
     const payments = paymentsResponse || [];
+
+    const canRenew = invoice?.project?.service?.durationDays && new Date() >= new Date(invoice.dueDate);
+
+    const renewMutation = useMutation({
+        mutationFn: () => invoiceApi.renew(invoice!.id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['invoice', id] });
+            queryClient.invalidateQueries({ queryKey: ['client-invoices'] });
+            alert('Invoice renewed successfully!');
+        },
+        onError: (err: any) => {
+            alert(err.response?.data?.message || 'Failed to renew invoice');
+        },
+    });
 
     const {
         register,
@@ -193,6 +207,17 @@ export function InvoiceView() {
                             <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(invoice.status)}`}>
                                 {invoice.status}
                             </span>
+                            {canRenew && (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => renewMutation.mutate()}
+                                    disabled={renewMutation.isPending}
+                                >
+                                    <RefreshCw className="w-4 h-4 mr-1" />
+                                    রিনিউ করুন
+                                </Button>
+                            )}
                             <Button variant="outline" size="sm">
                                 <Download className="w-4 h-4 mr-1" />
                                 Download

@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { GamePanel } from '@/components/GamePanel';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { ColorPicker } from '@/components/ui/color-picker';
@@ -112,7 +112,7 @@ export default function ManageColors() {
   if (isLoading) {
     return (
       <div className="container mx-auto p-6">
-        <div className="text-center py-12">Loading color settings...</div>
+        <div className="text-center py-12 text-amber-200/80">Loading color settings...</div>
       </div>
     );
   }
@@ -121,38 +121,30 @@ export default function ManageColors() {
   const darkerSecondary = darkenColor(formData.secondaryColor || settings.secondaryColor, 30);
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="flex items-center gap-2 mb-6">
-        <Palette className="h-8 w-8 text-indigo-600" />
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex items-center gap-2 p-4 rounded-xl border border-amber-500/20 bg-slate-800/40">
+        <Palette className="h-8 w-8 text-amber-400" />
         <div>
-          <h1 className="text-3xl font-bold">Manage Colors</h1>
-          <p className="text-gray-600 mt-1">Set primary and secondary colors for your landing page</p>
+          <h1 className="text-3xl font-bold text-amber-100">Manage Colors</h1>
+          <p className="text-amber-200/80 mt-1">Set primary and secondary colors for your landing page</p>
         </div>
       </div>
 
       <div className="space-y-6">
-        {/* Live Preview */}
-        <Card>
-          <CardHeader>
+        <GamePanel>
+          <div className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>Live Preview</CardTitle>
-                <CardDescription>Preview how colors will appear on your landing page</CardDescription>
+                <h2 className="text-lg font-semibold text-amber-100">Live Preview</h2>
+                <p className="text-sm text-amber-200/70">Preview how colors will appear on your landing page</p>
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setShowPreview(!showPreview)}
-              >
+              <Button type="button" variant="outline" size="sm" onClick={() => setShowPreview(!showPreview)} className="border-amber-500/50 text-amber-100 hover:bg-amber-500/20">
                 <Eye className="w-4 h-4 mr-2" />
                 {showPreview ? 'Hide' : 'Show'} Preview
               </Button>
             </div>
-          </CardHeader>
-          <CardContent>
             {showPreview && (
-              <div className="space-y-4">
+              <div className="space-y-4 mt-4">
                 {/* Gradient Preview */}
                 <div
                   className="h-32 rounded-lg flex items-center justify-center text-white font-bold text-lg"
@@ -190,13 +182,13 @@ export default function ManageColors() {
                     <div className="text-3xl font-bold mb-1" style={{ color: formData.primaryColor || settings.primaryColor }}>
                       1000+
                     </div>
-                    <div className="text-sm text-gray-600">Stats Number</div>
+                    <div className="text-sm text-amber-200/70">Stats Number</div>
                   </div>
                   <div className="p-4 border rounded-lg">
                     <div className="text-3xl font-bold mb-1" style={{ color: formData.primaryColor || settings.primaryColor }}>
                       50K+
                     </div>
-                    <div className="text-sm text-gray-600">Stats Number</div>
+                    <div className="text-sm text-amber-200/70">Stats Number</div>
                   </div>
                 </div>
 
@@ -206,64 +198,57 @@ export default function ManageColors() {
                     className="w-6 h-6"
                     style={{ color: formData.primaryColor || settings.primaryColor }}
                   />
-                  <span>Icon with primary color</span>
+                  <span className="text-amber-100">Icon with primary color</span>
                 </div>
               </div>
             )}
             {!showPreview && (
-              <div className="flex items-center justify-center p-12 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
-                <div className="text-center text-gray-500">
-                  <Eye className="h-12 w-12 mx-auto mb-2 text-gray-400" />
+              <div className="flex items-center justify-center p-12 border-2 border-dashed border-amber-500/30 rounded-lg bg-slate-800/60 mt-4">
+                <div className="text-center text-amber-200/70">
+                  <Eye className="h-12 w-12 mx-auto mb-2 text-amber-500/60" />
                   <p className="text-sm">Click "Show Preview" to see live preview</p>
                 </div>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </GamePanel>
 
-        {/* Color Settings Form */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Color Settings</CardTitle>
-            <CardDescription>Set the primary and secondary colors that will be used throughout your landing page</CardDescription>
-          </CardHeader>
-          <CardContent>
+        <GamePanel>
+          <div className="p-6">
+            <h2 className="text-lg font-semibold text-amber-100">Color Settings</h2>
+            <p className="text-sm text-amber-200/70 mb-4">Set the primary and secondary colors that will be used throughout your landing page</p>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <Label htmlFor="primary-color">Primary Color</Label>
+                <div className="space-y-4 p-4 bg-slate-800/60 rounded-lg border border-amber-500/20">
+                  <Label htmlFor="primary-color" className="text-amber-200/90">Primary Color</Label>
                   <ColorPicker
                     label="Primary Color"
                     value={watch('primaryColor') || settings.primaryColor}
                     onChange={(value) => reset({ ...watch(), primaryColor: value })}
                   />
-                  {errors.primaryColor && (
-                    <p className="text-sm text-red-600 mt-1">{errors.primaryColor.message}</p>
-                  )}
-                  <p className="text-xs text-gray-500 mt-2">
+                  {errors.primaryColor && <p className="text-sm text-red-400 mt-1">{errors.primaryColor.message}</p>}
+                  <p className="text-xs text-amber-200/70 mt-2">
                     This color will be used for primary buttons, gradients, stats, icons, and highlights.
                   </p>
                 </div>
 
-                <div className="space-y-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <Label htmlFor="secondary-color">Secondary Color</Label>
+                <div className="space-y-4 p-4 bg-slate-800/60 rounded-lg border border-amber-500/20">
+                  <Label htmlFor="secondary-color" className="text-amber-200/90">Secondary Color</Label>
                   <ColorPicker
                     label="Secondary Color"
                     value={watch('secondaryColor') || settings.secondaryColor}
                     onChange={(value) => reset({ ...watch(), secondaryColor: value })}
                   />
-                  {errors.secondaryColor && (
-                    <p className="text-sm text-red-600 mt-1">{errors.secondaryColor.message}</p>
-                  )}
-                  <p className="text-xs text-gray-500 mt-2">
+                  {errors.secondaryColor && <p className="text-sm text-red-400 mt-1">{errors.secondaryColor.message}</p>}
+                  <p className="text-xs text-amber-200/70 mt-2">
                     This color will be used in gradients and as accent color throughout the page.
                   </p>
                 </div>
               </div>
 
-              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <h4 className="text-sm font-semibold text-blue-900 mb-2">Color Application:</h4>
-                <ul className="text-xs text-blue-800 space-y-1">
+              <div className="p-4 bg-amber-500/20 rounded-lg border border-amber-500/40">
+                <h4 className="text-sm font-semibold text-amber-200 mb-2">Color Application:</h4>
+                <ul className="text-xs text-amber-200/90 space-y-1">
                   <li>• Hero section gradients will use both primary and secondary colors</li>
                   <li>• Primary buttons will use the primary color</li>
                   <li>• Stats numbers and icons will use the primary color</li>
@@ -272,11 +257,7 @@ export default function ManageColors() {
                 </ul>
               </div>
 
-              <Button
-                type="submit"
-                disabled={updateSettingsMutation.isPending}
-                className="w-full"
-              >
+              <Button type="submit" disabled={updateSettingsMutation.isPending} className="w-full bg-amber-600 hover:bg-amber-500 text-white border-amber-500/50">
                 {updateSettingsMutation.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -290,8 +271,8 @@ export default function ManageColors() {
                 )}
               </Button>
             </form>
-          </CardContent>
-        </Card>
+          </div>
+        </GamePanel>
       </div>
     </div>
   );

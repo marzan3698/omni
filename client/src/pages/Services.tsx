@@ -5,6 +5,7 @@ import { serviceApi } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Edit, Trash2, DollarSign, Calendar } from 'lucide-react';
+import { formatCurrencyWithSymbol, formatDaysToMonthsDays } from '@/lib/utils';
 
 export function Services() {
   const navigate = useNavigate();
@@ -79,14 +80,17 @@ export function Services() {
                           <div className="flex items-center gap-2">
                             <DollarSign className="w-4 h-4 text-indigo-600" />
                             <span className="font-semibold text-indigo-600">
-                              ${Number(service.pricing).toLocaleString()}
+                              {formatCurrencyWithSymbol(service.pricing, service.currency || 'BDT')}
                             </span>
                           </div>
                           <div className="flex items-center gap-2">
                             <Calendar className="w-4 h-4 text-slate-500" />
                             <span className="text-slate-600">
-                              {new Date(service.deliveryStartDate).toLocaleDateString()} -{' '}
-                              {new Date(service.deliveryEndDate).toLocaleDateString()}
+                              {service.useDeliveryDate && service.deliveryStartDate && service.deliveryEndDate
+                                ? `${new Date(service.deliveryStartDate).toLocaleDateString()} - ${new Date(service.deliveryEndDate).toLocaleDateString()}`
+                                : service.durationDays
+                                  ? `মেয়াদ: ${formatDaysToMonthsDays(service.durationDays)}`
+                                  : '-'}
                             </span>
                           </div>
                         </div>

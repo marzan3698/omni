@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { GamePanel } from '@/components/GamePanel';
+import { GameCard } from '@/components/GameCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -652,58 +653,62 @@ export function LeadDetail() {
 
   const getCallStatusColor = (status: LeadCallStatus) => {
     switch (status) {
-      case 'Scheduled': return 'bg-blue-100 text-blue-700';
-      case 'Completed': return 'bg-green-100 text-green-700';
-      case 'Canceled': return 'bg-red-100 text-red-700';
-      case 'NoAnswer': return 'bg-yellow-100 text-yellow-700';
-      case 'Busy': return 'bg-orange-100 text-orange-700';
-      case 'LeftVoicemail': return 'bg-purple-100 text-purple-700';
-      default: return 'bg-gray-100 text-gray-700';
+      case 'Scheduled': return 'bg-amber-500/20 text-amber-200 border-amber-500/40';
+      case 'Completed': return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
+      case 'Canceled': return 'bg-red-500/20 text-red-300 border-red-500/40';
+      case 'NoAnswer': return 'bg-amber-500/20 text-amber-200 border-amber-500/40';
+      case 'Busy': return 'bg-orange-500/20 text-orange-300 border-orange-500/40';
+      case 'LeftVoicemail': return 'bg-purple-500/20 text-purple-300 border-purple-500/40';
+      default: return 'bg-slate-700/60 text-amber-200/80 border-amber-500/20';
     }
   };
 
+  const btnOutline =
+    'bg-slate-800/60 border border-amber-500/50 text-amber-100 hover:bg-amber-500/20 hover:border-amber-500/70';
+  const inputDark = 'bg-slate-800/60 border-amber-500/20 text-amber-100 placeholder:text-amber-200/40';
+
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="mt-4 text-slate-600">Loading lead details...</p>
-        </div>
+      <div className="flex items-center justify-center min-h-[400px] p-6">
+        <GamePanel className="p-8 max-w-sm">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-2 border-amber-500/50 border-t-amber-400 mx-auto" />
+            <p className="mt-4 text-amber-200/80">Loading lead details...</p>
+          </div>
+        </GamePanel>
       </div>
     );
   }
 
   if (error || !lead) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Card className="w-full max-w-md shadow-sm border-gray-200">
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-slate-900 mb-2">Lead Not Found</h3>
-              <p className="text-slate-600 mb-4">
-                {error ? 'Failed to load lead details' : 'The lead you are looking for does not exist'}
-              </p>
-              <Button onClick={() => navigate('/leads')} variant="outline">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Leads
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="flex items-center justify-center min-h-[400px] p-6">
+        <GamePanel className="w-full max-w-md p-8">
+          <div className="text-center">
+            <AlertCircle className="w-14 h-14 text-red-400 mx-auto mb-4" />
+            <h3 className="text-xl font-bold text-amber-100 mb-2">Lead Not Found</h3>
+            <p className="text-amber-200/70 mb-6">
+              {error ? 'Failed to load lead details' : 'The lead you are looking for does not exist'}
+            </p>
+            <Button onClick={() => navigate('/leads')} className={btnOutline}>
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Leads
+            </Button>
+          </div>
+        </GamePanel>
       </div>
     );
   }
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Won': return 'bg-green-100 text-green-700 border-green-200';
-      case 'Lost': return 'bg-red-100 text-red-700 border-red-200';
-      case 'New': return 'bg-blue-100 text-blue-700 border-blue-200';
-      case 'Contacted': return 'bg-yellow-100 text-yellow-700 border-yellow-200';
-      case 'Qualified': return 'bg-purple-100 text-purple-700 border-purple-200';
-      case 'Negotiation': return 'bg-orange-100 text-orange-700 border-orange-200';
-      default: return 'bg-gray-100 text-gray-700 border-gray-200';
+      case 'Won': return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
+      case 'Lost': return 'bg-red-500/20 text-red-300 border-red-500/40';
+      case 'New': return 'bg-blue-500/20 text-blue-300 border-blue-500/40';
+      case 'Contacted': return 'bg-amber-500/20 text-amber-200 border-amber-500/40';
+      case 'Qualified': return 'bg-purple-500/20 text-purple-300 border-purple-500/40';
+      case 'Negotiation': return 'bg-orange-500/20 text-orange-300 border-orange-500/40';
+      default: return 'bg-slate-700/60 text-amber-200/80 border-amber-500/20';
     }
   };
 
@@ -756,152 +761,189 @@ export function LeadDetail() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate('/leads')}
-            className="hover:bg-gray-100"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900">{lead.title}</h1>
-            <p className="text-slate-600 mt-1">Lead ID: #{lead.id}</p>
+    <div className="space-y-6 p-6">
+      {/* Futuristic Header */}
+      <GamePanel className="p-6">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => navigate('/leads')}
+              className={cn(
+                'p-2 rounded-lg border border-amber-500/40 text-amber-200',
+                'hover:bg-amber-500/20 hover:border-amber-500/60 transition-all'
+              )}
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div>
+              <div className="flex items-center gap-3 flex-wrap">
+                <h1 className="text-2xl md:text-3xl font-bold text-amber-100">{lead.title}</h1>
+                <span className="px-2 py-1 text-xs font-mono text-amber-400/80 bg-slate-800/80 rounded border border-amber-500/20">
+                  #{lead.id}
+                </span>
+              </div>
+              <p className="text-amber-200/70 mt-1 text-sm">Lead details & activity</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            {isMonitoringAllowed ? (
+              <button
+                onClick={openStatusModal}
+                className={cn(
+                  'px-4 py-2 rounded-lg border flex items-center gap-2 font-medium text-sm cursor-pointer hover:opacity-90 transition-all',
+                  getStatusColor(lead.status)
+                )}
+                title="স্ট্যাটাস পরিবর্তন করতে ক্লিক করুন"
+              >
+                {getStatusIcon(lead.status)}
+                {lead.status}
+                <Edit className="w-3 h-3 ml-1 opacity-80" />
+              </button>
+            ) : (
+              <span
+                className={cn(
+                  'px-4 py-2 rounded-lg border flex items-center gap-2 font-medium text-sm',
+                  getStatusColor(lead.status)
+                )}
+                title={
+                  isLeadManagerOrSuperAdmin && lead?.leadMonitoringUser
+                    ? `Monitoring Incharge: ${lead.leadMonitoringUser.name || lead.leadMonitoringUser.email}`
+                    : undefined
+                }
+              >
+                {getStatusIcon(lead.status)}
+                {lead.status}
+              </span>
+            )}
+            {lead.convertedToClientId ? (
+              <span className="px-4 py-2 rounded-lg border border-emerald-500/40 bg-emerald-500/20 text-emerald-300 font-medium text-sm flex items-center gap-2">
+                <CheckCircle className="w-4 h-4" />
+                Already added as client
+              </span>
+            ) : (
+              lead.status === 'Won' && isMonitoringAllowed && (
+                <Button onClick={openConvertModal} className="bg-amber-600 hover:bg-amber-500 text-white border-amber-500/50">
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Convert to Client
+                </Button>
+              )
+            )}
+            {isLeadManagerOrSuperAdmin && (user?.roleName === 'SuperAdmin' || lead?.leadMonitoringUserId === user?.id) && (
+              <Button
+                onClick={() => setIsTransferMonitoringModalOpen(true)}
+                disabled={!lead?.leadMonitoringUserId}
+                title={!lead?.leadMonitoringUserId ? 'Monitoring incharge is not assigned yet' : 'Transfer monitoring responsibility'}
+                className={btnOutline}
+              >
+                <Users className="w-4 h-4 mr-2" />
+                Transfer Monitoring
+              </Button>
+            )}
+            <Button className={btnOutline}>
+              <Edit className="w-4 h-4 mr-2" />
+              Edit Lead
+            </Button>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          {/* Clickable Status Badge - only Lead Manager (and SuperAdmin) can change status; locked by monitoring incharge */}
-          {isMonitoringAllowed ? (
-            <button
-              onClick={openStatusModal}
-              className={cn(
-                "px-4 py-2 rounded-lg border flex items-center gap-2 font-medium text-sm cursor-pointer hover:opacity-80 transition-opacity",
-                getStatusColor(lead.status)
-              )}
-              title="স্ট্যাটাস পরিবর্তন করতে ক্লিক করুন"
-            >
-              {getStatusIcon(lead.status)}
-              {lead.status}
-              <Edit className="w-3 h-3 ml-1" />
-            </button>
-          ) : (
-            <span
-              className={cn(
-                "px-4 py-2 rounded-lg border flex items-center gap-2 font-medium text-sm",
-                getStatusColor(lead.status)
-              )}
-              title={
-                isLeadManagerOrSuperAdmin && lead?.leadMonitoringUser
-                  ? `Monitoring Incharge: ${lead.leadMonitoringUser.name || lead.leadMonitoringUser.email}`
-                  : undefined
-              }
-            >
-              {getStatusIcon(lead.status)}
-              {lead.status}
-            </span>
-          )}
-          {lead.convertedToClientId ? (
-            <span className="px-4 py-2 rounded-lg border border-green-200 bg-green-50 text-green-700 font-medium text-sm flex items-center gap-2">
-              <CheckCircle className="w-4 h-4" />
-              Already added as client
-            </span>
-          ) : (
-            lead.status === 'Won' && isMonitoringAllowed && (
-              <Button 
-                onClick={openConvertModal}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white"
-              >
-                <UserPlus className="w-4 h-4 mr-2" />
-                Convert to Client
-              </Button>
-            )
-          )}
-          {isLeadManagerOrSuperAdmin && (user?.roleName === 'SuperAdmin' || lead?.leadMonitoringUserId === user?.id) && (
-            <Button
-              variant="outline"
-              onClick={() => setIsTransferMonitoringModalOpen(true)}
-              disabled={!lead?.leadMonitoringUserId}
-              title={!lead?.leadMonitoringUserId ? 'Monitoring incharge is not assigned yet' : 'Transfer monitoring responsibility'}
-            >
-              <Users className="w-4 h-4 mr-2" />
-              Transfer Monitoring
-            </Button>
-          )}
-          <Button variant="outline">
-            <Edit className="w-4 h-4 mr-2" />
-            Edit Lead
-          </Button>
-        </div>
+      </GamePanel>
+
+      {/* Stats widgets */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <GameCard index={0} className="p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">Meetings</p>
+              <p className="text-2xl font-bold text-amber-100 mt-1">{meetings.length}</p>
+            </div>
+            <div className="p-3 rounded-full border border-amber-500/30 bg-amber-500/10">
+              <Calendar className="h-6 w-6 text-amber-400" />
+            </div>
+          </div>
+        </GameCard>
+        <GameCard index={1} className="p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">Calls</p>
+              <p className="text-2xl font-bold text-amber-100 mt-1">{calls.length}</p>
+            </div>
+            <div className="p-3 rounded-full border border-amber-500/30 bg-amber-500/10">
+              <Phone className="h-6 w-6 text-amber-400" />
+            </div>
+          </div>
+        </GameCard>
+        <GameCard index={2} className="p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">Est. Value</p>
+              <p className="text-xl font-bold text-emerald-300 mt-1">{formatCurrency(lead.value)}</p>
+            </div>
+            <div className="p-3 rounded-full border border-emerald-500/30 bg-emerald-500/10">
+              <DollarSign className="h-6 w-6 text-emerald-400" />
+            </div>
+          </div>
+        </GameCard>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content - Left Side (2 columns) */}
         <div className="lg:col-span-2 space-y-6">
           {/* Basic Information */}
-          <Card className="shadow-sm border-gray-200">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="w-5 h-5 text-indigo-600" />
+          <GamePanel>
+            <div className="p-6 space-y-4">
+              <h3 className="flex items-center gap-2 text-lg font-semibold text-amber-100">
+                <FileText className="w-5 h-5 text-amber-400" />
                 Basic Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+              </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium text-slate-600">Title</label>
-                  <p className="mt-1 text-slate-900 font-medium">{lead.title}</p>
+                  <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">Title</label>
+                  <p className="mt-1 text-amber-100 font-medium">{lead.title}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-slate-600">Source</label>
-                  <p className="mt-1 flex items-center gap-2">
+                  <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">Source</label>
+                  <p className="mt-1 flex items-center gap-2 text-amber-100">
                     {getSourceIcon(lead.source)}
-                    <span className="text-slate-900">{lead.source}</span>
+                    <span>{lead.source}</span>
                   </p>
                 </div>
                 {lead.description && (
                   <div className="md:col-span-2">
-                    <label className="text-sm font-medium text-slate-600">Description</label>
-                    <p className="mt-1 text-slate-700 whitespace-pre-wrap">{lead.description}</p>
+                    <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">Description</label>
+                    <p className="mt-1 text-amber-200/90 whitespace-pre-wrap">{lead.description}</p>
                   </div>
                 )}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </GamePanel>
 
           {/* Monitoring */}
-          <Card className="shadow-sm border-gray-200">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-indigo-600" />
+          <GamePanel>
+            <div className="p-6 space-y-4">
+              <h3 className="flex items-center gap-2 text-lg font-semibold text-amber-100">
+                <Users className="w-5 h-5 text-amber-400" />
                 Monitoring
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+              </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex items-start gap-3">
-                  <Users className="w-5 h-5 text-slate-400 mt-0.5" />
+                  <Users className="w-5 h-5 text-amber-400/80 mt-0.5" />
                   <div>
-                    <label className="text-sm font-medium text-slate-600">Lead Monitoring Incharge</label>
-                    <p className="mt-1 text-slate-900 font-medium">
+                    <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">Lead Monitoring Incharge</label>
+                    <p className="mt-1 text-amber-100 font-medium">
                       {lead.leadMonitoringUser
                         ? (lead.leadMonitoringUser.name || lead.leadMonitoringUser.email)
                         : 'Not assigned yet'}
                     </p>
                     {lead.leadMonitoringUser?.email && lead.leadMonitoringUser?.name && (
-                      <p className="text-xs text-slate-500">{lead.leadMonitoringUser.email}</p>
+                      <p className="text-xs text-amber-200/60">{lead.leadMonitoringUser.email}</p>
                     )}
                   </div>
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <DollarSign className="w-5 h-5 text-slate-400 mt-0.5" />
+                  <DollarSign className="w-5 h-5 text-amber-400/80 mt-0.5" />
                   <div>
-                    <label className="text-sm font-medium text-slate-600">Finance Monitoring</label>
-                    <p className="mt-1 text-slate-900 font-medium">
+                    <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">Finance Monitoring</label>
+                    <p className="mt-1 text-amber-100 font-medium">
                       {lead.clientApprovalRequest?.status === 'Approved'
                         ? (lead.clientApprovalRequest.approvedByUser?.name ||
                             lead.clientApprovalRequest.approvedByUser?.email ||
@@ -911,50 +953,48 @@ export function LeadDetail() {
                           : '—'}
                     </p>
                     {lead.clientApprovalRequest?.status === 'Approved' && lead.clientApprovalRequest.approvedAt && (
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-amber-200/60">
                         Approved at: {new Date(lead.clientApprovalRequest.approvedAt).toLocaleString()}
                       </p>
                     )}
                   </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </GamePanel>
 
           {/* Customer Information */}
-          <Card className="shadow-sm border-gray-200">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="w-5 h-5 text-indigo-600" />
+          <GamePanel>
+            <div className="p-6">
+              <h3 className="flex items-center gap-2 text-lg font-semibold text-amber-100 mb-4">
+                <User className="w-5 h-5 text-amber-400" />
                 Customer Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
+              </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {lead.customerName && (
                   <div className="flex items-start gap-3">
-                    <User className="w-5 h-5 text-slate-400 mt-0.5" />
+                    <User className="w-5 h-5 text-amber-400/80 mt-0.5" />
                     <div>
-                      <label className="text-sm font-medium text-slate-600">Customer Name</label>
-                      <p className="mt-1 text-slate-900 font-medium">{lead.customerName}</p>
+                      <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">Customer Name</label>
+                      <p className="mt-1 text-amber-100 font-medium">{lead.customerName}</p>
                     </div>
                   </div>
                 )}
                 {lead.phone && (
                   <div className="flex items-start gap-3">
-                    <Phone className="w-5 h-5 text-slate-400 mt-0.5" />
+                    <Phone className="w-5 h-5 text-amber-400/80 mt-0.5" />
                     <div>
-                      <label className="text-sm font-medium text-slate-600">Phone</label>
-                      <p className="mt-1 text-slate-900 font-medium">{lead.phone}</p>
+                      <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">Phone</label>
+                      <p className="mt-1 text-amber-100 font-medium">{lead.phone}</p>
                     </div>
                   </div>
                 )}
                 {lead.conversation && (
                   <div className="md:col-span-2 flex items-start gap-3">
-                    <MessageSquare className="w-5 h-5 text-slate-400 mt-0.5" />
+                    <MessageSquare className="w-5 h-5 text-amber-400/80 mt-0.5" />
                     <div className="flex-1">
-                      <label className="text-sm font-medium text-slate-600">Source Conversation</label>
-                      <p className="mt-1 text-slate-900">
+                      <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">Source Conversation</label>
+                      <p className="mt-1 text-amber-100">
                         {lead.conversation.platform === 'facebook' ? 'Facebook' : 'Chatwoot'} - 
                         {lead.conversation.externalUserName || lead.conversation.externalUserId}
                       </p>
@@ -962,104 +1002,100 @@ export function LeadDetail() {
                   </div>
                 )}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </GamePanel>
 
           {/* Product Information (for Sales Leads) */}
           {lead.product && (
-            <Card className="shadow-sm border-gray-200">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <ShoppingCart className="w-5 h-5 text-indigo-600" />
+            <GamePanel>
+              <div className="p-6">
+                <h3 className="flex items-center gap-2 text-lg font-semibold text-amber-100 mb-4">
+                  <ShoppingCart className="w-5 h-5 text-amber-400" />
                   Product Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
+                </h3>
                 <div className="flex gap-6">
                   {lead.product.imageUrl && (
                     <img
                       src={lead.product.imageUrl}
                       alt={lead.product.name}
-                      className="w-24 h-24 object-cover rounded-lg border border-gray-200"
+                      className="w-24 h-24 object-cover rounded-lg border border-amber-500/20"
                     />
                   )}
                   <div className="flex-1 space-y-4">
                     <div>
-                      <label className="text-sm font-medium text-slate-600">Product Name</label>
-                      <p className="mt-1 text-slate-900 font-medium text-lg">{lead.product.name}</p>
+                      <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">Product Name</label>
+                      <p className="mt-1 text-amber-100 font-medium text-lg">{lead.product.name}</p>
                       {lead.product.description && (
-                        <p className="mt-2 text-sm text-slate-600">{lead.product.description}</p>
+                        <p className="mt-2 text-sm text-amber-200/80">{lead.product.description}</p>
                       )}
                     </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-gray-200">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-amber-500/20">
                       <div>
-                        <label className="text-sm font-medium text-slate-600">Purchase Price</label>
-                        <p className="mt-1 text-slate-900 font-medium">
+                        <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">Purchase Price</label>
+                        <p className="mt-1 text-amber-100 font-medium">
                           {formatCurrency(lead.purchasePrice || lead.product.purchasePrice)}
                         </p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-slate-600">Sale Price</label>
-                        <p className="mt-1 text-slate-900 font-medium">
+                        <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">Sale Price</label>
+                        <p className="mt-1 text-amber-100 font-medium">
                           {formatCurrency(lead.salePrice || lead.product.salePrice)}
                         </p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-slate-600">Profit</label>
+                        <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">Profit</label>
                         <p className={cn(
                           "mt-1 font-medium",
                           lead.profit && Number(lead.profit) > 0 
-                            ? "text-green-600" 
+                            ? "text-emerald-400" 
                             : lead.profit && Number(lead.profit) < 0
-                            ? "text-red-600"
-                            : "text-slate-900"
+                            ? "text-red-400"
+                            : "text-amber-100"
                         )}>
                           {formatCurrency(lead.profit)}
                         </p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-slate-600">Currency</label>
-                        <p className="mt-1 text-slate-900 font-medium">{lead.product.currency || 'BDT'}</p>
+                        <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">Currency</label>
+                        <p className="mt-1 text-amber-100 font-medium">{lead.product.currency || 'BDT'}</p>
                       </div>
                     </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </GamePanel>
           )}
 
           {/* Campaign Information */}
           {lead.campaign && (
-            <Card className="shadow-sm border-gray-200">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Target className="w-5 h-5 text-indigo-600" />
+            <GamePanel>
+              <div className="p-6">
+                <h3 className="flex items-center gap-2 text-lg font-semibold text-amber-100 mb-4">
+                  <Target className="w-5 h-5 text-amber-400" />
                   Campaign Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
+                </h3>
                 <div className="space-y-3">
                   <div>
-                    <label className="text-sm font-medium text-slate-600">Campaign Name</label>
-                    <p className="mt-1 text-slate-900 font-medium">{lead.campaign.name}</p>
+                    <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">Campaign Name</label>
+                    <p className="mt-1 text-amber-100 font-medium">{lead.campaign.name}</p>
                   </div>
                   {lead.campaign.description && (
                     <div>
-                      <label className="text-sm font-medium text-slate-600">Description</label>
-                      <p className="mt-1 text-slate-700">{lead.campaign.description}</p>
+                      <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">Description</label>
+                      <p className="mt-1 text-amber-200/80">{lead.campaign.description}</p>
                     </div>
                   )}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-3 border-t border-gray-200">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-3 border-t border-amber-500/20">
                     <div>
-                      <label className="text-sm font-medium text-slate-600">Type</label>
+                      <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">Type</label>
                       <p className="mt-1">
                         <span className={cn(
                           "px-2 py-1 rounded text-xs font-medium",
                           lead.campaign.type === 'sale' 
-                            ? "bg-indigo-100 text-indigo-700"
+                            ? "bg-amber-500/20 text-amber-200 border-amber-500/40"
                             : lead.campaign.type === 'reach'
-                            ? "bg-blue-100 text-blue-700"
-                            : "bg-purple-100 text-purple-700"
+                            ? "bg-blue-500/20 text-blue-300 border-blue-500/40"
+                            : "bg-purple-500/20 text-purple-300 border-purple-500/40"
                         )}>
                           {lead.campaign.type.charAt(0).toUpperCase() + lead.campaign.type.slice(1)}
                         </span>
@@ -1067,36 +1103,34 @@ export function LeadDetail() {
                     </div>
                     {lead.campaign.budget && (
                       <div>
-                        <label className="text-sm font-medium text-slate-600">Budget</label>
-                        <p className="mt-1 text-slate-900 font-medium">
+                        <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">Budget</label>
+                        <p className="mt-1 text-amber-100 font-medium">
                           {formatCurrency(lead.campaign.budget)}
                         </p>
                       </div>
                     )}
                     <div>
-                      <label className="text-sm font-medium text-slate-600">Start Date</label>
-                      <p className="mt-1 text-slate-700 text-sm">{formatDate(lead.campaign.startDate)}</p>
+                      <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">Start Date</label>
+                      <p className="mt-1 text-amber-200/80 text-sm">{formatDate(lead.campaign.startDate)}</p>
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-slate-600">End Date</label>
-                      <p className="mt-1 text-slate-700 text-sm">{formatDate(lead.campaign.endDate)}</p>
+                      <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">End Date</label>
+                      <p className="mt-1 text-amber-200/80 text-sm">{formatDate(lead.campaign.endDate)}</p>
                     </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </GamePanel>
           )}
 
           {/* Conversation Messages */}
           {lead.conversation && lead.conversation.messages && lead.conversation.messages.length > 0 && (
-            <Card className="shadow-sm border-gray-200">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MessageSquare className="w-5 h-5 text-indigo-600" />
+            <GamePanel>
+              <div className="p-6">
+                <h3 className="flex items-center gap-2 text-lg font-semibold text-amber-100 mb-4">
+                  <MessageSquare className="w-5 h-5 text-amber-400" />
                   Conversation Messages
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
+                </h3>
                 <div className="space-y-3 max-h-96 overflow-y-auto">
                   {lead.conversation.messages
                     .slice()
@@ -1107,15 +1141,15 @@ export function LeadDetail() {
                         className={cn(
                           "p-3 rounded-lg",
                           message.senderType === 'agent'
-                            ? "bg-indigo-50 border border-indigo-200 ml-8"
-                            : "bg-gray-50 border border-gray-200 mr-8"
+                            ? "bg-amber-500/10 border border-amber-500/30 ml-8"
+                            : "bg-slate-800/60 border border-amber-500/20 mr-8"
                         )}
                       >
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs font-medium text-slate-600">
+                          <span className="text-xs font-medium text-amber-200/80">
                             {message.senderType === 'agent' ? 'Agent' : 'Customer'}
                           </span>
-                          <span className="text-xs text-slate-500">
+                          <span className="text-xs text-amber-200/60">
                             {formatDate(message.createdAt)}
                           </span>
                         </div>
@@ -1123,111 +1157,96 @@ export function LeadDetail() {
                           <img
                             src={getImageUrl(message.imageUrl)}
                             alt="Message attachment"
-                            className="max-w-xs rounded-lg mb-2"
+                            className="max-w-xs rounded-lg mb-2 border border-amber-500/20"
                           />
                         )}
-                        <p className="text-sm text-slate-900 whitespace-pre-wrap">{message.content}</p>
+                        <p className="text-sm text-amber-100 whitespace-pre-wrap">{message.content}</p>
                       </div>
                     ))}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </GamePanel>
           )}
 
           {/* Lead Meetings */}
-          <Card className="shadow-sm border-gray-200">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-indigo-600" />
-                Meetings
-              </CardTitle>
-              <Button
-                size="sm"
-                onClick={openCreateMeetingForm}
-                variant="outline"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Schedule Meeting
-              </Button>
-            </CardHeader>
-            <CardContent>
+          <GamePanel>
+            <div className="p-6">
+              <div className="flex flex-row items-center justify-between mb-4">
+                <h3 className="flex items-center gap-2 text-lg font-semibold text-amber-100">
+                  <Calendar className="w-5 h-5 text-amber-400" />
+                  Meetings
+                </h3>
+                <Button size="sm" onClick={openCreateMeetingForm} className={btnOutline}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Schedule Meeting
+                </Button>
+              </div>
               {isLoadingMeetings ? (
-                <div className="text-slate-500 py-4">Loading meetings...</div>
+                <div className="text-amber-200/70 py-4">Loading meetings...</div>
               ) : meetings.length === 0 ? (
-                <div className="text-slate-500 py-4">
-                  No meetings scheduled for this lead.
-                </div>
+                <div className="text-amber-200/60 py-4">No meetings scheduled for this lead.</div>
               ) : (
                 <div className="space-y-3">
-                  {meetings.map((meeting) => (
-                    <div
-                      key={meeting.id}
-                      className="flex items-start justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
-                    >
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-slate-900">
-                            {meeting.title}
-                          </span>
-                          <span
-                            className={cn(
-                              'px-2 py-0.5 rounded-full text-xs font-medium',
-                              meeting.status === 'Scheduled' &&
-                                'bg-blue-100 text-blue-700',
-                              meeting.status === 'Completed' &&
-                                'bg-green-100 text-green-700',
-                              meeting.status === 'Canceled' &&
-                                'bg-red-100 text-red-700'
-                            )}
-                          >
-                            {meeting.status}
-                          </span>
+                  {meetings.map((meeting, idx) => (
+                    <GameCard key={meeting.id} index={idx} className="p-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="space-y-1 min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium text-amber-100">{meeting.title}</span>
+                            <span
+                              className={cn(
+                                'px-2 py-0.5 rounded-full text-xs font-medium border',
+                                meeting.status === 'Scheduled' && 'bg-amber-500/20 text-amber-200 border-amber-500/40',
+                                meeting.status === 'Completed' && 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
+                                meeting.status === 'Canceled' && 'bg-red-500/20 text-red-300 border-red-500/40'
+                              )}
+                            >
+                              {meeting.status}
+                            </span>
+                          </div>
+                          <div className="text-sm text-amber-200/80 flex items-center gap-2">
+                            <Clock className="w-4 h-4 text-amber-400/80" />
+                            <span>{formatMeetingDate(meeting.meetingTime)}</span>
+                            <span className="text-amber-400/40">•</span>
+                            <span>{meeting.durationMinutes} min</span>
+                          </div>
+                          <div className="text-sm">
+                            <a
+                              href={meeting.googleMeetUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-amber-400 hover:text-amber-300 underline text-xs break-all"
+                            >
+                              {meeting.googleMeetUrl}
+                            </a>
+                          </div>
+                          {meeting.description && (
+                            <p className="text-sm text-amber-200/70 mt-1">{meeting.description}</p>
+                          )}
                         </div>
-                        <div className="text-sm text-slate-600 flex items-center gap-2">
-                          <Clock className="w-4 h-4" />
-                          <span>{formatMeetingDate(meeting.meetingTime)}</span>
-                          <span className="text-slate-400">•</span>
-                          <span>{meeting.durationMinutes} min</span>
+                        <div className="flex flex-col items-end gap-2 shrink-0">
+                          <div className="flex gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-amber-200 hover:text-amber-100 hover:bg-amber-500/20"
+                              onClick={() => openEditMeetingForm(meeting)}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-400 hover:text-red-300 hover:bg-red-500/20"
+                              onClick={() => deleteMeetingMutation.mutate(meeting.id)}
+                            >
+                              <XCircle className="w-4 h-4" />
+                            </Button>
+                          </div>
+                          <span className="text-xs text-amber-200/50">Created {formatMeetingDate(meeting.createdAt)}</span>
                         </div>
-                        <div className="text-sm">
-                          <a
-                            href={meeting.googleMeetUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-indigo-600 hover:underline text-xs break-all"
-                          >
-                            {meeting.googleMeetUrl}
-                          </a>
-                        </div>
-                        {meeting.description && (
-                          <p className="text-sm text-slate-700 mt-1">
-                            {meeting.description}
-                          </p>
-                        )}
                       </div>
-                      <div className="flex flex-col items-end gap-2">
-                        <div className="flex gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openEditMeetingForm(meeting)}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-red-600 hover:text-red-700"
-                            onClick={() => deleteMeetingMutation.mutate(meeting.id)}
-                          >
-                            <XCircle className="w-4 h-4" />
-                          </Button>
-                        </div>
-                        <span className="text-xs text-slate-400">
-                          Created at {formatMeetingDate(meeting.createdAt)}
-                        </span>
-                      </div>
-                    </div>
+                    </GameCard>
                   ))}
                 </div>
               )}
@@ -1235,163 +1254,95 @@ export function LeadDetail() {
               {isMeetingFormOpen && (
                 <form
                   onSubmit={handleSubmit(handleMeetingSubmit)}
-                  className="mt-4 space-y-4 border-t pt-4"
+                  className="mt-4 space-y-4 border-t border-amber-500/20 pt-4"
                 >
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="text-sm font-medium text-slate-600">
-                        Title
-                      </label>
-                      <Input
-                        {...register('title')}
-                        className="mt-1"
-                        placeholder="Meeting title"
-                      />
-                      {errors.title && (
-                        <p className="text-xs text-red-500 mt-1">
-                          {errors.title.message}
-                        </p>
-                      )}
+                      <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">Title</label>
+                      <Input {...register('title')} className={cn('mt-1', inputDark)} placeholder="Meeting title" />
+                      {errors.title && <p className="text-xs text-red-400 mt-1">{errors.title.message}</p>}
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-slate-600">
-                        Meeting Time
-                      </label>
-                      <Input
-                        type="datetime-local"
-                        {...register('meetingTime')}
-                        className="mt-1"
-                      />
-                      {errors.meetingTime && (
-                        <p className="text-xs text-red-500 mt-1">
-                          {errors.meetingTime.message}
-                        </p>
-                      )}
+                      <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">Meeting Time</label>
+                      <Input type="datetime-local" {...register('meetingTime')} className={cn('mt-1', inputDark)} />
+                      {errors.meetingTime && <p className="text-xs text-red-400 mt-1">{errors.meetingTime.message}</p>}
                     </div>
                   </div>
-
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="text-sm font-medium text-slate-600">
-                        Duration (minutes)
-                      </label>
+                      <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">Duration (minutes)</label>
                       <Input
                         type="number"
-                        {...register('durationMinutes', {
-                          valueAsNumber: true,
-                        })}
-                        className="mt-1"
+                        {...register('durationMinutes', { valueAsNumber: true })}
+                        className={cn('mt-1', inputDark)}
                         min={1}
                       />
-                      {errors.durationMinutes && (
-                        <p className="text-xs text-red-500 mt-1">
-                          {errors.durationMinutes.message}
-                        </p>
-                      )}
+                      {errors.durationMinutes && <p className="text-xs text-red-400 mt-1">{errors.durationMinutes.message}</p>}
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-slate-600">
-                        Google Meet URL
-                      </label>
-                      <Input
-                        {...register('googleMeetUrl')}
-                        className="mt-1"
-                        placeholder="https://meet.google.com/..."
-                      />
-                      {errors.googleMeetUrl && (
-                        <p className="text-xs text-red-500 mt-1">
-                          {errors.googleMeetUrl.message}
-                        </p>
-                      )}
+                      <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">Google Meet URL</label>
+                      <Input {...register('googleMeetUrl')} className={cn('mt-1', inputDark)} placeholder="https://meet.google.com/..." />
+                      {errors.googleMeetUrl && <p className="text-xs text-red-400 mt-1">{errors.googleMeetUrl.message}</p>}
                     </div>
                   </div>
-
                   <div>
-                    <label className="text-sm font-medium text-slate-600">
-                      Notes
-                    </label>
-                    <Textarea
-                      {...register('description')}
-                      className="mt-1"
-                      placeholder="Add any notes about this meeting..."
-                    />
-                    {errors.description && (
-                      <p className="text-xs text-red-500 mt-1">
-                        {errors.description.message}
-                      </p>
-                    )}
+                    <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">Notes</label>
+                    <Textarea {...register('description')} className={cn('mt-1', inputDark)} placeholder="Add any notes about this meeting..." />
+                    {errors.description && <p className="text-xs text-red-400 mt-1">{errors.description.message}</p>}
                   </div>
-
                   <div>
-                    <label className="text-sm font-medium text-slate-600">Assigned To *</label>
+                    <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">Assigned To *</label>
                     {user?.companyId && (
                       <EmployeeSelector
                         companyId={user.companyId}
                         selectedEmployeeIds={selectedMeetingEmployeeId}
                         onSelectionChange={setSelectedMeetingEmployeeId}
                         disabledEmployeeIds={busyEmployeeIdsMeeting}
-                        disabledReasonByEmployeeId={Object.fromEntries(
-                          busyEmployeeIdsMeeting.map((id) => [id, 'Booked'])
-                        )}
+                        disabledReasonByEmployeeId={Object.fromEntries(busyEmployeeIdsMeeting.map((id) => [id, 'Booked']))}
                       />
                     )}
-                    {errors.assignedTo && (
-                      <p className="text-xs text-red-500 mt-1">{errors.assignedTo.message}</p>
-                    )}
+                    {errors.assignedTo && <p className="text-xs text-red-400 mt-1">{errors.assignedTo.message}</p>}
                   </div>
-
                   <div className="flex items-center justify-end gap-2">
                     <Button
                       type="button"
-                      variant="outline"
-                      onClick={() => {
-                        setIsMeetingFormOpen(false);
-                        setEditingMeeting(null);
-                        setSelectedMeetingEmployeeId([]);
-                        reset();
-                      }}
+                      className={btnOutline}
+                      onClick={() => { setIsMeetingFormOpen(false); setEditingMeeting(null); setSelectedMeetingEmployeeId([]); reset(); }}
                       disabled={isSubmitting || createMeetingMutation.isPending || updateMeetingMutation.isPending}
                     >
                       Cancel
                     </Button>
                     <Button
                       type="submit"
-                      disabled={
-                        isSubmitting ||
-                        createMeetingMutation.isPending ||
-                        updateMeetingMutation.isPending ||
-                        selectedMeetingEmployeeId.length === 0
-                      }
+                      className="bg-amber-600 hover:bg-amber-500 text-white"
+                      disabled={isSubmitting || createMeetingMutation.isPending || updateMeetingMutation.isPending || selectedMeetingEmployeeId.length === 0}
                     >
-                      {(createMeetingMutation.isPending ||
-                        updateMeetingMutation.isPending) && (
-                        <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></span>
+                      {(createMeetingMutation.isPending || updateMeetingMutation.isPending) && (
+                        <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
                       )}
                       {editingMeeting ? 'Update Meeting' : 'Create Meeting'}
                     </Button>
                   </div>
                 </form>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </GamePanel>
         </div>
 
         {/* Sidebar - Right Side (1 column) */}
         <div className="space-y-6">
           {/* Lead Details */}
-          <Card className="shadow-sm border-gray-200">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Briefcase className="w-5 h-5 text-indigo-600" />
+          <GamePanel>
+            <div className="p-6 space-y-4">
+              <h3 className="flex items-center gap-2 text-lg font-semibold text-amber-100">
+                <Briefcase className="w-5 h-5 text-amber-400" />
                 Lead Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+              </h3>
               {lead.category && (
                 <div>
-                  <label className="text-sm font-medium text-slate-600">Category</label>
+                  <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">Category</label>
                   <p className="mt-1">
-                    <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">
+                    <span className="px-2 py-1 bg-blue-500/20 text-blue-300 border border-blue-500/40 text-xs rounded-full font-medium">
                       {lead.category.name}
                     </span>
                   </p>
@@ -1399,9 +1350,9 @@ export function LeadDetail() {
               )}
               {lead.interest && (
                 <div>
-                  <label className="text-sm font-medium text-slate-600">Interest</label>
+                  <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">Interest</label>
                   <p className="mt-1">
-                    <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full font-medium">
+                    <span className="px-2 py-1 bg-purple-500/20 text-purple-300 border border-purple-500/40 text-xs rounded-full font-medium">
                       {lead.interest.name}
                     </span>
                   </p>
@@ -1409,77 +1360,76 @@ export function LeadDetail() {
               )}
               {lead.value && (
                 <div>
-                  <label className="text-sm font-medium text-slate-600">Estimated Value</label>
-                  <p className="mt-1 text-slate-900 font-medium text-lg">
-                    {formatCurrency(lead.value)}
-                  </p>
+                  <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">Estimated Value</label>
+                  <p className="mt-1 text-emerald-300 font-medium text-lg">{formatCurrency(lead.value)}</p>
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </GamePanel>
 
           {/* Assignment */}
-          <Card className="shadow-sm border-gray-200">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-indigo-600" />
+          <GamePanel>
+            <div className="p-6 space-y-4">
+              <h3 className="flex items-center gap-2 text-lg font-semibold text-amber-100">
+                <Users className="w-5 h-5 text-amber-400" />
                 Assignment
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+              </h3>
               {lead.assignments && lead.assignments.length > 0 ? (
-                <div className="space-y-3">
-                  {lead.assignments.map((a) => (
-                    <div key={a.id} className="flex items-center justify-between gap-3 p-2 rounded-lg border border-gray-200 bg-gray-50/50">
-                      <div className="flex items-center gap-3">
-                        {a.employee?.user?.profileImage ? (
-                          <img
-                            src={a.employee.user.profileImage}
-                            alt={a.employee.user.email}
-                            className="w-10 h-10 rounded-full"
-                          />
-                        ) : (
-                          <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center text-white font-medium">
-                            {a.employee?.user?.email?.charAt(0).toUpperCase() || 'E'}
-                          </div>
-                        )}
-                        <div>
-                          <p className="text-sm font-medium text-slate-900">
-                            {a.employee?.user?.email || 'Employee'}
-                          </p>
-                          {a.employee?.user?.role && (
-                            <p className="text-xs text-slate-500">{a.employee.user.role.name}</p>
-                          )}
+                <div className="grid grid-cols-1 gap-4">
+                  {lead.assignments.map((a) => {
+                    const displayName = a.employee?.user?.name || a.employee?.user?.email || 'Employee';
+                    const email = a.employee?.user?.email || '';
+                    const rating = ((a.employeeId || 0) % 30) + 70;
+                    const roleName = a.employee?.user?.role?.name || 'TEAM';
+                    return (
+                      <div
+                        key={a.id}
+                        className="relative rounded-xl overflow-visible border-2 border-amber-500/40 bg-gradient-to-b from-slate-800/95 to-slate-900/98 hover:border-amber-500/60 transition-all group min-h-[88px]"
+                      >
+                        <div className="h-7 flex items-center justify-center text-[11px] font-bold uppercase tracking-wider bg-gradient-to-r from-amber-600/90 via-amber-500 to-amber-600/90 text-amber-950">
+                          {roleName}
                         </div>
+                        <div className="flex items-center gap-4 p-4">
+                          {a.employee?.user?.profileImage ? (
+                            <img src={a.employee.user.profileImage} alt={displayName} className="w-16 h-16 rounded-full object-cover border-2 border-amber-500/40 flex-shrink-0" />
+                          ) : (
+                            <div className="w-16 h-16 rounded-full bg-amber-500/30 border-2 border-amber-500/40 flex items-center justify-center text-2xl font-bold text-amber-200 flex-shrink-0">
+                              {displayName.charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-base font-bold text-amber-100">{displayName}</p>
+                            <p className="text-sm text-amber-200/80 mt-0.5">{email}</p>
+                          </div>
+                          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center text-base font-black text-amber-950 border-2 border-amber-400/50 flex-shrink-0 shadow-lg">
+                            {rating}
+                          </div>
+                        </div>
+                        {user?.companyId && (user?.roleName === 'Lead Manager' || user?.roleName === 'SuperAdmin' || hasPermission?.('can_manage_leads')) && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="absolute top-2 right-2 h-7 w-7 rounded-full bg-red-500/40 text-red-200 hover:bg-red-500/60 hover:text-red-100 border border-red-500/40"
+                            onClick={() => removeAssignmentMutation.mutate(a.employeeId)}
+                            disabled={removeAssignmentMutation.isPending}
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        )}
                       </div>
-                      {user?.companyId && (user?.roleName === 'Lead Manager' || user?.roleName === 'SuperAdmin' || hasPermission?.('can_manage_leads')) && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
-                          onClick={() => removeAssignmentMutation.mutate(a.employeeId)}
-                          disabled={removeAssignmentMutation.isPending}
-                        >
-                          <X className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
-                <p className="text-sm text-slate-500">Not assigned</p>
+                <p className="text-sm text-amber-200/60">Not assigned</p>
               )}
               {user?.companyId && (user?.roleName === 'Lead Manager' || user?.roleName === 'SuperAdmin' || hasPermission?.('can_manage_leads')) && (
-                <div className="pt-2 border-t border-gray-200">
-                  <p className="text-sm font-medium text-slate-600 mb-2">অ্যাসাইন যোগ করুন</p>
-                  <EmployeeSelector
-                    companyId={user.companyId}
-                    selectedEmployeeIds={leadAssignmentsSelectedIds}
-                    onSelectionChange={setLeadAssignmentsSelectedIds}
-                  />
+                <div className="pt-4 border-t border-amber-500/20">
+                  <p className="text-xs font-medium text-amber-200/70 uppercase tracking-wider mb-2">অ্যাসাইন যোগ করুন</p>
+                  <EmployeeSelector companyId={user.companyId} selectedEmployeeIds={leadAssignmentsSelectedIds} onSelectionChange={setLeadAssignmentsSelectedIds} variant="fifa" />
                   <Button
                     size="sm"
-                    className="mt-2 bg-indigo-600 hover:bg-indigo-700"
+                    className={cn('mt-2', 'bg-amber-600 hover:bg-amber-500 text-white')}
                     disabled={assignUsersMutation.isPending || leadAssignmentsSelectedIds.length === 0}
                     onClick={() => assignUsersMutation.mutate(leadAssignmentsSelectedIds)}
                   >
@@ -1487,136 +1437,104 @@ export function LeadDetail() {
                   </Button>
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </GamePanel>
 
           {/* Created By */}
-          <Card className="shadow-sm border-gray-200">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="w-5 h-5 text-indigo-600" />
+          <GamePanel>
+            <div className="p-6">
+              <h3 className="flex items-center gap-2 text-lg font-semibold text-amber-100 mb-4">
+                <User className="w-5 h-5 text-amber-400" />
                 Created By
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
+              </h3>
               {lead.createdByUser ? (
                 <div className="flex items-center gap-3">
                   {lead.createdByUser.profileImage ? (
-                    <img
-                      src={lead.createdByUser.profileImage}
-                      alt={lead.createdByUser.email}
-                      className="w-10 h-10 rounded-full"
-                    />
+                    <img src={lead.createdByUser.profileImage} alt={lead.createdByUser.email} className="w-10 h-10 rounded-full border border-amber-500/20" />
                   ) : (
-                    <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center text-white font-medium">
+                    <div className="w-10 h-10 bg-amber-500/30 rounded-full flex items-center justify-center text-amber-200 font-medium border border-amber-500/30">
                       {lead.createdByUser.email?.charAt(0).toUpperCase() || 'U'}
                     </div>
                   )}
                   <div>
-                    <p className="text-sm font-medium text-slate-900">
-                      {lead.createdByUser.name || lead.createdByUser.email}
-                    </p>
-                    <p className="text-xs text-slate-500">{lead.createdByUser.email}</p>
-                    {lead.createdByUser.role && (
-                      <p className="text-xs text-slate-500 mt-1">
-                        {lead.createdByUser.role.name}
-                      </p>
-                    )}
+                    <p className="text-sm font-medium text-amber-100">{lead.createdByUser.name || lead.createdByUser.email}</p>
+                    <p className="text-xs text-amber-200/60">{lead.createdByUser.email}</p>
+                    {lead.createdByUser.role && <p className="text-xs text-amber-200/60 mt-1">{lead.createdByUser.role.name}</p>}
                   </div>
                 </div>
               ) : (
-                <p className="text-sm text-slate-500">Unknown</p>
+                <p className="text-sm text-amber-200/60">Unknown</p>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </GamePanel>
 
           {/* Timeline */}
-          <Card className="shadow-sm border-gray-200">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="w-5 h-5 text-indigo-600" />
+          <GamePanel>
+            <div className="p-6 space-y-3">
+              <h3 className="flex items-center gap-2 text-lg font-semibold text-amber-100 mb-4">
+                <Clock className="w-5 h-5 text-amber-400" />
                 Timeline
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
+              </h3>
               <div>
-                <label className="text-sm font-medium text-slate-600">Created At</label>
-                <p className="mt-1 text-sm text-slate-700">{formatDate(lead.createdAt)}</p>
+                <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">Created At</label>
+                <p className="mt-1 text-sm text-amber-200/90">{formatDate(lead.createdAt)}</p>
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-600">Last Updated</label>
-                <p className="mt-1 text-sm text-slate-700">{formatDate(lead.updatedAt)}</p>
+                <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">Last Updated</label>
+                <p className="mt-1 text-sm text-amber-200/90">{formatDate(lead.updatedAt)}</p>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </GamePanel>
 
           {/* Call Schedule */}
-          <Card className="shadow-sm border-gray-200">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Phone className="w-5 h-5 text-indigo-600" />
+          <GamePanel>
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="flex items-center gap-2 text-lg font-semibold text-amber-100">
+                  <Phone className="w-5 h-5 text-amber-400" />
                   Call Schedule
-                </CardTitle>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={openCreateCallForm}
-                  disabled={isCallFormOpen}
-                >
+                </h3>
+                <Button size="sm" onClick={openCreateCallForm} disabled={isCallFormOpen} className={btnOutline}>
                   <Plus className="w-4 h-4 mr-1" />
                   Schedule Call
                 </Button>
               </div>
-            </CardHeader>
-            <CardContent>
               {isLoadingCalls ? (
-                <div className="text-center py-4 text-slate-500 text-sm">Loading calls...</div>
+                <div className="text-center py-4 text-amber-200/70 text-sm">Loading calls...</div>
               ) : calls.length === 0 ? (
-                <div className="text-center py-4 text-slate-500 text-sm">
-                  No calls scheduled
-                </div>
+                <div className="text-center py-4 text-amber-200/60 text-sm">No calls scheduled</div>
               ) : (
                 <div className="space-y-3">
-                  {calls.map((call) => (
-                    <div
-                      key={call.id}
-                      className="flex items-start justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
-                    >
-                      <div className="flex-1 space-y-1">
-                        <div className="flex items-center gap-2">
-                          {call.title && (
-                            <span className="font-medium text-slate-900">{call.title}</span>
-                          )}
-                          <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium', getCallStatusColor(call.status))}>
+                  {calls.map((call, idx) => (
+                    <GameCard key={call.id} index={idx} className="p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 space-y-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {call.title && <span className="font-medium text-amber-100">{call.title}</span>}
+                          <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium border', getCallStatusColor(call.status))}>
                             {call.status}
                           </span>
                         </div>
-                        <div className="text-sm text-slate-600 flex items-center gap-2">
-                          <Clock className="w-4 h-4" />
+                        <div className="text-sm text-amber-200/80 flex items-center gap-2">
+                          <Clock className="w-4 h-4 text-amber-400/80" />
                           <span>{formatMeetingDate(call.callTime)}</span>
-                          {call.durationMinutes && (
-                            <>
-                              <span className="text-slate-400">•</span>
-                              <span>{call.durationMinutes} min</span>
-                            </>
-                          )}
+                          {call.durationMinutes && <><span className="text-amber-400/40">•</span><span>{call.durationMinutes} min</span></>}
                         </div>
                         {call.phoneNumber && (
-                          <div className="text-sm text-slate-600 flex items-center gap-2">
+                          <div className="text-sm text-amber-200/80 flex items-center gap-2">
                             <Phone className="w-4 h-4" />
                             <span>{call.phoneNumber}</span>
                           </div>
                         )}
                         {call.assignedEmployee && (
-                          <div className="text-sm text-slate-600 flex items-center gap-2">
+                          <div className="text-sm text-amber-200/80 flex items-center gap-2">
                             <User className="w-4 h-4" />
                             <span>{call.assignedEmployee.user?.email || 'Employee'}</span>
                           </div>
                         )}
                         {call.notes && (
-                          <div className="text-sm text-slate-700 mt-2 p-2 bg-gray-50 rounded">
-                            <strong>Notes:</strong> {call.notes}
+                          <div className="text-sm text-amber-200/90 mt-2 p-2 bg-slate-800/60 rounded border border-amber-500/20">
+                            <strong className="text-amber-200/80">Notes:</strong> {call.notes}
                           </div>
                         )}
                         {editingCallNote?.callId === call.id && (
@@ -1625,11 +1543,12 @@ export function LeadDetail() {
                               value={editingCallNote.note}
                               onChange={(e) => setEditingCallNote({ callId: call.id, note: e.target.value })}
                               placeholder="Add call notes..."
-                              className="text-sm"
+                              className={cn('text-sm', inputDark)}
                             />
                             <div className="flex gap-2">
                               <Button
                                 size="sm"
+                                className="bg-amber-600 hover:bg-amber-500 text-white"
                                 onClick={() => {
                                   if (editingCallNote.note.trim()) {
                                     addCallNoteMutation.mutate({ callId: call.id, note: editingCallNote.note });
@@ -1641,119 +1560,71 @@ export function LeadDetail() {
                               >
                                 Save Note
                               </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => setEditingCallNote(null)}
-                              >
+                              <Button size="sm" className={btnOutline} onClick={() => setEditingCallNote(null)}>
                                 Cancel
                               </Button>
                             </div>
                           </div>
                         )}
                       </div>
-                      <div className="flex flex-col items-end gap-2">
+                      <div className="flex flex-col items-end gap-2 shrink-0">
                         <div className="flex gap-2">
                           {!editingCallNote || editingCallNote.callId !== call.id ? (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setEditingCallNote({ callId: call.id, note: call.notes || '' })}
-                              title="Add note"
-                            >
+                            <Button variant="ghost" size="sm" className="text-amber-200 hover:text-amber-100 hover:bg-amber-500/20" onClick={() => setEditingCallNote({ callId: call.id, note: call.notes || '' })} title="Add note">
                               <FileText className="w-4 h-4" />
                             </Button>
                           ) : null}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openEditCallForm(call)}
-                          >
+                          <Button variant="ghost" size="sm" className="text-amber-200 hover:text-amber-100 hover:bg-amber-500/20" onClick={() => openEditCallForm(call)}>
                             <Edit className="w-4 h-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-red-600 hover:text-red-700"
-                            onClick={() => deleteCallMutation.mutate(call.id)}
-                          >
+                          <Button variant="ghost" size="sm" className="text-red-400 hover:text-red-300 hover:bg-red-500/20" onClick={() => deleteCallMutation.mutate(call.id)}>
                             <XCircle className="w-4 h-4" />
                           </Button>
                         </div>
                       </div>
                     </div>
+                    </GameCard>
                   ))}
                 </div>
               )}
 
               {isCallFormOpen && (
-                <form
-                  onSubmit={handleCallSubmit(onCallSubmit)}
-                  className="mt-4 space-y-4 border-t pt-4"
-                >
+                <form onSubmit={handleCallSubmit(onCallSubmit)} className="mt-4 space-y-4 border-t border-amber-500/20 pt-4">
                   <div>
-                    <label className="text-sm font-medium text-slate-600">Title (Optional)</label>
-                    <Input
-                      {...registerCall('title')}
-                      className="mt-1"
-                      placeholder="Call title"
-                    />
+                    <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">Title (Optional)</label>
+                    <Input {...registerCall('title')} className={cn('mt-1', inputDark)} placeholder="Call title" />
                   </div>
-
                   <div>
-                    <label className="text-sm font-medium text-slate-600">Phone Number</label>
-                    <Input
-                      {...registerCall('phoneNumber')}
-                      className="mt-1"
-                      placeholder={lead?.phone || 'Phone number'}
-                    />
+                    <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">Phone Number</label>
+                    <Input {...registerCall('phoneNumber')} className={cn('mt-1', inputDark)} placeholder={lead?.phone || 'Phone number'} />
                   </div>
-
                   <div>
-                    <label className="text-sm font-medium text-slate-600">Call Time *</label>
-                    <Input
-                      type="datetime-local"
-                      {...registerCall('callTime')}
-                      className="mt-1"
-                    />
-                    {callErrors.callTime && (
-                      <p className="text-xs text-red-500 mt-1">{callErrors.callTime.message}</p>
-                    )}
+                    <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">Call Time *</label>
+                    <Input type="datetime-local" {...registerCall('callTime')} className={cn('mt-1', inputDark)} />
+                    {callErrors.callTime && <p className="text-xs text-red-400 mt-1">{callErrors.callTime.message}</p>}
                   </div>
-
                   <div>
-                    <label className="text-sm font-medium text-slate-600">Duration (minutes, optional)</label>
-                    <Input
-                      type="number"
-                      {...registerCall('durationMinutes', { valueAsNumber: true })}
-                      className="mt-1"
-                      min={1}
-                    />
+                    <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">Duration (minutes, optional)</label>
+                    <Input type="number" {...registerCall('durationMinutes', { valueAsNumber: true })} className={cn('mt-1', inputDark)} min={1} />
                   </div>
-
                   <div>
-                    <label className="text-sm font-medium text-slate-600">Assigned To *</label>
+                    <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">Assigned To *</label>
                     {user?.companyId && (
                       <EmployeeSelector
                         companyId={user.companyId}
                         selectedEmployeeIds={selectedEmployeeId}
                         onSelectionChange={setSelectedEmployeeId}
                         disabledEmployeeIds={busyEmployeeIdsCall}
-                        disabledReasonByEmployeeId={Object.fromEntries(
-                          busyEmployeeIdsCall.map((id) => [id, 'Booked'])
-                        )}
+                        disabledReasonByEmployeeId={Object.fromEntries(busyEmployeeIdsCall.map((id) => [id, 'Booked']))}
                       />
                     )}
-                    {callErrors.assignedTo && (
-                      <p className="text-xs text-red-500 mt-1">{callErrors.assignedTo.message}</p>
-                    )}
+                    {callErrors.assignedTo && <p className="text-xs text-red-400 mt-1">{callErrors.assignedTo.message}</p>}
                   </div>
-
                   <div>
-                    <label className="text-sm font-medium text-slate-600">Status</label>
+                    <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">Status</label>
                     <select
                       {...registerCall('status')}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 mt-1"
+                      className={cn('w-full px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 mt-1', inputDark)}
                     >
                       <option value="Scheduled">Scheduled</option>
                       <option value="Completed">Completed</option>
@@ -1767,316 +1638,199 @@ export function LeadDetail() {
                   <div className="flex items-center justify-end gap-2">
                     <Button
                       type="button"
-                      variant="outline"
-                      onClick={() => {
-                        setIsCallFormOpen(false);
-                        setEditingCall(null);
-                        setSelectedEmployeeId([]);
-                        resetCall();
-                      }}
+                      className={btnOutline}
+                      onClick={() => { setIsCallFormOpen(false); setEditingCall(null); setSelectedEmployeeId([]); resetCall(); }}
                       disabled={isCallSubmitting || createCallMutation.isPending || updateCallMutation.isPending}
                     >
                       Cancel
                     </Button>
                     <Button
                       type="submit"
-                      disabled={
-                        isCallSubmitting ||
-                        createCallMutation.isPending ||
-                        updateCallMutation.isPending ||
-                        selectedEmployeeId.length === 0
-                      }
+                      className="bg-amber-600 hover:bg-amber-500 text-white"
+                      disabled={isCallSubmitting || createCallMutation.isPending || updateCallMutation.isPending || selectedEmployeeId.length === 0}
                     >
                       {(createCallMutation.isPending || updateCallMutation.isPending) && (
-                        <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></span>
+                        <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
                       )}
                       {editingCall ? 'Update Call' : 'Schedule Call'}
                     </Button>
                   </div>
                 </form>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </GamePanel>
         </div>
       </div>
 
       {/* Convert to Client Modal */}
       {isConvertModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <Card className="w-full max-w-md shadow-lg border-gray-200">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <UserPlus className="w-5 h-5 text-indigo-600" />
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <GamePanel className="w-full max-w-md shadow-2xl">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="flex items-center gap-2 text-lg font-semibold text-amber-100">
+                  <UserPlus className="w-5 h-5 text-amber-400" />
                   Convert Lead to Client
-                </CardTitle>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setIsConvertModalOpen(false)}
-                  className="h-8 w-8"
-                >
+                </h3>
+                <button onClick={() => setIsConvertModalOpen(false)} className="p-2 rounded-lg text-amber-200 hover:bg-amber-500/20 hover:text-amber-100">
                   <X className="w-4 h-4" />
-                </Button>
+                </button>
               </div>
-            </CardHeader>
-            <CardContent>
               <form onSubmit={handleConvertSubmit(onConvertSubmit)} className="space-y-4">
                 <div>
-                  <label className="text-sm font-medium text-slate-600">Client Name</label>
-                  <Input
-                    {...registerConvert('name')}
-                    className="mt-1"
-                    placeholder={lead?.customerName || lead?.title || 'Client name'}
-                  />
-                  {convertErrors.name && (
-                    <p className="text-xs text-red-500 mt-1">{convertErrors.name.message}</p>
-                  )}
-                  <p className="text-xs text-slate-500 mt-1">
-                    Leave empty to use lead title: {lead?.title}
-                  </p>
+                  <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">Client Name</label>
+                  <Input {...registerConvert('name')} className={cn('mt-1', inputDark)} placeholder={lead?.customerName || lead?.title || 'Client name'} />
+                  {convertErrors.name && <p className="text-xs text-red-400 mt-1">{convertErrors.name.message}</p>}
+                  <p className="text-xs text-amber-200/60 mt-1">Leave empty to use lead title: {lead?.title}</p>
                 </div>
-
                 <div>
-                  <label className="text-sm font-medium text-slate-600">ইমেইল * (লগইনের জন্য)</label>
-                  <Input
-                    type="email"
-                    {...registerConvert('email')}
-                    className="mt-1"
-                    placeholder="client@example.com"
-                  />
-                  {convertErrors.email && (
-                    <p className="text-xs text-red-500 mt-1">{convertErrors.email.message}</p>
-                  )}
+                  <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">ইমেইল * (লগইনের জন্য)</label>
+                  <Input type="email" {...registerConvert('email')} className={cn('mt-1', inputDark)} placeholder="client@example.com" />
+                  {convertErrors.email && <p className="text-xs text-red-400 mt-1">{convertErrors.email.message}</p>}
                 </div>
-
                 <div>
-                  <label className="text-sm font-medium text-slate-600">Phone (Optional)</label>
-                  <Input
-                    {...registerConvert('phone')}
-                    className="mt-1"
-                    placeholder={lead?.phone || 'Phone number'}
-                  />
+                  <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">Phone (Optional)</label>
+                  <Input {...registerConvert('phone')} className={cn('mt-1', inputDark)} placeholder={lead?.phone || 'Phone number'} />
                 </div>
-
                 <div>
-                  <label className="text-sm font-medium text-slate-600">পাসওয়ার্ড * (ক্লায়েন্ট লগইনের জন্য)</label>
-                  <Input
-                    type="password"
-                    {...registerConvert('password')}
-                    className="mt-1"
-                    placeholder="কমপক্ষে ৬ অক্ষর"
-                    autoComplete="new-password"
-                  />
-                  {convertErrors.password && (
-                    <p className="text-xs text-red-500 mt-1">{convertErrors.password.message}</p>
-                  )}
+                  <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">পাসওয়ার্ড * (ক্লায়েন্ট লগইনের জন্য)</label>
+                  <Input type="password" {...registerConvert('password')} className={cn('mt-1', inputDark)} placeholder="কমপক্ষে ৬ অক্ষর" autoComplete="new-password" />
+                  {convertErrors.password && <p className="text-xs text-red-400 mt-1">{convertErrors.password.message}</p>}
                 </div>
-
                 <div>
-                  <label className="text-sm font-medium text-slate-600">পাসওয়ার্ড নিশ্চিত করুন *</label>
-                  <Input
-                    type="password"
-                    {...registerConvert('confirmPassword')}
-                    className="mt-1"
-                    placeholder="পাসওয়ার্ড আবার লিখুন"
-                    autoComplete="new-password"
-                  />
-                  {convertErrors.confirmPassword && (
-                    <p className="text-xs text-red-500 mt-1">{convertErrors.confirmPassword.message}</p>
-                  )}
+                  <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">পাসওয়ার্ড নিশ্চিত করুন *</label>
+                  <Input type="password" {...registerConvert('confirmPassword')} className={cn('mt-1', inputDark)} placeholder="পাসওয়ার্ড আবার লিখুন" autoComplete="new-password" />
+                  {convertErrors.confirmPassword && <p className="text-xs text-red-400 mt-1">{convertErrors.confirmPassword.message}</p>}
                 </div>
-
                 <div>
-                  <label className="text-sm font-medium text-slate-600">Address (Optional)</label>
-                  <Textarea
-                    {...registerConvert('address')}
-                    className="mt-1"
-                    rows={3}
-                    placeholder="Client address"
-                  />
+                  <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">Address (Optional)</label>
+                  <Textarea {...registerConvert('address')} className={cn('mt-1', inputDark)} rows={3} placeholder="Client address" />
                 </div>
-
-                <div className="flex gap-3 pt-4 border-t">
-                  <Button
-                    type="submit"
-                    className="flex-1 bg-indigo-600 hover:bg-indigo-700"
-                    disabled={convertToClientMutation.isPending}
-                  >
-                    {convertToClientMutation.isPending && (
-                      <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></span>
-                    )}
+                <div className="flex gap-3 pt-4 border-t border-amber-500/20">
+                  <Button type="submit" className="flex-1 bg-amber-600 hover:bg-amber-500 text-white" disabled={convertToClientMutation.isPending}>
+                    {convertToClientMutation.isPending && <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />}
                     Convert to Client
                   </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setIsConvertModalOpen(false)}
-                    disabled={convertToClientMutation.isPending}
-                  >
+                  <Button type="button" className={btnOutline} onClick={() => setIsConvertModalOpen(false)} disabled={convertToClientMutation.isPending}>
                     Cancel
                   </Button>
                 </div>
               </form>
-            </CardContent>
-          </Card>
+            </div>
+          </GamePanel>
         </div>
       )}
 
       {/* Status Change Modal */}
       {isStatusModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <Card className="w-full max-w-md shadow-lg border-gray-200">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-indigo-600" />
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <GamePanel className="w-full max-w-md shadow-2xl">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="flex items-center gap-2 text-lg font-semibold text-amber-100">
+                  <TrendingUp className="w-5 h-5 text-amber-400" />
                   স্ট্যাটাস পরিবর্তন করুন
-                </CardTitle>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setIsStatusModalOpen(false)}
-                  className="h-8 w-8"
-                >
+                </h3>
+                <button onClick={() => setIsStatusModalOpen(false)} className="p-2 rounded-lg text-amber-200 hover:bg-amber-500/20 hover:text-amber-100">
                   <X className="w-4 h-4" />
-                </Button>
+                </button>
               </div>
-            </CardHeader>
-            <CardContent>
               <div className="space-y-4">
-                <p className="text-sm text-slate-600 mb-4">
-                  বর্তমান স্ট্যাটাস: <span className={cn("px-2 py-1 rounded text-xs font-medium", getStatusColor(lead.status))}>{lead.status}</span>
+                <p className="text-sm text-amber-200/80 mb-4">
+                  বর্তমান স্ট্যাটাস: <span className={cn("px-2 py-1 rounded border text-xs font-medium", getStatusColor(lead.status))}>{lead.status}</span>
                 </p>
-                
                 <div className="space-y-2">
-                  {statusOptions.map((option) => (
+                  {statusOptions.map((opt) => (
                     <button
-                      key={option.value}
-                      onClick={() => setSelectedStatus(option.value)}
+                      key={opt.value}
+                      onClick={() => setSelectedStatus(opt.value)}
+                      disabled={lead.status === opt.value}
                       className={cn(
                         "w-full p-3 rounded-lg border text-left transition-all",
-                        selectedStatus === option.value
-                          ? "border-indigo-500 bg-indigo-50 ring-2 ring-indigo-200"
-                          : "border-gray-200 hover:border-indigo-300 hover:bg-gray-50",
-                        lead.status === option.value && "opacity-50"
+                        selectedStatus === opt.value ? "border-amber-500 bg-amber-500/20 ring-2 ring-amber-500/40" : "border-amber-500/30 hover:border-amber-500/50 hover:bg-amber-500/10",
+                        lead.status === opt.value && "opacity-50"
                       )}
-                      disabled={lead.status === option.value}
                     >
                       <div className="flex items-center justify-between">
-                        <span className={cn("px-2 py-1 rounded text-sm font-medium", option.color)}>
-                          {option.label}
+                        <span className={cn("px-2 py-1 rounded border text-sm font-medium", getStatusColor(opt.value))}>
+                          {opt.label}
                         </span>
-                        {lead.status === option.value && (
-                          <span className="text-xs text-slate-500">(বর্তমান)</span>
-                        )}
-                        {selectedStatus === option.value && lead.status !== option.value && (
-                          <CheckCircle className="w-5 h-5 text-indigo-600" />
-                        )}
+                        {lead.status === opt.value && <span className="text-xs text-amber-200/60">(বর্তমান)</span>}
+                        {selectedStatus === opt.value && lead.status !== opt.value && <CheckCircle className="w-5 h-5 text-amber-400" />}
                       </div>
-                      {option.value === 'Won' && lead.status !== 'Won' && (
-                        <p className="text-xs text-green-600 mt-2">
-                          ✨ এই স্ট্যাটাস সিলেক্ট করলে রিজার্ভ পয়েন্ট মেইন পয়েন্টে ট্রান্সফার হবে
-                        </p>
+                      {opt.value === 'Won' && lead.status !== 'Won' && (
+                        <p className="text-xs text-emerald-400 mt-2">✨ এই স্ট্যাটাস সিলেক্ট করলে রিজার্ভ পয়েন্ট মেইন পয়েন্টে ট্রান্সফার হবে</p>
                       )}
                     </button>
                   ))}
                 </div>
-
-                <div className="flex gap-3 pt-4 border-t">
-                  <Button
-                    onClick={handleStatusUpdate}
-                    className="flex-1 bg-indigo-600 hover:bg-indigo-700"
-                    disabled={updateStatusMutation.isPending || selectedStatus === lead.status}
-                  >
-                    {updateStatusMutation.isPending && (
-                      <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></span>
-                    )}
+                <div className="flex gap-3 pt-4 border-t border-amber-500/20">
+                  <Button onClick={handleStatusUpdate} className="flex-1 bg-amber-600 hover:bg-amber-500 text-white" disabled={updateStatusMutation.isPending || selectedStatus === lead.status}>
+                    {updateStatusMutation.isPending && <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />}
                     স্ট্যাটাস আপডেট করুন
                   </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsStatusModalOpen(false)}
-                    disabled={updateStatusMutation.isPending}
-                  >
+                  <Button className={btnOutline} onClick={() => setIsStatusModalOpen(false)} disabled={updateStatusMutation.isPending}>
                     বাতিল
                   </Button>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </GamePanel>
         </div>
       )}
 
       {/* Transfer Monitoring Modal */}
       {isTransferMonitoringModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <Card className="w-full max-w-md shadow-lg border-gray-200">
-            <CardHeader>
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <GamePanel className="w-full max-w-md shadow-2xl">
+            <div className="p-6 space-y-4">
               <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="w-5 h-5 text-indigo-600" />
+                <h3 className="flex items-center gap-2 text-lg font-semibold text-amber-100">
+                  <Users className="w-5 h-5 text-amber-400" />
                   Transfer Monitoring
-                </CardTitle>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => {
-                    setIsTransferMonitoringModalOpen(false);
-                    setNewLeadManagerUserId('');
-                  }}
-                  className="h-8 w-8"
+                </h3>
+                <button
+                  onClick={() => { setIsTransferMonitoringModalOpen(false); setNewLeadManagerUserId(''); }}
+                  className="p-2 rounded-lg text-amber-200 hover:bg-amber-500/20 hover:text-amber-100"
                 >
                   <X className="w-4 h-4" />
-                </Button>
+                </button>
               </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
               <div>
-                <label className="text-sm font-medium text-slate-600">Select new Lead Manager</label>
+                <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">Select new Lead Manager</label>
                 <select
-                  className="mt-2 w-full border border-gray-200 rounded-md p-2 text-sm"
+                  className={cn('mt-2 w-full rounded-md p-2 text-sm', inputDark)}
                   value={newLeadManagerUserId}
                   onChange={(e) => setNewLeadManagerUserId(e.target.value)}
                 >
                   <option value="">-- Select --</option>
-                  {leadManagers
-                    .filter((m) => m.id !== user?.id)
-                    .map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.name ? `${m.name} (${m.email})` : m.email}
-                      </option>
-                    ))}
+                  {leadManagers.filter((m) => m.id !== user?.id).map((m) => (
+                    <option key={m.id} value={m.id}>{m.name ? `${m.name} (${m.email})` : m.email}</option>
+                  ))}
                 </select>
-                <p className="text-xs text-slate-500 mt-2">
+                <p className="text-xs text-amber-200/60 mt-2">
                   Only the current monitoring incharge can transfer this responsibility to another Lead Manager.
                 </p>
               </div>
-
-              <div className="flex gap-3 pt-4 border-t">
+              <div className="flex gap-3 pt-4 border-t border-amber-500/20">
                 <Button
-                  className="flex-1 bg-indigo-600 hover:bg-indigo-700"
+                  className="flex-1 bg-amber-600 hover:bg-amber-500 text-white"
                   disabled={transferMonitoringMutation.isPending || !newLeadManagerUserId}
                   onClick={() => transferMonitoringMutation.mutate()}
                 >
-                  {transferMonitoringMutation.isPending && (
-                    <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></span>
-                  )}
+                  {transferMonitoringMutation.isPending && <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />}
                   Transfer
                 </Button>
                 <Button
-                  variant="outline"
-                  onClick={() => {
-                    setIsTransferMonitoringModalOpen(false);
-                    setNewLeadManagerUserId('');
-                  }}
+                  className={btnOutline}
+                  onClick={() => { setIsTransferMonitoringModalOpen(false); setNewLeadManagerUserId(''); }}
                   disabled={transferMonitoringMutation.isPending}
                 >
                   Cancel
                 </Button>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </GamePanel>
         </div>
       )}
     </div>

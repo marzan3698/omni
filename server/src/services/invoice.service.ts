@@ -12,6 +12,7 @@ interface CreateInvoiceData {
     description: string;
     quantity: number;
     unitPrice: number;
+    productId?: number;
   }>;
   notes?: string;
 }
@@ -26,6 +27,7 @@ interface UpdateInvoiceData {
     description: string;
     quantity: number;
     unitPrice: number;
+    productId?: number;
   }>;
 }
 
@@ -119,6 +121,8 @@ export const invoiceService = {
                 id: true,
                 title: true,
                 pricing: true,
+                durationDays: true,
+                useDeliveryDate: true,
               },
             },
           },
@@ -253,6 +257,8 @@ export const invoiceService = {
                 id: true,
                 title: true,
                 pricing: true,
+                durationDays: true,
+                useDeliveryDate: true,
               },
             },
           },
@@ -302,6 +308,7 @@ export const invoiceService = {
             quantity: item.quantity,
             unitPrice: item.unitPrice,
             total: item.quantity * item.unitPrice,
+            productId: item.productId ?? undefined,
           })),
         },
       },
@@ -326,6 +333,80 @@ export const invoiceService = {
     }
 
     return invoice;
+  },
+
+  /**
+   * Renew invoice (create new invoice for next period based on service durationDays)
+   * Only for project-linked invoices with service that has durationDays
+   */
+  async renewInvoice(invoiceId: number, companyId: number, userId?: string): Promise<any> {
+    const invoice = await prisma.invoice.findFirst({
+      where: { id: invoiceId, companyId },
+      include: { items: true, project: { include: { service: true } } },
+    });
+    if (!invoice) throw new AppError('Invoice not found', 404);
+    if (!invoice.projectId) throw new AppError('Invoice is not linked to a project', 400);
+    if (!invoice.project?.service) throw new AppError('Project has no service', 400);
+
+    const service = invoice.project.service;
+    if (!service.durationDays) throw new AppError('Service does not support renewal (no duration in days)', 400);
+
+    const now = new Date();
+    const dueDate = new Date(now);
+    dueDate.setDate(dueDate.getDate() + service.durationDays);
+
+    const invoiceNumber = await this.generateInvoiceNumber(companyId);
+    const newInvoice = await prisma.invoice.create({
+      data: {
+        companyId,
+        clientId: invoice.clientId,
+        projectId: invoice.projectId,
+        renewedFromId: invoiceId,
+        invoiceNumber,
+        issueDate: now,
+        dueDate,
+        totalAmount: invoice.totalAmount,
+        status: 'Unpaid',
+        notes: `Renewal of invoice ${invoice.invoiceNumber}`,
+        items: {
+          create: invoice.items.map((item) => ({
+            description: item.description,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            total: item.total,
+            productId: item.productId,
+          })),
+        },
+      },
+      include: { client: true, items: true },
+    });
+
+    await prisma.accountReceivable.create({
+      data: {
+        companyId,
+        clientId: invoice.clientId,
+        invoiceId: newInvoice.id,
+        amount: newInvoice.totalAmount,
+        dueDate,
+        status: 'Pending',
+      },
+    });
+
+    return newInvoice;
+  },
+
+  /**
+   * Check if invoice can be renewed (for client UI)
+   */
+  async canRenewInvoice(invoiceId: number, companyId: number, userId?: string): Promise<boolean> {
+    const invoice = await prisma.invoice.findFirst({
+      where: { id: invoiceId, companyId },
+      include: { project: { include: { service: true } } },
+    });
+    if (!invoice || !invoice.projectId || !invoice.project?.service?.durationDays) return false;
+    const due = new Date(invoice.dueDate);
+    const now = new Date();
+    return now >= due;
   },
 
   /**
@@ -400,6 +481,7 @@ export const invoiceService = {
           quantity: item.quantity,
           unitPrice: item.unitPrice,
           total: item.quantity * item.unitPrice,
+          productId: item.productId ?? undefined,
         })),
       });
 
@@ -439,6 +521,89 @@ export const invoiceService = {
     return await prisma.invoice.delete({
       where: { id },
     });
+  },
+
+  /**
+   * Create invoice from project with custom items (for Add Invoice flow)
+   */
+  async createInvoiceFromProject(companyId: number, projectId: number, data: {
+    items: Array<{ description: string; quantity: number; unitPrice: number; productId?: number }>;
+    issueDate?: Date;
+    dueDate?: Date;
+    notes?: string;
+  }) {
+    const project = await prisma.project.findUnique({
+      where: { id: projectId, companyId },
+      include: { client: true },
+    });
+    if (!project) throw new AppError('Project not found', 404);
+
+    let client: any = null;
+    try {
+      const rawClients = await prisma.$queryRawUnsafe<Array<{ id: number }>>(
+        `SELECT id FROM clients WHERE company_id = ? AND LOWER(JSON_UNQUOTE(JSON_EXTRACT(contact_info, '$.email'))) = LOWER(?) LIMIT 1`,
+        companyId,
+        project.client.email
+      );
+      if (rawClients.length > 0) client = await prisma.client.findUnique({ where: { id: rawClients[0].id } });
+    } catch (_) {
+      const all = await prisma.client.findMany({ where: { companyId }, select: { id: true, contactInfo: true } });
+      const found = all.find(
+        (c) => c.contactInfo && typeof c.contactInfo === 'object' && (c.contactInfo as any).email?.toLowerCase() === project.client.email.toLowerCase()
+      );
+      if (found) client = found;
+    }
+    if (!client) {
+      client = await prisma.client.create({
+        data: {
+          companyId,
+          name: project.client.email.split('@')[0],
+          contactInfo: { email: project.client.email.toLowerCase() },
+        },
+      });
+    }
+
+    const issueDate = data.issueDate || new Date();
+    const dueDate = data.dueDate || (() => { const d = new Date(); d.setDate(d.getDate() + 30); return d; })();
+    const totalAmount = data.items.reduce((sum, i) => sum + i.quantity * i.unitPrice, 0);
+    const invoiceNumber = await this.generateInvoiceNumber(companyId);
+
+    const invoice = await prisma.invoice.create({
+      data: {
+        companyId,
+        clientId: client.id,
+        projectId,
+        invoiceNumber,
+        issueDate,
+        dueDate,
+        totalAmount,
+        notes: data.notes || `Invoice for project: ${project.title}`,
+        items: {
+          create: data.items.map((i) => ({
+            description: i.description,
+            quantity: i.quantity,
+            unitPrice: i.unitPrice,
+            total: i.quantity * i.unitPrice,
+            productId: i.productId,
+          })),
+        },
+      },
+      include: { client: true, items: true },
+    });
+
+    if (invoice.status === 'Unpaid') {
+      await prisma.accountReceivable.create({
+        data: {
+          companyId,
+          clientId: client.id,
+          invoiceId: invoice.id,
+          amount: totalAmount,
+          dueDate,
+          status: 'Pending',
+        },
+      });
+    }
+    return invoice;
   },
 
   /**

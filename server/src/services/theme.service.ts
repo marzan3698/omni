@@ -1021,6 +1021,8 @@ export const themeService = {
       buttonSecondaryTextColor?: string;
       isFixed?: boolean;
       isTransparent?: boolean;
+      logo?: string | null;
+      logoType?: string;
     }
   ) {
     const updates: Promise<any>[] = [];

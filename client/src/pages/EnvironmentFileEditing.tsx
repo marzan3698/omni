@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { GamePanel } from '@/components/GamePanel';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -60,11 +60,11 @@ function CopyableField({
 }) {
   return (
     <div className="space-y-1">
-      <Label className="text-sm font-medium text-slate-700">{label}</Label>
+      <Label className="text-sm font-medium text-amber-200/90">{label}</Label>
       <div className="flex gap-2">
-        <Input readOnly value={value} className="font-mono text-sm bg-slate-50" />
-        <Button type="button" variant="outline" size="icon" onClick={onCopy} title="Copy">
-          {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+        <Input readOnly value={value} className="font-mono text-sm bg-slate-800/60 border-amber-500/20 text-amber-100" />
+        <Button type="button" variant="outline" size="icon" onClick={onCopy} title="Copy" className="border-amber-500/50 text-amber-100 hover:bg-amber-500/20">
+          {copied ? <Check className="h-4 w-4 text-amber-400" /> : <Copy className="h-4 w-4" />}
         </Button>
       </div>
     </div>
@@ -139,44 +139,43 @@ export default function EnvironmentFileEditing() {
     updateMutation.mutate(data);
   };
 
+  const inputDark = 'bg-slate-800/60 border-amber-500/20 text-amber-100 placeholder-amber-500/50';
+  const labelDark = 'text-amber-200/90';
+
   return (
-    <div className="container mx-auto p-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <FileCode className="h-8 w-8" />
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="p-4 rounded-xl border border-amber-500/20 bg-slate-800/40">
+        <h1 className="text-3xl font-bold flex items-center gap-2 text-amber-100">
+          <FileCode className="h-8 w-8 text-amber-400" />
           Environment File Editing
         </h1>
-        <p className="text-gray-600 mt-1">Manage Facebook webhook configuration from admin panel</p>
+        <p className="text-amber-200/80 mt-1">Manage Facebook webhook configuration from admin panel</p>
       </div>
 
       {/* Facebook Webhook Configuration Form */}
-      <Card className="shadow-sm border-gray-200 mb-6">
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <FileCode className="h-6 w-6 text-blue-600" />
+      <GamePanel>
+        <div className="p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 rounded-lg border border-amber-500/30 bg-amber-500/20">
+              <FileCode className="h-6 w-6 text-amber-300" />
             </div>
             <div>
-              <CardTitle>Facebook Webhook Configuration</CardTitle>
-              <CardDescription>
-                Edit Facebook integration settings directly from the admin panel
-              </CardDescription>
+              <h2 className="text-xl font-semibold text-amber-100">Facebook Webhook Configuration</h2>
+              <p className="text-sm text-amber-200/70 mt-0.5">Edit Facebook integration settings directly from the admin panel</p>
             </div>
           </div>
-        </CardHeader>
-        <CardContent>
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
-              <span className="ml-2 text-gray-600">Loading configuration...</span>
+              <Loader2 className="h-8 w-8 animate-spin text-amber-400" />
+              <span className="ml-2 text-amber-200/80">Loading configuration...</span>
             </div>
           ) : error ? (
-            <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-              <div className="flex items-center gap-2 text-red-700">
+            <div className="p-4 bg-red-500/20 border border-red-500/40 rounded-lg">
+              <div className="flex items-center gap-2 text-red-300">
                 <AlertCircle className="h-5 w-5" />
                 <span className="font-medium">Error loading configuration</span>
               </div>
-              <p className="text-sm text-red-600 mt-2">
+              <p className="text-sm text-red-200/90 mt-2">
                 {(error as Error).message || 'Failed to load Facebook configuration'}
               </p>
             </div>
@@ -184,7 +183,7 @@ export default function EnvironmentFileEditing() {
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               {/* Facebook App ID */}
               <div>
-                <Label htmlFor="FACEBOOK_APP_ID" className="text-sm font-medium text-gray-700">
+                <Label htmlFor="FACEBOOK_APP_ID" className={`text-sm font-medium ${labelDark}`}>
                   Facebook App ID *
                 </Label>
                 <Input
@@ -192,19 +191,19 @@ export default function EnvironmentFileEditing() {
                   type="text"
                   placeholder="e.g., 1362036352081793"
                   {...register('FACEBOOK_APP_ID')}
-                  className={cn('mt-1', errors.FACEBOOK_APP_ID && 'border-red-500')}
+                  className={cn('mt-1', inputDark, errors.FACEBOOK_APP_ID && 'border-red-500')}
                 />
                 {errors.FACEBOOK_APP_ID && (
                   <p className="text-sm text-red-500 mt-1">{errors.FACEBOOK_APP_ID.message}</p>
                 )}
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-amber-200/60 mt-1">
                   Your Facebook App ID from Facebook Developer Dashboard
                 </p>
               </div>
 
               {/* Facebook App Secret */}
               <div>
-                <Label htmlFor="FACEBOOK_APP_SECRET" className="text-sm font-medium text-gray-700">
+                <Label htmlFor="FACEBOOK_APP_SECRET" className={`text-sm font-medium ${labelDark}`}>
                   Facebook App Secret *
                 </Label>
                 <div className="relative mt-1">
@@ -213,12 +212,12 @@ export default function EnvironmentFileEditing() {
                     type={showSecret ? 'text' : 'password'}
                     placeholder="Enter your Facebook App Secret"
                     {...register('FACEBOOK_APP_SECRET')}
-                    className={cn('pr-10', errors.FACEBOOK_APP_SECRET && 'border-red-500')}
+                    className={cn('pr-10', inputDark, errors.FACEBOOK_APP_SECRET && 'border-red-500')}
                   />
                   <button
                     type="button"
                     onClick={() => setShowSecret(!showSecret)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-amber-200/70 hover:text-amber-100"
                   >
                     {showSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -226,14 +225,14 @@ export default function EnvironmentFileEditing() {
                 {errors.FACEBOOK_APP_SECRET && (
                   <p className="text-sm text-red-500 mt-1">{errors.FACEBOOK_APP_SECRET.message}</p>
                 )}
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-amber-200/60 mt-1">
                   Your Facebook App Secret from Facebook Developer Dashboard
                 </p>
               </div>
 
               {/* Facebook Verify Token */}
               <div>
-                <Label htmlFor="FACEBOOK_VERIFY_TOKEN" className="text-sm font-medium text-gray-700">
+                <Label htmlFor="FACEBOOK_VERIFY_TOKEN" className={`text-sm font-medium ${labelDark}`}>
                   Facebook Verify Token *
                 </Label>
                 <Input
@@ -241,19 +240,19 @@ export default function EnvironmentFileEditing() {
                   type="text"
                   placeholder="e.g., omni_crm_webhook_2024_secure"
                   {...register('FACEBOOK_VERIFY_TOKEN')}
-                  className={cn('mt-1', errors.FACEBOOK_VERIFY_TOKEN && 'border-red-500')}
+                  className={cn('mt-1', inputDark, errors.FACEBOOK_VERIFY_TOKEN && 'border-red-500')}
                 />
                 {errors.FACEBOOK_VERIFY_TOKEN && (
                   <p className="text-sm text-red-500 mt-1">{errors.FACEBOOK_VERIFY_TOKEN.message}</p>
                 )}
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-amber-200/60 mt-1">
                   Secret token for webhook verification (must match Facebook App settings)
                 </p>
               </div>
 
               {/* Facebook OAuth Redirect URI */}
               <div>
-                <Label htmlFor="FACEBOOK_OAUTH_REDIRECT_URI" className="text-sm font-medium text-gray-700">
+                <Label htmlFor="FACEBOOK_OAUTH_REDIRECT_URI" className={`text-sm font-medium ${labelDark}`}>
                   Facebook OAuth Redirect URI *
                 </Label>
                 <Input
@@ -261,22 +260,22 @@ export default function EnvironmentFileEditing() {
                   type="text"
                   placeholder="http://localhost:5001/api/integrations/facebook/callback"
                   {...register('FACEBOOK_OAUTH_REDIRECT_URI')}
-                  className={cn('mt-1', errors.FACEBOOK_OAUTH_REDIRECT_URI && 'border-red-500')}
+                  className={cn('mt-1', inputDark, errors.FACEBOOK_OAUTH_REDIRECT_URI && 'border-red-500')}
                 />
                 {errors.FACEBOOK_OAUTH_REDIRECT_URI && (
                   <p className="text-sm text-red-500 mt-1">{errors.FACEBOOK_OAUTH_REDIRECT_URI.message}</p>
                 )}
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-amber-200/60 mt-1">
                   OAuth callback URL (local: http://localhost:5001/api/integrations/facebook/callback)
                 </p>
               </div>
 
               {/* Save Button */}
-              <div className="flex justify-end pt-4 border-t">
+              <div className="flex justify-end pt-4 border-t border-amber-500/20">
                 <Button
                   type="submit"
                   disabled={updateMutation.isPending}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                  className="bg-amber-600 hover:bg-amber-500 text-white border-amber-500/50"
                 >
                   {updateMutation.isPending ? (
                     <>
@@ -293,33 +292,31 @@ export default function EnvironmentFileEditing() {
               </div>
             </form>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </GamePanel>
 
-      {/* Required URLs - Facebook এ কপি করে ব্যবহার করুন */}
-      <Card className="shadow-sm border-gray-200 mb-6">
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <LinkIcon className="h-6 w-6 text-green-600" />
+      {/* Required URLs */}
+      <GamePanel>
+        <div className="p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 rounded-lg border border-amber-500/30 bg-amber-500/20">
+              <LinkIcon className="h-6 w-6 text-amber-300" />
             </div>
             <div>
-              <CardTitle>প্রয়োজনীয় URL (Required URLs for Facebook)</CardTitle>
-              <CardDescription>
-                Facebook App (Messenger API Settings) এ এই URL ও Verify Token কপি করে দিন। ডিপ্লয় করা ডোমেইন অনুযায়ী অটো আপডেট হয়। Production এ সার্ভার env এ API_URL বা PUBLIC_URL সেট করুন।
-              </CardDescription>
+              <h2 className="text-xl font-semibold text-amber-100">প্রয়োজনীয় URL (Required URLs for Facebook)</h2>
+              <p className="text-sm text-amber-200/70 mt-0.5">
+                Facebook App (Messenger API Settings) এ এই URL ও Verify Token কপি করে দিন। ডিপ্লয় করা ডোমেইন অনুযায়ী অটো আপডেট হয়। Production এ সার্ভার env এ API_URL বা PUBLIC_URL সেট করুন。
+              </p>
             </div>
           </div>
-        </CardHeader>
-        <CardContent>
           {urlsLoading || !webhookUrls ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-indigo-600" />
-              <span className="ml-2 text-gray-600">Loading URLs...</span>
+              <Loader2 className="h-6 w-6 animate-spin text-amber-400" />
+              <span className="ml-2 text-amber-200/80">Loading URLs...</span>
             </div>
           ) : (
-            <div className="space-y-4">
-              <p className="text-sm text-slate-600 mb-4">
+              <div className="space-y-4">
+              <p className="text-sm text-amber-200/80 mb-4">
                 নিচের প্রতিটি মান কপি করে Facebook Developer Console → আপনার অ্যাপ → Use cases → Messenger → Configure webhooks এ যথাক্রমে ব্যবহার করুন।
               </p>
               <CopyableField
@@ -331,12 +328,12 @@ export default function EnvironmentFileEditing() {
 
               {/* Verify Token with warning if empty */}
               <div className="space-y-1">
-                <Label className="text-sm font-medium text-slate-700">
+                <Label className="text-sm font-medium text-amber-200/90">
                   2. Verify token (Facebook Verify token ফিল্ডে দেবেন)
                 </Label>
                 {webhookUrls.verifyToken ? (
                   <div className="flex gap-2">
-                    <Input readOnly value={webhookUrls.verifyToken} className="font-mono text-sm bg-slate-50" />
+                    <Input readOnly value={webhookUrls.verifyToken} className="font-mono text-sm bg-slate-800/60 border-amber-500/20 text-amber-100" />
                     <Button
                       type="button"
                       variant="outline"
@@ -352,8 +349,8 @@ export default function EnvironmentFileEditing() {
                     </Button>
                   </div>
                 ) : (
-                  <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                    <div className="flex items-center gap-2 text-red-700 mb-2">
+                  <div className="p-4 bg-red-500/20 border border-red-500/40 rounded-lg">
+                    <div className="flex items-center gap-2 text-red-300 mb-2">
                       <AlertCircle className="h-5 w-5" />
                       <span className="font-medium">Verify Token খালি!</span>
                     </div>
@@ -395,27 +392,23 @@ export default function EnvironmentFileEditing() {
               />
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </GamePanel>
 
       {/* Bangla Documentation */}
-      <Card className="shadow-sm border-gray-200">
-        <CardHeader>
+      <GamePanel>
+        <div className="p-6 border-b border-amber-500/20">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-indigo-100 rounded-lg">
-                <FileText className="h-6 w-6 text-indigo-600" />
+              <div className="p-2 rounded-lg border border-amber-500/30 bg-amber-500/20">
+                <FileText className="h-6 w-6 text-amber-300" />
               </div>
               <div>
-                <CardTitle>📖 Environment File Management Guide (বাংলা)</CardTitle>
-                <CardDescription>Facebook Webhook Configuration পরিচালনার সম্পূর্ণ নির্দেশিকা</CardDescription>
+                <h2 className="text-xl font-semibold text-amber-100">📖 Environment File Management Guide (বাংলা)</h2>
+                <p className="text-sm text-amber-200/70 mt-0.5">Facebook Webhook Configuration পরিচালনার সম্পূর্ণ নির্দেশিকা</p>
               </div>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowDocs(!showDocs)}
-            >
+            <Button variant="ghost" size="icon" onClick={() => setShowDocs(!showDocs)} className="text-amber-100 hover:bg-amber-500/20">
               {showDocs ? (
                 <ChevronUp className="h-5 w-5" />
               ) : (
@@ -426,7 +419,7 @@ export default function EnvironmentFileEditing() {
         </CardHeader>
 
         {showDocs && (
-          <CardContent className="space-y-6">
+          <div className="p-6 space-y-6">
             {/* Introduction */}
             <section>
               <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
@@ -1256,9 +1249,9 @@ export default function EnvironmentFileEditing() {
                 </ul>
               </div>
             </section>
-          </CardContent>
+          </div>
         )}
-      </Card>
+      </GamePanel>
     </div>
   );
 }

@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { GamePanel } from '@/components/GamePanel';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -154,31 +154,29 @@ export default function ThemeDesign() {
   if (isLoading) {
     return (
       <div className="container mx-auto p-6">
-        <div className="text-center py-12">Loading theme settings...</div>
+        <div className="text-center py-12 text-amber-200/80">Loading theme settings...</div>
       </div>
     );
   }
 
+  const inputDark = 'bg-slate-800/60 border-amber-500/20 text-amber-100 placeholder-amber-500/50 mt-2';
+
   return (
-    <div className="container mx-auto p-6">
-      <div className="flex items-center gap-2 mb-6">
-        <Palette className="h-8 w-8 text-indigo-600" />
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex items-center gap-2 p-4 rounded-xl border border-amber-500/20 bg-slate-800/40">
+        <Palette className="h-8 w-8 text-amber-400" />
         <div>
-          <h1 className="text-3xl font-bold">Theme Design</h1>
-          <p className="text-gray-600 mt-1">Customize your site logo, name, and contact information</p>
+          <h1 className="text-3xl font-bold text-amber-100">Theme Design</h1>
+          <p className="text-amber-200/80 mt-1">Customize your site logo, name, and contact information</p>
         </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        {/* Logo Upload Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Site Logo</CardTitle>
-            <CardDescription>Upload your site logo. It will be displayed in the header and sidebar.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Logo Preview */}
-            <div className="flex items-center justify-center p-6 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
+        <GamePanel>
+          <div className="p-6 space-y-4">
+            <h2 className="text-lg font-semibold text-amber-100">Site Logo</h2>
+            <p className="text-sm text-amber-200/70">Upload your site logo. It will be displayed in the header and sidebar.</p>
+            <div className="flex items-center justify-center p-6 border-2 border-dashed border-amber-500/30 rounded-lg bg-slate-800/60">
               {logoPreview ? (
                 <img
                   src={getImageUrl(logoPreview)}
@@ -186,31 +184,17 @@ export default function ThemeDesign() {
                   className="max-w-full max-h-32 object-contain"
                 />
               ) : (
-                <div className="text-center text-gray-500">
-                  <ImageIcon className="h-12 w-12 mx-auto mb-2 text-gray-400" />
+                <div className="text-center text-amber-200/70">
+                  <ImageIcon className="h-12 w-12 mx-auto mb-2 text-amber-500/60" />
                   <p className="text-sm">No logo uploaded</p>
                 </div>
               )}
             </div>
-
-            {/* Logo Upload Input */}
             <div>
-              <Label htmlFor="logo-upload">Select Logo</Label>
-              <Input
-                id="logo-upload"
-                type="file"
-                accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/svg+xml"
-                onChange={handleLogoChange}
-                className="mt-2"
-              />
+              <Label htmlFor="logo-upload" className="text-amber-200/90">Select Logo</Label>
+              <Input id="logo-upload" type="file" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/svg+xml" onChange={handleLogoChange} className={inputDark} />
             </div>
-
-            {/* Upload Button */}
-            <Button
-              onClick={handleLogoUpload}
-              disabled={!logoFile || uploadStatus === 'uploading'}
-              className="w-full"
-            >
+            <Button onClick={handleLogoUpload} disabled={!logoFile || uploadStatus === 'uploading'} className="w-full bg-amber-600 hover:bg-amber-500 text-white border-amber-500/50">
               {uploadStatus === 'uploading' ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -234,10 +218,9 @@ export default function ThemeDesign() {
               )}
             </Button>
 
-            {/* Logo Requirements */}
-            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <h4 className="text-sm font-semibold text-blue-900 mb-2">Logo Requirements:</h4>
-              <ul className="text-xs text-blue-800 space-y-1">
+            <div className="p-4 bg-amber-500/20 rounded-lg border border-amber-500/40">
+              <h4 className="text-sm font-semibold text-amber-200 mb-2">Logo Requirements:</h4>
+              <ul className="text-xs text-amber-200/90 space-y-1">
                 <li>• <strong>Recommended Size:</strong> 200x50 pixels (width x height)</li>
                 <li>• <strong>Maximum Size:</strong> 500x150 pixels</li>
                 <li>• <strong>File Formats:</strong> PNG, JPG, JPEG, SVG, WebP</li>
@@ -245,82 +228,35 @@ export default function ThemeDesign() {
                 <li>• <strong>Aspect Ratio:</strong> 4:1 (width:height) recommended for best display</li>
               </ul>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </GamePanel>
 
-        {/* Site Information Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Site Information</CardTitle>
-            <CardDescription>Update your site name and contact information</CardDescription>
-          </CardHeader>
-          <CardContent>
+        <GamePanel>
+          <div className="p-6">
+            <h2 className="text-lg font-semibold text-amber-100">Site Information</h2>
+            <p className="text-sm text-amber-200/70 mb-4">Update your site name and contact information</p>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              {/* Site Name */}
               <div>
-                <Label htmlFor="site-name">Site Name</Label>
-                <Input
-                  id="site-name"
-                  {...register('siteName')}
-                  placeholder="Omni CRM"
-                  className="mt-2"
-                />
-                {errors.siteName && (
-                  <p className="text-sm text-red-600 mt-1">{errors.siteName.message}</p>
-                )}
+                <Label htmlFor="site-name" className="text-amber-200/90">Site Name</Label>
+                <Input id="site-name" {...register('siteName')} placeholder="Omni CRM" className={inputDark} />
+                {errors.siteName && <p className="text-sm text-red-400 mt-1">{errors.siteName.message}</p>}
               </div>
-
-              {/* Contact Email */}
               <div>
-                <Label htmlFor="contact-email">Contact Email</Label>
-                <Input
-                  id="contact-email"
-                  type="email"
-                  {...register('contactEmail')}
-                  placeholder="contact@example.com"
-                  className="mt-2"
-                />
-                {errors.contactEmail && (
-                  <p className="text-sm text-red-600 mt-1">{errors.contactEmail.message}</p>
-                )}
+                <Label htmlFor="contact-email" className="text-amber-200/90">Contact Email</Label>
+                <Input id="contact-email" type="email" {...register('contactEmail')} placeholder="contact@example.com" className={inputDark} />
+                {errors.contactEmail && <p className="text-sm text-red-400 mt-1">{errors.contactEmail.message}</p>}
               </div>
-
-              {/* Contact Phone */}
               <div>
-                <Label htmlFor="contact-phone">Contact Phone</Label>
-                <Input
-                  id="contact-phone"
-                  type="tel"
-                  {...register('contactPhone')}
-                  placeholder="+1 (555) 123-4567"
-                  className="mt-2"
-                />
-                {errors.contactPhone && (
-                  <p className="text-sm text-red-600 mt-1">{errors.contactPhone.message}</p>
-                )}
+                <Label htmlFor="contact-phone" className="text-amber-200/90">Contact Phone</Label>
+                <Input id="contact-phone" type="tel" {...register('contactPhone')} placeholder="+1 (555) 123-4567" className={inputDark} />
+                {errors.contactPhone && <p className="text-sm text-red-400 mt-1">{errors.contactPhone.message}</p>}
               </div>
-
-              {/* Contact Address */}
               <div>
-                <Label htmlFor="contact-address">Contact Address</Label>
-                <Textarea
-                  id="contact-address"
-                  {...register('contactAddress')}
-                  placeholder="123 Innovation Road, Level 5, Dhaka, Bangladesh"
-                  className="mt-2"
-                  rows={3}
-                />
-                {errors.contactAddress && (
-                  <p className="text-sm text-red-600 mt-1">{errors.contactAddress.message}</p>
-                )}
+                <Label htmlFor="contact-address" className="text-amber-200/90">Contact Address</Label>
+                <Textarea id="contact-address" {...register('contactAddress')} placeholder="123 Innovation Road, Level 5, Dhaka, Bangladesh" className={inputDark} rows={3} />
+                {errors.contactAddress && <p className="text-sm text-red-400 mt-1">{errors.contactAddress.message}</p>}
               </div>
-
-              {/* Submit Button */}
-              <Button
-                type="submit"
-                disabled={updateSettingsMutation.isPending}
-                className="w-full"
-              >
+              <Button type="submit" disabled={updateSettingsMutation.isPending} className="w-full bg-amber-600 hover:bg-amber-500 text-white border-amber-500/50">
                 {updateSettingsMutation.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -331,8 +267,8 @@ export default function ThemeDesign() {
                 )}
               </Button>
             </form>
-          </CardContent>
-        </Card>
+          </div>
+        </GamePanel>
       </div>
     </div>
   );

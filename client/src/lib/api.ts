@@ -119,6 +119,14 @@ export const financeApi = {
     getById: (id: number, companyId: number) => 
       apiClientInstance.get<ApiResponse>(`/finance/invoices/${id}`, { params: { companyId } }),
     create: (data: any) => apiClientInstance.post<ApiResponse>('/finance/invoices', data),
+    createFromProject: (data: {
+      projectId: number;
+      items: Array<{ description: string; quantity: number; unitPrice: number; productId?: number }>;
+      issueDate?: string;
+      dueDate?: string;
+      notes?: string;
+    }) => apiClientInstance.post<ApiResponse>('/finance/invoices/from-project', data),
+    renew: (id: number) => apiClientInstance.post<ApiResponse>(`/finance/invoices/${id}/renew`),
     update: (id: number, data: any) => apiClientInstance.put<ApiResponse>(`/finance/invoices/${id}`, data),
   },
   transactions: {
@@ -514,10 +522,24 @@ export const serviceApi = {
 
 // Admin API
 export const adminApi = {
+  getLiveUsers: () => apiClientInstance.get<ApiResponse>('/admin/live-users'),
+  getLiveUserDetail: (userId: string) =>
+    apiClientInstance.get<ApiResponse>(`/admin/live-users/${userId}/detail`),
+  getClientUsers: () => apiClientInstance.get<ApiResponse>('/admin/client-users'),
   getAllProjects: (filters?: { companyId?: number; status?: string; search?: string }) =>
     apiClientInstance.get<ApiResponse>('/admin/projects', { params: filters }),
   getProjectById: (id: number) =>
     apiClientInstance.get<ApiResponse>(`/admin/projects/${id}`),
+  createProject: (data: {
+    clientId: string;
+    serviceId: number;
+    title?: string;
+    description?: string;
+    budget: number;
+    time: string;
+    deliveryStartDate?: string;
+    deliveryEndDate?: string;
+  }) => apiClientInstance.post<ApiResponse>('/admin/projects', data),
   getAllClients: (filters?: { companyId?: number; search?: string }) =>
     apiClientInstance.get<ApiResponse>('/admin/clients', { params: filters }),
   getClientById: (id: number) =>
@@ -536,6 +558,7 @@ export const invoiceApi = {
     apiClientInstance.get<ApiResponse>('/finance/invoices', { params: filters }),
   getById: (id: number) => apiClientInstance.get<ApiResponse>(`/finance/invoices/${id}`),
   getClientInvoices: () => apiClientInstance.get<ApiResponse>('/finance/invoices/client'),
+  renew: (id: number) => apiClientInstance.post<ApiResponse>(`/finance/invoices/${id}/renew`),
 };
 
 // Payment Gateway API

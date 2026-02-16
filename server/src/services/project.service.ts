@@ -186,20 +186,26 @@ export const projectService = {
         );
       }
 
-      // Validate delivery dates are within service date range
-      const deliveryStartDate = data.deliveryStartDate || service.deliveryStartDate;
-      const deliveryEndDate = data.deliveryEndDate || service.deliveryEndDate;
+      // Delivery dates: when service uses date range, validate; otherwise use provided or null
+      let deliveryStartDate: Date | undefined = data.deliveryStartDate;
+      let deliveryEndDate: Date | undefined = data.deliveryEndDate;
 
-      if (deliveryStartDate < service.deliveryStartDate || deliveryStartDate > service.deliveryEndDate) {
-        throw new AppError('Delivery start date must be within service date range', 400);
-      }
-
-      if (deliveryEndDate < service.deliveryStartDate || deliveryEndDate > service.deliveryEndDate) {
-        throw new AppError('Delivery end date must be within service date range', 400);
-      }
-
-      if (deliveryStartDate >= deliveryEndDate) {
-        throw new AppError('Delivery end date must be after start date', 400);
+      if (service.useDeliveryDate && service.deliveryStartDate && service.deliveryEndDate) {
+        deliveryStartDate = deliveryStartDate || service.deliveryStartDate;
+        deliveryEndDate = deliveryEndDate || service.deliveryEndDate;
+        if (deliveryStartDate < service.deliveryStartDate || deliveryStartDate > service.deliveryEndDate) {
+          throw new AppError('Delivery start date must be within service date range', 400);
+        }
+        if (deliveryEndDate < service.deliveryStartDate || deliveryEndDate > service.deliveryEndDate) {
+          throw new AppError('Delivery end date must be within service date range', 400);
+        }
+        if (deliveryStartDate >= deliveryEndDate) {
+          throw new AppError('Delivery end date must be after start date', 400);
+        }
+      } else if (service.durationDays && (deliveryStartDate || deliveryEndDate)) {
+        if (deliveryStartDate && deliveryEndDate && deliveryStartDate >= deliveryEndDate) {
+          throw new AppError('Delivery end date must be after start date', 400);
+        }
       }
 
       const project = await prisma.project.create({

@@ -1,12 +1,29 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { invoiceApi } from '@/lib/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileText, DollarSign, Calendar } from 'lucide-react';
+import { FileText, DollarSign, Calendar, RefreshCw } from 'lucide-react';
 
 export function ClientInvoices() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  const renewMutation = useMutation({
+    mutationFn: (id: number) => invoiceApi.renew(id),
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ['client-invoices'] });
+      alert('Invoice renewed successfully!');
+    },
+    onError: (err: any) => {
+      alert(err.response?.data?.message || 'Failed to renew invoice');
+    },
+  });
+
+  const canRenew = (invoice: any) => {
+    if (!invoice.project?.service?.durationDays) return false;
+    return new Date() >= new Date(invoice.dueDate);
+  };
 
   const { data: invoicesResponse, isLoading } = useQuery({
     queryKey: ['client-invoices'],
@@ -84,13 +101,26 @@ export function ClientInvoices() {
                         </div>
                       </div>
                     </div>
-                    <Button
-                      size="sm"
-                      onClick={() => navigate(`/client/invoices/${invoice.id}`)}
-                    >
-                      <FileText className="w-4 h-4 mr-1" />
-                      View
-                    </Button>
+                    <div className="flex gap-2">
+                      {canRenew(invoice) && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => renewMutation.mutate(invoice.id)}
+                          disabled={renewMutation.isPending}
+                        >
+                          <RefreshCw className="w-4 h-4 mr-1" />
+                          রিনিউ
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        onClick={() => navigate(`/client/invoices/${invoice.id}`)}
+                      >
+                        <FileText className="w-4 h-4 mr-1" />
+                        View
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ))}

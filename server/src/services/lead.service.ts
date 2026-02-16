@@ -46,6 +46,7 @@ const leadAssignmentsInclude = {
             select: {
               id: true,
               email: true,
+              name: true,
               profileImage: true,
               role: { select: { id: true, name: true } },
             },

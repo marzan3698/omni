@@ -34,6 +34,45 @@ export function formatCurrency(
 }
 
 /**
+ * Format amount with currency symbol (BDT=৳, USD=$)
+ */
+export function formatCurrencyWithSymbol(
+  amount: number | string | null | undefined,
+  currency: 'BDT' | 'USD' = 'BDT',
+  options?: { minimumFractionDigits?: number; maximumFractionDigits?: number }
+): string {
+  if (amount === null || amount === undefined) return '-';
+  const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+  if (isNaN(num)) return '-';
+  const symbol = currency === 'BDT' ? '৳' : '$';
+  const { minimumFractionDigits = 2, maximumFractionDigits = 2 } = options || {};
+  return `${symbol}${num.toLocaleString(undefined, { minimumFractionDigits, maximumFractionDigits })}`;
+}
+
+/**
+ * Format days to "X মাস Y দিন" (months and days)
+ * Uses 30 days per month for display
+ * @param days - Number of days
+ * @param useBengali - Use Bengali numerals (default true)
+ */
+export function formatDaysToMonthsDays(days: number, useBengali = true): string {
+  if (!Number.isFinite(days) || days < 0) return '-';
+  if (days === 0) return useBengali ? '০ দিন' : '0 days';
+  const months = Math.floor(days / 30);
+  const remainder = days % 30;
+  const bn = (n: number) => n.toString().replace(/\d/g, (d) => '০১২৩৪৫৬৭৮৯'[parseInt(d, 10)]);
+  if (months === 0) {
+    return useBengali ? `${bn(remainder)} দিন` : `${remainder} দিন`;
+  }
+  if (remainder === 0) {
+    return useBengali ? `${bn(months)} মাস` : `${months} মাস`;
+  }
+  return useBengali
+    ? `${bn(months)} মাস ${bn(remainder)} দিন`
+    : `${months} মাস ${remainder} দিন`;
+}
+
+/**
  * Format date and time in Bangladeshi timezone (Asia/Dhaka)
  * Returns format like "12 Jan 2026 at 2:00 PM"
  * @param date - Date object or ISO string

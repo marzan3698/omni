@@ -7,6 +7,8 @@ interface CircularProgressProps {
   className?: string;
   showPercentage?: boolean;
   children?: React.ReactNode;
+  /** Use for dark backgrounds (e.g. FIFA-style widgets) */
+  dark?: boolean;
 }
 
 export function CircularProgress({
@@ -16,6 +18,7 @@ export function CircularProgress({
   className,
   showPercentage = true,
   children,
+  dark = false,
 }: CircularProgressProps) {
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
@@ -36,7 +39,7 @@ export function CircularProgress({
           stroke="currentColor"
           strokeWidth={strokeWidth}
           fill="none"
-          className="text-gray-200"
+          className={dark ? 'text-slate-600' : 'text-gray-200'}
         />
         {/* Progress circle */}
         <circle
@@ -59,7 +62,7 @@ export function CircularProgress({
       <div className="absolute inset-0 flex items-center justify-center">
         {children || (showPercentage && (
           <div className="text-center">
-            <div className="text-2xl font-bold text-slate-900">
+            <div className={cn('text-2xl font-bold', dark ? 'text-amber-400' : 'text-slate-900')}>
               {Math.round(value)}%
             </div>
           </div>

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminApi } from '@/lib/api';
 import { Button } from '@/components/ui/button';
@@ -6,14 +7,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Edit, Trash2, Search, Eye } from 'lucide-react';
 import { ClientDetailModal } from '@/components/ClientDetailModal';
-import { ProjectDetailModal } from '@/components/ProjectDetailModal';
 
 export function AdminProjectsClients() {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'projects' | 'clients'>('projects');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
 
   const { data: projectsResponse, isLoading: loadingProjects } = useQuery({
     queryKey: ['admin-projects', searchTerm],
@@ -139,7 +139,7 @@ export function AdminProjectsClients() {
                               <Button
                                 size="sm"
                                 variant="default"
-                                onClick={() => setSelectedProjectId(project.id)}
+                                onClick={() => navigate(`/admin/projects/${project.id}`)}
                               >
                                 <Eye className="w-4 h-4 mr-1" />
                                 View
@@ -243,13 +243,6 @@ export function AdminProjectsClients() {
         />
       )}
 
-      {/* Project Detail Modal */}
-      {selectedProjectId && (
-        <ProjectDetailModal
-          projectId={selectedProjectId}
-          onClose={() => setSelectedProjectId(null)}
-        />
-      )}
     </div>
   );
 }

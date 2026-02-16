@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { userApi } from '@/lib/api';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { GamePanel } from '@/components/GamePanel';
+import { GameCard } from '@/components/GameCard';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
@@ -140,18 +141,21 @@ export default function Users() {
   };
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="flex justify-between items-center mb-6">
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex justify-between items-center p-4 rounded-xl border border-amber-500/20 bg-slate-800/40">
         <div>
-          <h1 className="text-3xl font-bold">User Management</h1>
-          <p className="text-gray-600 mt-1">Manage system users and their roles</p>
+          <h1 className="text-3xl font-bold text-amber-100">User Management</h1>
+          <p className="text-amber-200/80 mt-1">Manage system users and their roles</p>
         </div>
         <PermissionGuard permission="can_manage_users">
-          <Button onClick={() => {
-            setEditingUser(null);
-            setFormData({ email: '', password: '', roleId: 0, companyId: user?.companyId || 0 });
-            setIsCreateModalOpen(true);
-          }}>
+          <Button
+            onClick={() => {
+              setEditingUser(null);
+              setFormData({ email: '', password: '', roleId: 0, companyId: user?.companyId || 0 });
+              setIsCreateModalOpen(true);
+            }}
+            className="bg-amber-600 hover:bg-amber-500 text-white border-amber-500/50"
+          >
             <Plus className="mr-2 h-4 w-4" />
             Add User
           </Button>
@@ -159,43 +163,39 @@ export default function Users() {
       </div>
 
       {/* Search */}
-      <div className="mb-6">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <Input
-            placeholder="Search users by email or role..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-amber-500/60 h-4 w-4" />
+        <Input
+          placeholder="Search users by email or role..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-10 bg-slate-800/60 border-amber-500/20 text-amber-100 placeholder-amber-500/50 focus-visible:ring-amber-500/50"
+        />
       </div>
 
       {/* Users List */}
       {isLoading ? (
-        <div className="text-center py-12">Loading users...</div>
+        <div className="text-center py-12 text-amber-200/80">Loading users...</div>
       ) : filteredUsers.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center text-gray-500">
-            No users found
-          </CardContent>
-        </Card>
+        <GamePanel>
+          <div className="py-12 text-center text-amber-200/70">No users found</div>
+        </GamePanel>
       ) : (
         <div className="grid gap-4">
-          {filteredUsers.map((userItem) => (
-            <Card key={userItem.id}>
-              <CardContent className="p-6">
+          {filteredUsers.map((userItem, idx) => (
+            <GameCard key={userItem.id} index={idx}>
+              <div className="p-6">
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                        <span className="text-blue-600 font-semibold">
+                      <div className="w-10 h-10 rounded-full border-2 border-amber-500/50 bg-gradient-to-br from-amber-600 to-amber-800 flex items-center justify-center">
+                        <span className="text-amber-100 font-semibold">
                           {userItem.email.charAt(0).toUpperCase()}
                         </span>
                       </div>
                       <div>
-                        <h3 className="font-semibold text-lg">{userItem.email}</h3>
-                        <p className="text-sm text-gray-600">
+                        <h3 className="font-semibold text-lg text-amber-50">{userItem.email}</h3>
+                        <p className="text-sm text-amber-200/80">
                           {userItem.role.name} • {userItem.company.name}
                         </p>
                       </div>
@@ -208,6 +208,7 @@ export default function Users() {
                         size="sm"
                         onClick={() => handleLoginAs(userItem)}
                         title="Login as this user"
+                        className="border-amber-500/50 text-amber-100 hover:bg-amber-500/20 bg-transparent"
                       >
                         <LogIn className="h-4 w-4 mr-1" />
                         Login as
@@ -219,6 +220,7 @@ export default function Users() {
                           variant="outline"
                           size="sm"
                           onClick={() => handleEdit(userItem)}
+                          className="border-amber-500/50 text-amber-100 hover:bg-amber-500/20 bg-transparent"
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -226,7 +228,7 @@ export default function Users() {
                           variant="outline"
                           size="sm"
                           onClick={() => handleDelete(userItem.id)}
-                          className="text-red-600 hover:text-red-700"
+                          className="border-red-500/50 text-red-400 hover:bg-red-500/20 bg-transparent"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -234,36 +236,43 @@ export default function Users() {
                     </PermissionGuard>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </GameCard>
           ))}
         </div>
       )}
 
       {/* Create/Edit Modal */}
       {isCreateModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <Card className="w-full max-w-md">
-            <CardHeader>
-              <CardTitle>{editingUser ? 'Edit User' : 'Create User'}</CardTitle>
-              <CardDescription>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+          <div
+            className="w-full max-w-md rounded-xl overflow-hidden"
+            style={{
+              background: 'linear-gradient(180deg, #1e293b 0%, #0f172a 100%)',
+              boxShadow: '0 0 0 1px rgba(217,119,6,0.3), 0 25px 50px -12px rgba(0,0,0,0.7)',
+            }}
+          >
+            <div className="p-6 border-b border-amber-500/20">
+              <h2 className="text-xl font-semibold text-amber-100">{editingUser ? 'Edit User' : 'Create User'}</h2>
+              <p className="text-sm text-amber-200/70 mt-1">
                 {editingUser ? 'Update user information' : 'Add a new user to the system'}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+              </p>
+            </div>
+            <div className="p-6">
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email" className="text-amber-200/90">Email</Label>
                   <Input
                     id="email"
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     required
+                    className="bg-slate-800/60 border-amber-500/20 text-amber-100 placeholder-amber-500/50 mt-1"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="password">{editingUser ? 'New Password (leave blank to keep current)' : 'Password'}</Label>
+                  <Label htmlFor="password" className="text-amber-200/90">{editingUser ? 'New Password (leave blank to keep current)' : 'Password'}</Label>
                   <Input
                     id="password"
                     type="password"
@@ -271,10 +280,11 @@ export default function Users() {
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     required={!editingUser}
                     minLength={6}
+                    className="bg-slate-800/60 border-amber-500/20 text-amber-100 placeholder-amber-500/50 mt-1"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="roleId">Role</Label>
+                  <Label htmlFor="roleId" className="text-amber-200/90">Role</Label>
                   <Input
                     id="roleId"
                     type="number"
@@ -282,9 +292,10 @@ export default function Users() {
                     onChange={(e) => setFormData({ ...formData, roleId: parseInt(e.target.value) })}
                     required
                     placeholder="Role ID (1=Admin, 2=Manager, etc.)"
+                    className="bg-slate-800/60 border-amber-500/20 text-amber-100 placeholder-amber-500/50 mt-1"
                   />
                 </div>
-                <div className="flex gap-2 justify-end">
+                <div className="flex gap-2 justify-end pt-2">
                   <Button
                     type="button"
                     variant="outline"
@@ -292,16 +303,21 @@ export default function Users() {
                       setIsCreateModalOpen(false);
                       setEditingUser(null);
                     }}
+                    className="border-amber-500/50 text-amber-100 hover:bg-amber-500/20 bg-transparent"
                   >
                     Cancel
                   </Button>
-                  <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+                  <Button
+                    type="submit"
+                    disabled={createMutation.isPending || updateMutation.isPending}
+                    className="bg-amber-600 hover:bg-amber-500 text-white border-amber-500/50"
+                  >
                     {editingUser ? 'Update' : 'Create'}
                   </Button>
                 </div>
               </form>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       )}
     </div>

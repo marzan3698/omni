@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { socialApi, type SocialConversation, type SocialMessage } from '@/lib/social';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { MessageSquare, User, Bot, Archive, BarChart3, Share2 } from 'lucide-react';
 import { getImageUrl } from '@/lib/imageUtils';
@@ -79,34 +78,34 @@ export function SuperAdminInbox() {
   return (
     <div className="h-[calc(100vh-8rem)] flex flex-col">
       <div className="flex-1 flex gap-4 overflow-hidden min-w-0">
-        <Card className="w-80 flex-shrink-0 flex flex-col shadow-sm border-gray-200">
+        <div className="w-80 flex-shrink-0 flex flex-col game-panel rounded-xl overflow-hidden">
           {stats && (
-            <div className="p-3 bg-slate-50 border-b border-slate-200">
-              <div className="flex items-center gap-2 mb-2 text-sm font-medium text-slate-700">
-                <BarChart3 className="w-4 h-4" />
+            <div className="p-3 border-b border-amber-500/20 bg-slate-800/60">
+              <div className="flex items-center gap-2 mb-2 text-sm font-medium text-amber-100">
+                <BarChart3 className="w-4 h-4 text-amber-500" />
                 Overview
               </div>
               <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="rounded bg-white p-2 border border-slate-200">
-                  <span className="text-slate-500 block">Total (Open)</span>
-                  <span className="font-semibold text-slate-900">{stats.totalMessages}</span>
+                <div className="rounded-lg bg-slate-800/60 p-2 border border-amber-500/20 animate-game-item-reveal">
+                  <span className="text-amber-200/70 block">Total (Open)</span>
+                  <span className="font-semibold text-white">{stats.totalMessages}</span>
                 </div>
-                <div className="rounded bg-white p-2 border border-slate-200">
-                  <span className="text-slate-500 block">Assigned</span>
-                  <span className="font-semibold text-green-700">{stats.assignedMessages}</span>
+                <div className="rounded-lg bg-slate-800/60 p-2 border border-amber-500/20 animate-game-item-reveal" style={{ animationDelay: '50ms', animationFillMode: 'both' }}>
+                  <span className="text-amber-200/70 block">Assigned</span>
+                  <span className="font-semibold text-emerald-400">{stats.assignedMessages}</span>
                 </div>
-                <div className="rounded bg-white p-2 border border-slate-200">
-                  <span className="text-slate-500 block">Archive</span>
-                  <span className="font-semibold text-amber-700">{stats.unassignedMessages}</span>
+                <div className="rounded-lg bg-slate-800/60 p-2 border border-amber-500/20 animate-game-item-reveal" style={{ animationDelay: '100ms', animationFillMode: 'both' }}>
+                  <span className="text-amber-200/70 block">Archive</span>
+                  <span className="font-semibold text-amber-400">{stats.unassignedMessages}</span>
                 </div>
-                <div className="rounded bg-white p-2 border border-slate-200">
-                  <span className="text-slate-500 block">Active reps</span>
-                  <span className="font-semibold text-slate-900">{stats.activeRepsCount}</span>
+                <div className="rounded-lg bg-slate-800/60 p-2 border border-amber-500/20 animate-game-item-reveal" style={{ animationDelay: '150ms', animationFillMode: 'both' }}>
+                  <span className="text-amber-200/70 block">Active reps</span>
+                  <span className="font-semibold text-white">{stats.activeRepsCount}</span>
                 </div>
               </div>
               <Button
                 size="sm"
-                className="w-full mt-2"
+                className="w-full mt-2 bg-amber-600 hover:bg-amber-500 text-white border-amber-500/50 font-semibold"
                 onClick={() => setShowDistributeModal(true)}
                 disabled={statsLoading || stats.unassignedMessages === 0}
               >
@@ -115,9 +114,9 @@ export function SuperAdminInbox() {
               </Button>
             </div>
           )}
-          <div className="p-4 border-b border-gray-200">
-            <h2 className="font-semibold text-slate-900">Archive</h2>
-            <p className="text-xs text-slate-500 mt-1">
+          <div className="p-4 border-b border-amber-500/20">
+            <h2 className="font-semibold text-amber-100">Archive</h2>
+            <p className="text-xs text-amber-200/70 mt-1">
               {conversations.length} unassigned {conversations.length === 1 ? 'conversation' : 'conversations'}
             </p>
           </div>
@@ -130,8 +129,8 @@ export function SuperAdminInbox() {
                 No unassigned conversations
               </div>
             ) : (
-              <div className="divide-y divide-gray-200">
-                {conversations.map((conv) => {
+              <div className="space-y-2 p-2">
+                {conversations.map((conv, idx) => {
                   const last = getLastMessage(conv);
                   const isSelected = selectedConversationId === conv.id;
                   return (
@@ -140,25 +139,26 @@ export function SuperAdminInbox() {
                       type="button"
                       onClick={() => setSelectedConversationId(conv.id)}
                       className={cn(
-                        'w-full p-4 text-left hover:bg-gray-50 transition-colors',
-                        isSelected && 'bg-indigo-50 border-l-4 border-indigo-600'
+                        'w-full p-4 text-left rounded-lg game-item-card game-item-hover animate-game-item-reveal',
+                        isSelected && 'game-item-selected'
                       )}
+                      style={{ animationDelay: `${idx * 40}ms`, animationFillMode: 'both' }}
                     >
                       <div className="flex items-start gap-2">
-                        <div className="w-9 h-9 bg-indigo-600 rounded-full flex items-center justify-center flex-shrink-0 text-white text-sm font-medium">
+                        <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 text-amber-100 text-sm font-bold border-2 border-amber-500/50 bg-gradient-to-br from-amber-600 to-amber-800">
                           {conv.externalUserName ? conv.externalUserName.charAt(0).toUpperCase() : '?'}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5">
-                            {conv.platform === 'facebook' && <FacebookIcon className="w-3.5 h-3.5 text-blue-600" />}
-                            {conv.platform === 'whatsapp' && <WhatsAppIcon className="w-3.5 h-3.5 text-green-500" />}
-                            <span className="text-sm font-medium text-slate-900 truncate">
+                            {conv.platform === 'facebook' && <FacebookIcon className="w-3.5 h-3.5 text-blue-400" />}
+                            {conv.platform === 'whatsapp' && <WhatsAppIcon className="w-3.5 h-3.5 text-emerald-400" />}
+                            <span className="text-sm font-medium text-amber-50 truncate">
                               {conv.externalUserName || `User ${conv.externalUserId.slice(0, 8)}`}
                             </span>
                           </div>
-                          {last && <p className="text-xs text-slate-500 truncate mt-0.5">{last.content}</p>}
+                          {last && <p className="text-xs text-slate-300 truncate mt-0.5">{last.content}</p>}
                           {conv.lastMessageAt && (
-                            <p className="text-xs text-slate-400 mt-0.5">{formatTime(conv.lastMessageAt)}</p>
+                            <p className="text-xs text-amber-500/80 mt-0.5">{formatTime(conv.lastMessageAt)}</p>
                           )}
                         </div>
                       </div>
@@ -168,32 +168,32 @@ export function SuperAdminInbox() {
               </div>
             )}
           </div>
-        </Card>
+        </div>
 
-        <Card className="flex-1 min-w-0 flex flex-col shadow-sm border-gray-200">
+        <div className="flex-1 min-w-0 flex flex-col game-panel rounded-xl overflow-hidden">
           {!selectedConversationId ? (
             <div className="flex-1 flex items-center justify-center">
-              <div className="text-center text-slate-500">
-                <MessageSquare className="w-16 h-16 mx-auto mb-4 text-slate-300" />
+              <div className="text-center text-amber-200/80">
+                <MessageSquare className="w-16 h-16 mx-auto mb-4 text-amber-500/50" />
                 <p>Select a conversation to view (read-only)</p>
               </div>
             </div>
           ) : messagesLoading ? (
-            <div className="flex-1 flex items-center justify-center text-slate-500">Loading messages...</div>
+            <div className="flex-1 flex items-center justify-center text-amber-200/80">Loading messages...</div>
           ) : !selectedConversation ? (
-            <div className="flex-1 flex items-center justify-center text-slate-500">Failed to load</div>
+            <div className="flex-1 flex items-center justify-center text-amber-200/80">Failed to load</div>
           ) : (
             <>
-              <div className="p-4 border-b border-gray-200">
+              <div className="p-4 border-b border-amber-500/20 bg-slate-800/40">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-amber-100 text-sm font-bold border-2 border-amber-500/50 bg-gradient-to-br from-amber-600 to-amber-800">
                     {selectedConversation.externalUserName?.charAt(0).toUpperCase() || '?'}
                   </div>
                   <div>
-                    <h3 className="font-semibold text-slate-900">
+                    <h3 className="font-semibold text-amber-50">
                       {selectedConversation.externalUserName || `User ${selectedConversation.externalUserId.slice(0, 8)}`}
                     </h3>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-amber-200/70">
                       {selectedConversation.platform === 'facebook' && <FacebookIcon className="w-3 h-3 inline mr-1 text-blue-600" />}
                       {selectedConversation.platform === 'whatsapp' && <WhatsAppIcon className="w-3 h-3 inline mr-1 text-green-500" />}
                       {selectedConversation.platform} {selectedConversation.whatsappSlotId ? `Slot ${selectedConversation.whatsappSlotId}` : ''}
@@ -242,12 +242,12 @@ export function SuperAdminInbox() {
                   <div className="text-center text-slate-500 py-8">No messages yet</div>
                 )}
               </div>
-              <div className="p-3 border-t border-gray-200 bg-slate-50 text-center text-xs text-slate-500">
+              <div className="p-3 border-t border-amber-500/20 bg-slate-800/40 text-center text-xs text-amber-200/70">
                 View only. Reply and assign are available to Customer Care.
               </div>
             </>
           )}
-        </Card>
+        </div>
       </div>
 
       {stats && (

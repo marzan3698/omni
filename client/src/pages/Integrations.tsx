@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { GamePanel } from '@/components/GamePanel';
+import { GameCard } from '@/components/GameCard';
 import { Button } from '@/components/ui/button';
 import { integrationApi, type CreateIntegrationData } from '@/lib/integration';
 import { facebookIntegrationApi } from '@/lib/facebookIntegration';
@@ -189,74 +190,72 @@ export default function Integrations() {
   const whatsappIntegrations = integrations.filter((i) => i.provider === 'whatsapp');
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <Plug className="h-8 w-8" />
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="p-4 rounded-xl border border-amber-500/20 bg-slate-800/40">
+        <h1 className="text-3xl font-bold flex items-center gap-2 text-amber-100">
+          <Plug className="h-8 w-8 text-amber-400" />
           Integrations
         </h1>
-        <p className="text-gray-600 mt-1">Manage your inbox connections</p>
+        <p className="text-amber-200/80 mt-1">Manage your inbox connections</p>
       </div>
 
       {isIntegrationsError && (
-        <Card className="mb-6 border-red-200 bg-red-50/40">
-          <CardHeader>
-            <CardTitle className="text-red-700 flex items-center gap-2">
+        <GamePanel>
+          <div className="p-6 border-red-500/40 bg-red-500/10">
+            <h2 className="text-lg font-semibold text-red-300 flex items-center gap-2">
               <AlertCircle className="h-5 w-5" />
               Integrations লোড হচ্ছে না
-            </CardTitle>
-            <CardDescription className="text-red-700">
+            </h2>
+            <p className="text-sm text-red-200/90 mt-2">
               {(integrationsError as any)?.response?.data?.message ||
                 (integrationsError as any)?.message ||
                 'Failed to load integrations'}
-            </CardDescription>
-          </CardHeader>
-        </Card>
+            </p>
+          </div>
+        </GamePanel>
       )}
 
       {/* Integration Options */}
       <PermissionGuard permission="can_manage_integrations">
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4 text-gray-800">🔷 Inbox Connection Options</h2>
+        <div className="space-y-6">
+          <h2 className="text-xl font-semibold text-amber-200/90">🔷 Inbox Connection Options</h2>
           <div className="grid gap-6 md:grid-cols-2">
             {/* Facebook Messenger Card */}
-            <Card className="shadow-sm border-gray-200 hover:shadow-md transition-shadow">
-              <CardHeader>
+            <GameCard index={0}>
+              <div className="p-6">
                 <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <Facebook className="h-6 w-6 text-blue-600" />
+                  <div className="p-2 rounded-lg border border-amber-500/30 bg-amber-500/20">
+                    <Facebook className="h-6 w-6 text-amber-300" />
                   </div>
-                  <CardTitle className="text-xl">Facebook Messenger</CardTitle>
+                  <h2 className="text-xl font-semibold text-amber-100">Facebook Messenger</h2>
                 </div>
-                <CardDescription>
+                <p className="text-sm text-amber-200/80 mb-4">
                   একাধিক Facebook Page কানেক্ট করুন - সব মেসেজ ইনবক্সে জমা হবে
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
+                </p>
                 {!hasFacebookConfig && (
-                  <div className="mb-4 p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800">
+                  <div className="mb-4 p-3 rounded-lg bg-amber-500/20 border border-amber-500/40 text-sm text-amber-200">
                     <p className="font-medium">কনফিগ প্রয়োজন</p>
                     <p className="mt-1">Facebook App ID, App Secret ও Verify Token সেট করুন। SuperAdmin সেটিংস থেকে দিন।</p>
-                    <Button variant="outline" size="sm" className="mt-2" onClick={() => navigate('/settings/facebook-app-config')}>
+                    <Button variant="outline" size="sm" className="mt-2 border-amber-500/50 text-amber-100 hover:bg-amber-500/20" onClick={() => navigate('/settings/facebook-app-config')}>
                       Facebook App Config এ যান
                     </Button>
                   </div>
                 )}
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <CheckCircle className="h-4 w-4 text-green-500" />
+                    <div className="flex items-center gap-2 text-sm text-amber-200/80">
+                      <CheckCircle className="h-4 w-4 text-amber-400" />
                       <span>একাধিক পেজ সিলেক্ট করুন</span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <CheckCircle className="h-4 w-4 text-green-500" />
+                    <div className="flex items-center gap-2 text-sm text-amber-200/80">
+                      <CheckCircle className="h-4 w-4 text-amber-400" />
                       <span>ইনবক্সে পেজের নাম দেখাবে</span>
                     </div>
                   </div>
                   <Button
                     onClick={handleFacebookConnect}
                     disabled={isConnecting || !hasFacebookConfig}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                    className="w-full bg-amber-600 hover:bg-amber-500 text-white border-amber-500/50"
                   >
                     {isConnecting ? (
                       <>
@@ -271,31 +270,31 @@ export default function Integrations() {
                     )}
                   </Button>
                   {facebookIntegrations.length > 0 && (
-                    <div className="pt-4 border-t border-gray-200">
-                      <p className="text-sm font-medium text-gray-700 mb-2">Connected Pages ({facebookIntegrations.length})</p>
+                    <div className="pt-4 border-t border-amber-500/20">
+                      <p className="text-sm font-medium text-amber-200/90 mb-2">Connected Pages ({facebookIntegrations.length})</p>
                       <div className="space-y-2">
                         {facebookIntegrations.map((fb) => (
                           <div
                             key={fb.id}
-                            className="flex items-center justify-between gap-3 py-2 px-3 rounded-lg border border-gray-200 bg-gray-50/50"
+                            className="flex items-center justify-between gap-3 py-2 px-3 rounded-lg border border-amber-500/20 bg-slate-800/40"
                           >
                             <div className="min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-sm font-medium text-slate-700">{fb.displayName || 'Facebook Page'}</span>
-                                <span className="text-xs text-gray-500">ID: {fb.pageId}</span>
+                                <span className="text-sm font-medium text-amber-100">{fb.displayName || 'Facebook Page'}</span>
+                                <span className="text-xs text-amber-200/60">ID: {fb.pageId}</span>
                               </div>
                               {!fb.isWebhookActive && fb.lastError && (
-                                <p className="text-xs text-red-600 mt-0.5 truncate max-w-[420px]" title={fb.lastError}>
+                                <p className="text-xs text-red-400 mt-0.5 truncate max-w-[420px]" title={fb.lastError}>
                                   {fb.lastError}
                                 </p>
                               )}
                             </div>
                             <div className="flex items-center gap-2">
                               <span
-                                className={`px-2 py-0.5 text-xs rounded-full font-medium ${
+                                className={`px-2 py-0.5 text-xs rounded-full font-medium border ${
                                   fb.isWebhookActive
-                                    ? 'bg-green-100 text-green-800'
-                                    : 'bg-amber-100 text-amber-800'
+                                    ? 'bg-green-500/25 text-green-300 border-green-500/30'
+                                    : 'bg-amber-500/25 text-amber-200 border-amber-500/30'
                                 }`}
                               >
                                 {fb.isWebhookActive ? 'Webhook OK' : 'Webhook Issue'}
@@ -305,7 +304,7 @@ export default function Integrations() {
                                 size="sm"
                                 onClick={() => setFacebookDiagnosticsPageId(fb.pageId)}
                                 title="Diagnostics"
-                                className="border-gray-200"
+                                className="border-amber-500/50 text-amber-100 hover:bg-amber-500/20"
                               >
                                 <Stethoscope className="h-4 w-4" />
                               </Button>
@@ -314,7 +313,7 @@ export default function Integrations() {
                                 size="sm"
                                 onClick={() => handleFacebookDisconnect(fb)}
                                 disabled={facebookDisconnectLoadingId === fb.id}
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                                className="border-red-500/50 text-red-400 hover:bg-red-500/20"
                                 title="Disconnect"
                               >
                                 {facebookDisconnectLoadingId === fb.id ? (
@@ -330,29 +329,25 @@ export default function Integrations() {
                     </div>
                   )}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </GameCard>
 
-            {/* WhatsApp Slots Card (max 5) */}
-            <Card className="shadow-sm border-gray-200 hover:shadow-md transition-shadow">
-              <CardHeader>
+            {/* WhatsApp Slots Card */}
+            <GameCard index={1}>
+              <div className="p-6">
                 <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 bg-green-100 rounded-lg">
-                    <Smartphone className="h-6 w-6 text-green-600" />
+                  <div className="p-2 rounded-lg border border-amber-500/30 bg-amber-500/20">
+                    <Smartphone className="h-6 w-6 text-amber-300" />
                   </div>
-                  <CardTitle className="text-xl">WhatsApp Slots</CardTitle>
+                  <h2 className="text-xl font-semibold text-amber-100">WhatsApp Slots</h2>
                 </div>
-                <CardDescription>
+                <p className="text-sm text-amber-200/80 mb-1">
                   সর্বোচ্চ ৫টি নম্বর কানেক্ট করুন - সব মেসেজ ইনবক্সে জমা হবে
-                </CardDescription>
-                <p className="text-sm text-gray-500 mt-1">
-                  {whatsappConnectedCount}/5 Connected
                 </p>
-              </CardHeader>
-              <CardContent>
+                <p className="text-sm text-amber-200/60 mb-4">{whatsappConnectedCount}/5 Connected</p>
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
+                  <div className="flex items-center gap-2 text-sm text-amber-200/80 mb-3">
+                    <CheckCircle className="h-4 w-4 text-amber-400" />
                     <span>প্রতি স্লটে একটি ফোন - QR দিয়ে কানেক্ট করুন</span>
                   </div>
                   {[1, 2, 3, 4, 5].map((n) => {
@@ -373,9 +368,9 @@ export default function Integrations() {
                     return (
                       <div
                         key={slotId}
-                        className="flex items-center justify-between gap-3 py-2 px-3 rounded-lg border border-gray-200 bg-gray-50/50"
+                        className="flex items-center justify-between gap-3 py-2 px-3 rounded-lg border border-amber-500/20 bg-slate-800/40"
                       >
-                        <span className="text-sm font-medium text-slate-700">
+                        <span className="text-sm font-medium text-amber-100">
                           Slot {slotId}: {slotLabel}
                         </span>
                         {connected ? (
@@ -383,17 +378,17 @@ export default function Integrations() {
                             variant="outline"
                             size="sm"
                             onClick={() => handleWhatsAppDisconnect(slotId)}
-                            className="border-gray-300 text-gray-700"
+                            className="border-amber-500/50 text-amber-100 hover:bg-amber-500/20"
                           >
                             <Power className="mr-1 h-3 w-3" />
                             Disconnect
                           </Button>
                         ) : (
-                            <Button
+                          <Button
                             size="sm"
                             onClick={() => handleWhatsAppConnect(slotId, persisted && !connected)}
                             disabled={isConnecting}
-                            className="bg-green-600 hover:bg-green-700 text-white"
+                            className="bg-amber-600 hover:bg-amber-500 text-white border-amber-500/50"
                           >
                             {isThisSlotConnecting ? (
                               <>
@@ -412,8 +407,8 @@ export default function Integrations() {
                     );
                   })}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </GameCard>
           </div>
         </div>
       </PermissionGuard>
@@ -444,29 +439,29 @@ export default function Integrations() {
 
       {/* Connected Integrations */}
       {!isLoading && integrations.length > 0 && (
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4 text-gray-800">📋 Connected Integrations</h2>
+        <div>
+          <h2 className="text-xl font-semibold mb-4 text-amber-200/90">📋 Connected Integrations</h2>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {integrations.map((integration) => (
-              <Card key={integration.id} className="shadow-sm border-gray-200">
-                <CardHeader>
+            {integrations.map((integration, idx) => (
+              <GameCard key={integration.id} index={idx}>
+                <div className="p-6">
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
-                      <CardTitle className="text-lg flex items-center gap-2">
+                      <h3 className="text-lg font-semibold flex items-center gap-2 text-amber-100">
                         {integration.provider === 'facebook' ? (
-                          <Facebook className="h-5 w-5 text-blue-600" />
+                          <Facebook className="h-5 w-5 text-amber-400" />
                         ) : integration.provider === 'whatsapp' ? (
-                          <Smartphone className="h-5 w-5 text-green-600" />
+                          <Smartphone className="h-5 w-5 text-amber-400" />
                         ) : (
-                          <Plug className="h-5 w-5" />
+                          <Plug className="h-5 w-5 text-amber-400" />
                         )}
                         {integration.provider === 'facebook'
                           ? (integration.displayName || 'Facebook Page')
                           : integration.provider === 'whatsapp'
                             ? 'WhatsApp (Web)'
                             : 'Other'}
-                      </CardTitle>
-                      <CardDescription className="mt-1">
+                      </h3>
+                      <p className="mt-1 text-sm text-amber-200/70">
                         {integration.provider === 'whatsapp'
                           ? (integration.pageId?.match(/whatsapp-slot-(.+)/)
                               ? `Slot ${integration.pageId.match(/whatsapp-slot-(.+)/)?.[1]}`
@@ -474,28 +469,28 @@ export default function Integrations() {
                           : integration.provider === 'facebook'
                             ? (integration.displayName ? `${integration.displayName} (${integration.pageId})` : `Page ID: ${integration.pageId}`)
                             : `Page ID: ${integration.pageId}`}
-                      </CardDescription>
+                      </p>
                       <div className="mt-2 flex items-center gap-2 flex-wrap">
                         <span
-                          className={`px-3 py-1.5 text-xs rounded-full font-semibold flex items-center gap-1.5 ${
+                          className={`px-3 py-1.5 text-xs rounded-full font-semibold flex items-center gap-1.5 border ${
                             integration.isActive
-                              ? 'bg-green-500 text-white shadow-sm'
-                              : 'bg-gray-300 text-gray-700'
+                              ? 'bg-green-500/25 text-green-300 border-green-500/30'
+                              : 'bg-slate-700/60 text-amber-200/80 border-amber-500/20'
                           }`}
                         >
                           {integration.isActive ? (
                             <>
-                              <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span>
+                              <span className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse"></span>
                               ACTIVE
                             </>
                           ) : (
                             <>
-                              <span className="w-1.5 h-1.5 bg-gray-600 rounded-full"></span>
+                              <span className="w-1.5 h-1.5 bg-amber-200/50 rounded-full"></span>
                               INACTIVE
                             </>
                           )}
                         </span>
-                        <span className="px-2 py-1 text-xs rounded-full bg-indigo-100 text-indigo-700">
+                        <span className="px-2 py-1 text-xs rounded-full bg-amber-500/25 text-amber-200 border border-amber-500/30">
                           {integration.provider === 'facebook'
                             ? 'Direct'
                             : integration.provider === 'whatsapp'
@@ -515,7 +510,7 @@ export default function Integrations() {
                               variant="outline"
                               size="sm"
                               onClick={() => handleWhatsAppDisconnect(slotId)}
-                              className="text-amber-600 hover:text-amber-700"
+                              className="border-amber-500/50 text-amber-100 hover:bg-amber-500/20"
                               title="Disconnect WhatsApp"
                             >
                               <Power className="h-4 w-4" />
@@ -529,6 +524,7 @@ export default function Integrations() {
                               size="sm"
                               onClick={() => setFacebookDiagnosticsPageId(integration.pageId)}
                               title="Diagnostics"
+                              className="border-amber-500/50 text-amber-100 hover:bg-amber-500/20"
                             >
                               <Stethoscope className="h-4 w-4" />
                             </Button>
@@ -538,6 +534,7 @@ export default function Integrations() {
                               onClick={() => handleFacebookTestMessage(integration.pageId)}
                               disabled={facebookTestLoadingPageId === integration.pageId}
                               title="Send test message to Inbox"
+                              className="border-amber-500/50 text-amber-100 hover:bg-amber-500/20"
                             >
                               {facebookTestLoadingPageId === integration.pageId ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -554,11 +551,7 @@ export default function Integrations() {
                               size="sm"
                               onClick={() => handleToggleActive(integration)}
                               disabled={toggleActiveMutation.isPending}
-                              className={
-                                integration.isActive
-                                  ? 'text-green-600 hover:text-green-700 hover:bg-green-50'
-                                  : 'text-gray-600 hover:text-gray-700'
-                              }
+                              className={`${integration.isActive ? 'border-green-500/50 text-green-300 hover:bg-green-500/20' : 'border-amber-500/50 text-amber-100 hover:bg-amber-500/20'}`}
                               title={integration.isActive ? 'Deactivate' : 'Activate'}
                             >
                               {toggleActiveMutation.isPending ? (
@@ -573,6 +566,7 @@ export default function Integrations() {
                                 size="sm"
                                 onClick={() => navigate('/settings')}
                                 title="Edit"
+                                className="border-amber-500/50 text-amber-100 hover:bg-amber-500/20"
                               >
                                 <Edit className="h-4 w-4" />
                               </Button>
@@ -583,7 +577,7 @@ export default function Integrations() {
                           variant="outline"
                           size="sm"
                           onClick={() => handleDelete(integration.id)}
-                          className="text-red-600 hover:text-red-700"
+                          className="border-red-500/50 text-red-400 hover:bg-red-500/20"
                           title="Delete"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -591,22 +585,19 @@ export default function Integrations() {
                       </div>
                     </PermissionGuard>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3 text-sm">
-                    {/* Active/Inactive Toggle Section - Prominent Green Switch */}
+                  <div className="mt-4 space-y-3 text-sm">
                     <PermissionGuard permission="can_manage_integrations">
-                      <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border-2 border-green-200 shadow-sm">
+                      <div className="p-4 rounded-lg border-2 border-amber-500/30 bg-slate-800/60">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-full ${integration.isActive ? 'bg-green-100' : 'bg-gray-100'}`}>
-                              <Power className={`h-5 w-5 ${integration.isActive ? 'text-green-600' : 'text-gray-400'}`} />
+                            <div className={`p-2 rounded-full ${integration.isActive ? 'bg-green-500/25 border border-green-500/30' : 'bg-slate-700/60 border border-amber-500/20'}`}>
+                              <Power className={`h-5 w-5 ${integration.isActive ? 'text-green-300' : 'text-amber-200/60'}`} />
                             </div>
                             <div>
-                              <p className="text-sm font-semibold text-gray-900">
+                              <p className="text-sm font-semibold text-amber-100">
                                 {integration.isActive ? 'Integration is Active' : 'Integration is Inactive'}
                               </p>
-                              <p className="text-xs text-gray-600 mt-0.5">
+                              <p className="text-xs text-amber-200/70 mt-0.5">
                                 {integration.isActive 
                                   ? 'Messages are being received and processed' 
                                   : 'Integration is disabled - no messages will be received'}
@@ -617,10 +608,10 @@ export default function Integrations() {
                             <button
                               onClick={() => handleToggleActive(integration)}
                               disabled={toggleActiveMutation.isPending}
-                              className={`relative inline-flex h-8 w-14 items-center rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 shadow-md ${
+                              className={`relative inline-flex h-8 w-14 items-center rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-amber-500/50 disabled:opacity-50 ${
                                 integration.isActive 
-                                  ? 'bg-green-500 hover:bg-green-600' 
-                                  : 'bg-gray-300 hover:bg-gray-400'
+                                  ? 'bg-green-500/80 hover:bg-green-500' 
+                                  : 'bg-slate-600'
                               }`}
                               title={integration.isActive ? 'Click to deactivate' : 'Click to activate'}
                             >
@@ -630,21 +621,18 @@ export default function Integrations() {
                                 }`}
                               />
                             </button>
-                            <span className={`text-xs font-medium ${
-                              integration.isActive ? 'text-green-700' : 'text-gray-600'
-                            }`}>
+                            <span className={`text-xs font-medium ${integration.isActive ? 'text-green-300' : 'text-amber-200/70'}`}>
                               {integration.isActive ? 'ON' : 'OFF'}
                             </span>
                           </div>
                         </div>
-                        {/* Status Badge */}
-                        <div className="mt-3 pt-3 border-t border-green-200">
+                        <div className="mt-3 pt-3 border-t border-amber-500/20">
                           <div className="flex items-center justify-between">
-                            <span className="text-xs text-gray-600">Current Status:</span>
-                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                            <span className="text-xs text-amber-200/70">Current Status:</span>
+                            <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${
                               integration.isActive
-                                ? 'bg-green-500 text-white'
-                                : 'bg-gray-400 text-white'
+                                ? 'bg-green-500/25 text-green-300 border-green-500/30'
+                                : 'bg-slate-700/60 text-amber-200/80 border-amber-500/20'
                             }`}>
                               {integration.isActive ? '✓ ACTIVE' : '○ INACTIVE'}
                             </span>
@@ -653,8 +641,8 @@ export default function Integrations() {
                       </div>
                     </PermissionGuard>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </GameCard>
             ))}
           </div>
         </div>
@@ -662,47 +650,51 @@ export default function Integrations() {
 
       {/* Empty State */}
       {!isLoading && integrations.length === 0 && (
-        <Card className="mb-8">
-          <CardContent className="py-12 text-center">
-            <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500">No integrations connected yet.</p>
-            <p className="text-sm text-gray-400 mt-2">
+        <GamePanel>
+          <div className="py-12 text-center">
+            <AlertCircle className="h-12 w-12 text-amber-500/60 mx-auto mb-4" />
+            <p className="text-amber-200/80">No integrations connected yet.</p>
+            <p className="text-sm text-amber-200/60 mt-2">
               Choose an option above to connect your inbox.
             </p>
-          </CardContent>
-        </Card>
+          </div>
+        </GamePanel>
       )}
 
       {/* Loading State */}
       {isLoading && (
         <div className="text-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-indigo-600 mx-auto" />
-          <p className="text-gray-600 mt-2">Loading integrations...</p>
+          <Loader2 className="h-8 w-8 animate-spin text-amber-400 mx-auto" />
+          <p className="text-amber-200/80 mt-2">Loading integrations...</p>
         </div>
       )}
 
       {/* Facebook diagnostics modal */}
       {facebookDiagnosticsPageId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setFacebookDiagnosticsPageId(null)}>
-          <Card className="w-full max-w-md shadow-lg" onClick={(e) => e.stopPropagation()}>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-lg">Page diagnostics</CardTitle>
-              <Button variant="ghost" size="icon" onClick={() => setFacebookDiagnosticsPageId(null)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setFacebookDiagnosticsPageId(null)}>
+          <div
+            className="w-full max-w-md rounded-xl overflow-hidden"
+            style={{ background: 'linear-gradient(180deg, #1e293b 0%, #0f172a 100%)', boxShadow: '0 0 0 1px rgba(217,119,6,0.3)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6 border-b border-amber-500/20 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-amber-100">Page diagnostics</h2>
+              <Button variant="ghost" size="icon" onClick={() => setFacebookDiagnosticsPageId(null)} className="text-amber-100 hover:bg-amber-500/20">
                 <X className="h-4 w-4" />
               </Button>
-            </CardHeader>
-            <CardContent className="space-y-2">
+            </div>
+            <div className="p-6 space-y-2">
               {fbDiagnosticsRes?.data?.data?.steps?.map((step, i) => (
-                <div key={i} className={`flex items-center gap-2 text-sm ${step.ok ? 'text-green-700' : 'text-red-700'}`}>
+                <div key={i} className={`flex items-center gap-2 text-sm ${step.ok ? 'text-green-300' : 'text-red-400'}`}>
                   {step.ok ? <CheckCircle className="h-4 w-4 flex-shrink-0" /> : <AlertCircle className="h-4 w-4 flex-shrink-0" />}
                   <span><strong>{step.step}:</strong> {step.message ?? (step.ok ? 'OK' : 'Failed')}</span>
                 </div>
               ))}
               {!fbDiagnosticsRes?.data?.data && fbDiagnosticsRes?.data !== undefined && (
-                <p className="text-sm text-gray-500">Loading...</p>
+                <p className="text-sm text-amber-200/70">Loading...</p>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       )}
 

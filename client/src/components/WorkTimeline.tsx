@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { workSessionApi, type WorkSession } from '@/lib/workSession';
+import { DashboardWidgetCard } from '@/components/DashboardWidgetCard';
 import { Clock, Calendar } from 'lucide-react';
 
 function formatDuration(seconds: number): string {
@@ -41,17 +41,13 @@ export function WorkTimeline() {
 
   if (isLoading || !history) {
     return (
-      <Card className="shadow-sm border-gray-200">
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Clock className="w-4 h-4" />
-            Work Timeline
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-slate-500">Loading...</p>
-        </CardContent>
-      </Card>
+      <DashboardWidgetCard index={0}>
+        <div className="flex items-center gap-2 mb-2">
+          <Clock className="w-4 h-4 text-amber-500" />
+          <span className="font-semibold text-white">Work Timeline</span>
+        </div>
+        <p className="text-sm text-slate-400 animate-pulse">Loading...</p>
+      </DashboardWidgetCard>
     );
   }
 
@@ -61,52 +57,48 @@ export function WorkTimeline() {
   const currentSession = current?.session;
 
   return (
-    <Card className="shadow-sm border-gray-200">
-      <CardHeader>
-        <CardTitle className="text-base flex items-center gap-2">
-          <Clock className="w-4 h-4" />
-          Work Timeline
-        </CardTitle>
-        <p className="text-xs text-slate-500 mt-0.5">
-          When you were active and how long you worked
-        </p>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <DashboardWidgetCard index={0}>
+      <div className="flex items-center gap-2 mb-2">
+        <Clock className="w-4 h-4 text-amber-500" />
+        <span className="font-semibold text-white">Work Timeline</span>
+      </div>
+      <p className="text-xs text-slate-400 mb-4">When you were active and how long you worked</p>
+      <div className="space-y-4">
         <div className="flex flex-wrap gap-4 text-sm">
           <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-slate-400" />
-            <span className="text-slate-600">Today:</span>
-            <strong>{formatDuration(todayTotal)}</strong>
+            <Calendar className="w-4 h-4 text-amber-500/80" />
+            <span className="text-slate-400">Today:</span>
+            <strong className="text-amber-400">{formatDuration(todayTotal)}</strong>
           </div>
           {currentSession && current?.isOnline && (
-            <div className="flex items-center gap-2 text-green-600">
-              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+            <div className="flex items-center gap-2 text-emerald-400">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               <span>Live now</span>
             </div>
           )}
         </div>
 
         <div>
-          <h4 className="text-sm font-medium text-slate-700 mb-2">Recent sessions</h4>
+          <h4 className="text-sm font-medium text-amber-200/90 mb-2">Recent sessions</h4>
           <ul className="space-y-2 max-h-48 overflow-y-auto">
             {history.sessions.length === 0 ? (
-              <li className="text-sm text-slate-500">No sessions in the last 7 days</li>
+              <li className="text-sm text-slate-400">No sessions in the last 7 days</li>
             ) : (
               history.sessions.map((s: WorkSession) => (
                 <li
                   key={s.id}
-                  className="text-sm border-b border-gray-100 pb-2 last:border-0 last:pb-0"
+                  className="text-sm border-b border-amber-500/10 pb-2 last:border-0 last:pb-0"
                 >
                   <div className="flex justify-between gap-2">
-                    <span className="text-slate-600">{formatDateTime(s.startTime)}</span>
+                    <span className="text-slate-400">{formatDateTime(s.startTime)}</span>
                     {s.duration != null ? (
-                      <span className="font-medium">{formatDuration(s.duration)}</span>
+                      <span className="font-medium text-amber-400">{formatDuration(s.duration)}</span>
                     ) : (
-                      <span className="text-green-600 text-xs">In progress</span>
+                      <span className="text-emerald-400 text-xs">In progress</span>
                     )}
                   </div>
                   {s.endTime && (
-                    <div className="text-xs text-slate-400 mt-0.5">
+                    <div className="text-xs text-slate-500 mt-0.5">
                       Ended {formatDateTime(s.endTime)}
                     </div>
                   )}
@@ -118,7 +110,7 @@ export function WorkTimeline() {
 
         {history.dailyStats.length > 0 && (
           <div>
-            <h4 className="text-sm font-medium text-slate-700 mb-2">By day</h4>
+            <h4 className="text-sm font-medium text-amber-200/90 mb-2">By day</h4>
             <ul className="space-y-1 text-sm">
               {history.dailyStats
                 .slice()
@@ -126,14 +118,14 @@ export function WorkTimeline() {
                 .slice(0, 7)
                 .map((d) => (
                   <li key={d.date} className="flex justify-between">
-                    <span className="text-slate-600">{formatDate(d.date)}</span>
-                    <span className="font-medium">{formatDuration(d.duration)}</span>
+                    <span className="text-slate-400">{formatDate(d.date)}</span>
+                    <span className="font-medium text-amber-400">{formatDuration(d.duration)}</span>
                   </li>
                 ))}
             </ul>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </DashboardWidgetCard>
   );
 }

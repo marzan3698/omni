@@ -39,6 +39,7 @@ export const employeeService = {
           select: {
             id: true,
             email: true,
+            name: true,
             profileImage: true,
             role: {
               select: {

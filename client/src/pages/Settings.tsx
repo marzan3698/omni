@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { GamePanel } from '@/components/GamePanel';
 import { Button } from '@/components/ui/button';
 import { integrationApi } from '@/lib/integration';
 import { Plug } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 
 export function Settings() {
@@ -28,35 +27,28 @@ export function Settings() {
 
   const activeIntegration = integrations.find((i) => i.isActive);
 
+  const tabActive = 'border-amber-500 text-amber-100';
+  const tabInactive = 'border-transparent text-amber-200/70 hover:text-amber-100 hover:border-amber-500/50';
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900">Settings</h1>
-        <p className="text-slate-600 mt-1">Manage your application settings and integrations</p>
+      <div className="p-4 rounded-xl border border-amber-500/20 bg-slate-800/40">
+        <h1 className="text-3xl font-bold text-amber-100">Settings</h1>
+        <p className="text-amber-200/80 mt-1">Manage your application settings and integrations</p>
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200">
+      <div className="border-b border-amber-500/20">
         <nav className="flex space-x-8">
           <button
             onClick={() => setActiveTab('integrations')}
-            className={cn(
-              'py-4 px-1 border-b-2 font-medium text-sm transition-colors',
-              activeTab === 'integrations'
-                ? 'border-indigo-600 text-indigo-600'
-                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-            )}
+            className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'integrations' ? tabActive : tabInactive}`}
           >
             Integrations
           </button>
           <button
             onClick={() => setActiveTab('general')}
-            className={cn(
-              'py-4 px-1 border-b-2 font-medium text-sm transition-colors',
-              activeTab === 'general'
-                ? 'border-indigo-600 text-indigo-600'
-                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-            )}
+            className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'general' ? tabActive : tabInactive}`}
           >
             General
           </button>
@@ -66,60 +58,54 @@ export function Settings() {
       {/* Integrations Tab */}
       {activeTab === 'integrations' && (
         <div className="space-y-6">
-          {/* Active integrations summary */}
           {integrations.filter((i) => i.isActive).length > 0 && (
-            <div className="p-4 bg-indigo-50 rounded-md border border-indigo-200">
+            <div className="p-4 bg-amber-500/20 rounded-md border border-amber-500/30">
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <p className="text-sm font-medium text-indigo-900">
+                <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></div>
+                <p className="text-sm font-medium text-amber-100">
                   Active: {integrations.filter((i) => i.isActive).map((i) => (i.displayName || i.provider) + (i.provider === 'facebook' ? ' (FB)' : '')).join(', ') || 'None'}
                 </p>
               </div>
-              <p className="text-xs text-indigo-700 mt-1">
+              <p className="text-xs text-amber-200/80 mt-1">
                 You can have multiple Facebook Pages and WhatsApp slots active at once.
               </p>
             </div>
           )}
 
-          {/* Integrations are managed from the Integrations page */}
-          <Card className="shadow-sm border-gray-200">
-            <CardHeader>
+          <GamePanel>
+            <div className="p-6">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center">
+                <div className="w-10 h-10 bg-amber-600 rounded-lg flex items-center justify-center">
                   <Plug className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <CardTitle>Inbox Integrations</CardTitle>
-                  <CardDescription>
+                  <h2 className="text-lg font-semibold text-amber-100">Inbox Integrations</h2>
+                  <p className="text-sm text-amber-200/70 mt-0.5">
                     Connect Facebook Messenger and WhatsApp from the Integrations page
-                  </CardDescription>
+                  </p>
                 </div>
               </div>
-            </CardHeader>
-            <CardContent>
               <Button
                 variant="outline"
                 onClick={() => navigate('/integrations')}
-                className="border-indigo-300 text-indigo-700 hover:bg-indigo-50"
+                className="mt-4 border-amber-500/50 text-amber-100 hover:bg-amber-500/20 bg-transparent"
               >
                 Go to Integrations
               </Button>
-            </CardContent>
-          </Card>
+            </div>
+          </GamePanel>
         </div>
       )}
 
       {/* General Tab */}
       {activeTab === 'general' && (
-        <Card className="shadow-sm border-gray-200">
-          <CardHeader>
-            <CardTitle>General Settings</CardTitle>
-            <CardDescription>Manage your general application settings</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-slate-500">General settings coming soon...</p>
-          </CardContent>
-        </Card>
+        <GamePanel>
+          <div className="p-6">
+            <h2 className="text-lg font-semibold text-amber-100">General Settings</h2>
+            <p className="text-sm text-amber-200/70 mt-0.5">Manage your general application settings</p>
+            <p className="text-amber-200/70 mt-4">General settings coming soon...</p>
+          </div>
+        </GamePanel>
       )}
     </div>
   );

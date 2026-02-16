@@ -752,54 +752,54 @@ export function Inbox() {
   return (
     <div className="h-[calc(100vh-8rem)] flex flex-col">
       <div className="flex-1 flex gap-4 overflow-hidden min-w-0">
-        {/* Left Column: Conversation List - always visible (do not shrink or hide when a chat is selected) */}
-        <Card className="w-80 flex-shrink-0 flex flex-col shadow-sm border-gray-200">
+        {/* Left Column: Conversation List - FIFA game style */}
+        <div className="w-80 flex-shrink-0 flex flex-col game-panel rounded-xl overflow-hidden">
           {user?.roleName === 'Customer Care' && stats && (
-            <div className="p-3 bg-indigo-50 border-b border-indigo-100">
-              <div className="flex items-center justify-between text-sm flex-wrap gap-2">
+            <div className="p-3 border-b border-amber-500/20 bg-slate-800/60">
+              <div className="flex items-center justify-between text-sm flex-wrap gap-2 text-amber-100">
                 <div className="flex gap-4">
-                  <span>Total: <strong>{stats.totalConversations}</strong></span>
-                  <span className="text-green-600">WhatsApp: <strong>{stats.whatsappCount}</strong></span>
-                  <span className="text-blue-600">Messenger: <strong>{stats.messengerCount}</strong></span>
+                  <span>Total: <strong className="text-white">{stats.totalConversations}</strong></span>
+                  <span className="text-emerald-400">WhatsApp: <strong>{stats.whatsappCount}</strong></span>
+                  <span className="text-blue-400">Messenger: <strong>{stats.messengerCount}</strong></span>
                 </div>
                 <div className="flex gap-4">
-                  <span>Assigned to you: <strong>{stats.assignedToMe}</strong></span>
-                  <span className="text-slate-500">Reps: <strong>{stats.totalCustomerCareReps}</strong></span>
+                  <span>Assigned to you: <strong className="text-amber-300">{stats.assignedToMe}</strong></span>
+                  <span className="text-slate-400">Reps: <strong>{stats.totalCustomerCareReps}</strong></span>
                 </div>
               </div>
             </div>
           )}
-          <div className="p-4 border-b border-gray-200">
+          <div className="p-4 border-b border-amber-500/20">
             <div className="flex items-center justify-between mb-1">
-              <h2 className="font-semibold text-slate-900">Conversations</h2>
+              <h2 className="font-semibold text-amber-100">Conversations</h2>
               <div className="relative" ref={filterPanelRef}>
                 <button
                   onClick={() => setShowFilterPanel(!showFilterPanel)}
                   className={cn(
-                    "p-1.5 rounded-md transition-colors",
+                    "p-1.5 rounded-lg transition-colors",
                     showFilterPanel || statusFilter !== 'All' || labelFilter
-                      ? "bg-indigo-100 text-indigo-600"
-                      : "text-slate-500 hover:bg-gray-100 hover:text-slate-700"
+                      ? "bg-amber-500/30 text-amber-200"
+                      : "text-amber-200/70 hover:bg-amber-500/20 hover:text-amber-100"
                   )}
                   title="Filter conversations"
                 >
                   <Filter className="h-4 w-4" />
                 </button>
                 {(statusFilter !== 'All' || labelFilter) && (
-                  <span className="absolute -top-1 -right-1 w-2 h-2 bg-indigo-600 rounded-full"></span>
+                  <span className="absolute -top-1 -right-1 w-2 h-2 bg-amber-500 rounded-full animate-game-badge-pulse"></span>
                 )}
                 
                 {/* Filter Panel */}
                 {showFilterPanel && (
-                  <div className="absolute right-0 top-full mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-4">
+                  <div className="absolute right-0 top-full mt-2 w-64 rounded-lg shadow-xl z-50 p-4 game-panel border-amber-500/30">
                     <div className="space-y-4">
                       {/* Status Filter */}
                       <div>
-                        <Label className="text-sm font-medium text-gray-700 mb-2 block">Status</Label>
+                        <Label className="text-sm font-medium text-amber-200/90 mb-2 block">Status</Label>
                         <select
                           value={statusFilter}
                           onChange={(e) => setStatusFilter(e.target.value as 'All' | 'Open' | 'Closed')}
-                          className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                          className="w-full rounded-lg border border-amber-500/20 bg-slate-800/60 px-3 py-2 text-sm text-amber-100 focus:border-amber-500/50 focus:outline-none focus:ring-2 focus:ring-amber-500/30"
                         >
                           <option value="All">All</option>
                           <option value="Open">Open</option>
@@ -809,11 +809,11 @@ export function Inbox() {
 
                       {/* Label Filter */}
                       <div>
-                        <Label className="text-sm font-medium text-gray-700 mb-2 block">Label</Label>
+                        <Label className="text-sm font-medium text-amber-200/90 mb-2 block">Label</Label>
                         <select
                           value={labelFilter || ''}
                           onChange={(e) => setLabelFilter(e.target.value || null)}
-                          className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                          className="w-full rounded-lg border border-amber-500/20 bg-slate-800/60 px-3 py-2 text-sm text-amber-100 focus:border-amber-500/50 focus:outline-none focus:ring-2 focus:ring-amber-500/30"
                         >
                           <option value="">All Labels</option>
                           {availableLabels.length > 0 ? (
@@ -829,7 +829,7 @@ export function Inbox() {
                       </div>
 
                       {/* Action Buttons */}
-                      <div className="flex gap-2 pt-2 border-t border-gray-200">
+                      <div className="flex gap-2 pt-2 border-t border-amber-500/20">
                         <Button
                           onClick={() => {
                             setStatusFilter('All');
@@ -837,14 +837,14 @@ export function Inbox() {
                           }}
                           variant="outline"
                           size="sm"
-                          className="flex-1"
+                          className="flex-1 border-amber-500/50 text-amber-100 hover:bg-amber-500/20 bg-transparent"
                         >
                           Clear
                         </Button>
                         <Button
                           onClick={() => setShowFilterPanel(false)}
                           size="sm"
-                          className="flex-1 bg-indigo-600 hover:bg-indigo-700"
+                          className="flex-1 bg-amber-600 hover:bg-amber-500 text-white border-amber-500/50"
                         >
                           Apply
                         </Button>
@@ -854,67 +854,50 @@ export function Inbox() {
                 )}
               </div>
             </div>
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-amber-200/80 mt-1">
               {filteredConversations.length} of {conversations.length} {conversations.length === 1 ? 'conversation' : 'conversations'}
               {(statusFilter !== 'All' || labelFilter) && (
-                <span className="ml-1 text-indigo-600 font-medium">
-                  (filtered)
-                </span>
+                <span className="ml-1 text-amber-400 font-medium">(filtered)</span>
               )}
             </p>
-            {/* Tabs: Assigned first, then Complete, Inbox last */}
+            {/* Tabs: Assigned, Complete, Inbox - game style */}
             <div className="flex gap-2 mt-3">
-              <button
-                onClick={() => setActiveTab('taken')}
-                className={cn(
-                  'flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
-                  activeTab === 'taken'
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-gray-100 text-slate-700 hover:bg-gray-200'
-                )}
-              >
-                Assigned
-              </button>
-              <button
-                onClick={() => setActiveTab('complete')}
-                className={cn(
-                  'flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
-                  activeTab === 'complete'
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-gray-100 text-slate-700 hover:bg-gray-200'
-                )}
-              >
-                Complete
-              </button>
-              <button
-                onClick={() => setActiveTab('inbox')}
-                className={cn(
-                  'flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
-                  activeTab === 'inbox'
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-gray-100 text-slate-700 hover:bg-gray-200'
-                )}
-              >
-                Inbox
-              </button>
+              {[
+                { key: 'taken' as const, label: 'Assigned' },
+                { key: 'complete' as const, label: 'Complete' },
+                { key: 'inbox' as const, label: 'Inbox' },
+              ].map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  className={cn(
+                    'flex-1 px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-200',
+                    activeTab === tab.key
+                      ? 'bg-gradient-to-r from-amber-600 to-amber-500 text-white shadow-lg shadow-amber-500/20 border border-amber-400/50'
+                      : 'bg-slate-700/50 text-amber-100 hover:bg-amber-500/20 hover:text-white border border-amber-500/30'
+                  )}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
           </div>
 
           <div className="flex-1 overflow-y-auto">
             {conversationsLoading ? (
-              <div className="p-4 text-center text-slate-500">Loading conversations...</div>
+              <div className="p-4 text-center text-amber-200/80">Loading conversations...</div>
             ) : conversations.length === 0 ? (
-              <div className="p-4 text-center text-slate-500">
-                <MessageSquare className="w-12 h-12 mx-auto mb-2 text-slate-300" />
+              <div className="p-4 text-center text-amber-200/70">
+                <MessageSquare className="w-12 h-12 mx-auto mb-2 text-amber-500/50" />
                 <p>No conversations yet</p>
               </div>
             ) : filteredConversations.length === 0 ? (
-              <div className="p-4 text-center text-slate-500">
+              <div className="p-4 text-center text-amber-200/70">
                 {activeTab === 'inbox' ? (
                   <>
-                    <MessageSquare className="w-12 h-12 mx-auto mb-2 text-slate-300" />
+                    <MessageSquare className="w-12 h-12 mx-auto mb-2 text-amber-500/50" />
                     <p className="text-sm">No unassigned conversations.</p>
-                    <p className="text-xs mt-1 text-slate-400">New chats are auto-assigned to live agents.</p>
+                    <p className="text-xs mt-1 text-amber-200/60">New chats are auto-assigned to live agents.</p>
                     {(statusFilter !== 'All' || labelFilter) && (
                       <Button
                         onClick={() => {
@@ -923,15 +906,15 @@ export function Inbox() {
                         }}
                         variant="outline"
                         size="sm"
-                        className="mt-3"
+                        className="mt-3 border-amber-500/50 text-amber-100 hover:bg-amber-500/20 bg-transparent"
                       >
                         Clear Filters
                       </Button>
                     )}
                   </>
                 ) : (
-                  <>
-                    <Filter className="w-12 h-12 mx-auto mb-2 text-slate-300" />
+                    <>
+                    <Filter className="w-12 h-12 mx-auto mb-2 text-amber-500/50" />
                     <p>No conversations match your filters</p>
                     <Button
                       onClick={() => {
@@ -940,7 +923,7 @@ export function Inbox() {
                       }}
                       variant="outline"
                       size="sm"
-                      className="mt-2"
+                      className="mt-2 border-amber-500/50 text-amber-100 hover:bg-amber-500/20 bg-transparent"
                     >
                       Clear Filters
                     </Button>
@@ -948,8 +931,8 @@ export function Inbox() {
                 )}
               </div>
             ) : (
-              <div className="divide-y divide-gray-200">
-                {filteredConversations.map((conversation) => {
+              <div className="space-y-2 p-2">
+                {filteredConversations.map((conversation, idx) => {
                   const lastMessage = getLastMessage(conversation);
                   const isSelected = selectedConversationId === conversation.id;
                   const isAssigned = conversation.assignedTo !== null && conversation.assignedTo !== undefined;
@@ -960,16 +943,18 @@ export function Inbox() {
                     <div
                       key={conversation.id}
                       className={cn(
-                        'w-full hover:bg-gray-50 transition-colors',
-                        isSelected && 'bg-indigo-50 border-l-4 border-indigo-600'
+                        'game-item-card rounded-lg overflow-hidden animate-game-item-reveal game-item-hover',
+                        isSelected && 'game-item-selected',
+                        'group'
                       )}
+                      style={{ animationDelay: `${idx * 40}ms`, animationFillMode: 'both' }}
                     >
                       <button
                         onClick={() => handleConversationSelect(conversation.id)}
                         className="w-full p-4 text-left"
                     >
                       <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 border-2 border-amber-500/50 bg-gradient-to-br from-amber-600 to-amber-800">
                           {conversation.externalUserName ? (
                             <span className="text-white text-sm font-medium">
                               {conversation.externalUserName.charAt(0).toUpperCase()}
@@ -983,9 +968,9 @@ export function Inbox() {
                               <div className="flex items-center gap-2 flex-1 min-w-0">
                                 {conversation.platform === 'facebook' && (
                                   <>
-                                    <FacebookIcon className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                                    <FacebookIcon className="w-4 h-4 text-blue-400 flex-shrink-0" />
                                     {(conversation.facebookPageName || conversation.facebookPageId) && (
-                                      <span className="text-[10px] font-medium text-blue-600 bg-blue-50 px-1 rounded" title={conversation.facebookPageName || conversation.facebookPageId || undefined}>
+                                      <span className="text-[10px] font-medium text-blue-300 bg-blue-500/20 px-1 rounded" title={conversation.facebookPageName || conversation.facebookPageId || undefined}>
                                         FB: {conversation.facebookPageName || conversation.facebookPageId || 'Page'}
                                       </span>
                                     )}
@@ -993,15 +978,15 @@ export function Inbox() {
                                 )}
                                 {conversation.platform === 'whatsapp' && (
                                   <>
-                                    <WhatsAppIcon className="w-4 h-4 text-green-500 flex-shrink-0" />
+                                    <WhatsAppIcon className="w-4 h-4 text-emerald-400 flex-shrink-0" />
                                     {conversation.whatsappSlotId && (
-                                      <span className="text-[10px] font-medium text-green-600 bg-green-50 px-1 rounded" title={`Slot ${conversation.whatsappSlotId}`}>
+                                      <span className="text-[10px] font-medium text-emerald-300 bg-emerald-500/20 px-1 rounded" title={`Slot ${conversation.whatsappSlotId}`}>
                                         S{conversation.whatsappSlotId}
                                       </span>
                                     )}
                                   </>
                                 )}
-                            <p className="text-sm font-medium text-slate-900 truncate">
+                            <p className="text-sm font-medium text-amber-50 truncate">
                               {conversation.externalUserName || `User ${conversation.externalUserId.slice(0, 8)}`}
                             </p>
                               </div>
@@ -1014,7 +999,7 @@ export function Inbox() {
                                   return releaseCount > 0 ? (
                                     <span
                                       onClick={(e) => handleShowReleaseHistory(conversation.id, e)}
-                                      className="bg-orange-100 text-orange-700 text-xs font-medium rounded-full px-2 py-0.5 border border-orange-300 hover:bg-orange-200 transition-colors cursor-pointer"
+                                      className="bg-amber-500/30 text-amber-200 text-xs font-medium rounded-full px-2 py-0.5 border border-amber-500/40 hover:bg-amber-500/40 transition-colors cursor-pointer"
                                       title="Click to view release history"
                                       role="button"
                                       tabIndex={0}
@@ -1027,7 +1012,7 @@ export function Inbox() {
                               {(() => {
                                 const unreadCount = getUnreadCount(conversation);
                                 return unreadCount > 0 ? (
-                                  <span className="bg-indigo-600 text-white text-xs font-medium rounded-full px-2 py-0.5 min-w-[20px] text-center">
+                                  <span className="bg-amber-500 text-amber-950 text-xs font-bold rounded-full px-2 py-0.5 min-w-[20px] text-center animate-game-badge-pulse">
                                     {unreadCount > 99 ? '99+' : unreadCount}
                                   </span>
                                 ) : null;
@@ -1035,7 +1020,7 @@ export function Inbox() {
                             </div>
                           </div>
                           {lastMessage && (
-                            <p className="text-xs text-slate-500 truncate mb-1">
+                            <p className="text-xs text-slate-300 truncate mb-1">
                               {lastMessage.content}
                             </p>
                           )}
@@ -1044,7 +1029,7 @@ export function Inbox() {
                               {conversation.labels.slice(0, 2).map((label) => (
                                 <span
                                   key={label.id}
-                                  className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-indigo-100 text-indigo-700 border border-indigo-200"
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-amber-500/20 text-amber-200 border border-amber-500/30"
                                   title={label.source ? `${label.name} (${label.source})` : label.name}
                                 >
                                   <Tag className="w-3 h-3" />
@@ -1052,14 +1037,14 @@ export function Inbox() {
                                 </span>
                               ))}
                               {conversation.labels.length > 2 && (
-                                <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 text-gray-600 border border-gray-200">
+                                <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-slate-600/50 text-slate-300 border border-slate-500/50">
                                   +{conversation.labels.length - 2} more
                                 </span>
                               )}
                             </div>
                           )}
                           {conversation.lastMessageAt && (
-                            <p className="text-xs text-slate-400">
+                            <p className="text-xs text-amber-500/80">
                               {formatTime(conversation.lastMessageAt)}
                             </p>
                           )}
@@ -1077,7 +1062,7 @@ export function Inbox() {
                             disabled={isAssigning || isUnassigning}
                             size="sm"
                             variant="outline"
-                            className="w-full border-red-300 text-red-600 hover:bg-red-50"
+                            className="w-full border-red-500/50 text-red-400 hover:bg-red-500/20 hover:text-red-300 bg-transparent"
                           >
                             {isUnassigning ? 'Releasing...' : 'Release'}
                           </Button>
@@ -1089,32 +1074,32 @@ export function Inbox() {
               </div>
             )}
           </div>
-        </Card>
+        </div>
 
-        {/* Right Column: Chat Window */}
-        <Card className="flex-1 min-w-0 flex flex-col shadow-sm border-gray-200">
+        {/* Right Column: Chat Window - game style */}
+        <div className="flex-1 min-w-0 flex flex-col game-panel rounded-xl overflow-hidden">
           {!selectedConversationId ? (
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center">
-                <MessageSquare className="w-16 h-16 mx-auto mb-4 text-slate-300" />
-                <p className="text-slate-500">Select a conversation to start chatting</p>
+                <MessageSquare className="w-16 h-16 mx-auto mb-4 text-amber-500/50" />
+                <p className="text-amber-200/80">Select a conversation to start chatting</p>
               </div>
             </div>
           ) : messagesLoading ? (
             <div className="flex-1 flex items-center justify-center">
-              <div className="text-slate-500">Loading messages...</div>
+              <div className="text-amber-200/80">Loading messages...</div>
             </div>
           ) : !selectedConversation ? (
             <div className="flex-1 flex items-center justify-center">
-              <div className="text-slate-500">Failed to load conversation</div>
+              <div className="text-amber-200/80">Failed to load conversation</div>
             </div>
           ) : (
             <>
               {/* Chat Header */}
-              <div className="p-4 border-b border-gray-200">
+              <div className="p-4 border-b border-amber-500/20 bg-slate-800/40">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-center gap-3 flex-1">
-                    <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 border-2 border-amber-500/50 bg-gradient-to-br from-amber-600 to-amber-800">
                       {selectedConversation.externalUserName ? (
                         <span className="text-white text-sm font-medium">
                           {selectedConversation.externalUserName.charAt(0).toUpperCase()}
@@ -1125,21 +1110,21 @@ export function Inbox() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold text-slate-900 truncate">
+                        <h3 className="font-semibold text-amber-50 truncate">
                           {selectedConversation.externalUserName || `User ${selectedConversation.externalUserId.slice(0, 8)}`}
                         </h3>
                         <span
                           className={cn(
                             'px-2 py-0.5 text-xs font-medium rounded-full flex-shrink-0',
                             selectedConversation.status === 'Open'
-                              ? 'bg-green-100 text-green-700'
-                              : 'bg-gray-100 text-gray-700'
+                              ? 'bg-emerald-500/30 text-emerald-300'
+                              : 'bg-slate-600/50 text-slate-300'
                           )}
                         >
                           {selectedConversation.status}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-500 mb-2 flex items-center gap-1.5">
+                      <p className="text-xs text-amber-200/80 mb-2 flex items-center gap-1.5">
                         {selectedConversation.platform === 'facebook' && <FacebookIcon className="w-3.5 h-3.5 text-blue-600" />}
                         {selectedConversation.platform === 'whatsapp' && <WhatsAppIcon className="w-3.5 h-3.5 text-green-500" />}
                         {selectedConversation.platform === 'facebook' ? (selectedConversation.facebookPageName ? `FB: ${selectedConversation.facebookPageName}` : 'Facebook') : selectedConversation.platform === 'whatsapp' ? `WhatsApp${selectedConversation.whatsappSlotId ? ` (Slot ${selectedConversation.whatsappSlotId})` : ''}` : selectedConversation.platform}
@@ -1624,7 +1609,7 @@ export function Inbox() {
               </div>
             </>
           )}
-        </Card>
+        </div>
       </div>
 
       {/* Create Lead Modal */}

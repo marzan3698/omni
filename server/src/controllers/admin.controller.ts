@@ -1,10 +1,22 @@
 import { Request, Response } from 'express';
 import { adminService } from '../services/admin.service.js';
+import { getLiveUsers, getLiveUserDetail } from '../services/liveUsers.service.js';
 import { sendSuccess, sendError } from '../utils/response.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { AuthRequest } from '../types/index.js';
 import { z } from 'zod';
 import { ProjectStatus } from '@prisma/client';
+
+const createProjectSchema = z.object({
+  clientId: z.string().min(1, 'Client ID is required'),
+  serviceId: z.coerce.number().int().positive('Service ID is required'),
+  title: z.string().min(1).optional(),
+  description: z.string().optional(),
+  budget: z.coerce.number().positive('Budget is required'),
+  time: z.string().min(1, 'Time is required'),
+  deliveryStartDate: z.union([z.string(), z.coerce.date()]).optional(),
+  deliveryEndDate: z.union([z.string(), z.coerce.date()]).optional(),
+});
 
 // Validation schemas
 const updateProjectSchema = z.object({
@@ -24,6 +36,107 @@ const updateClientSchema = z.object({
 });
 
 export const adminController = {
+  /**
+   * Get live (currently online) users for dashboard
+   * GET /api/admin/live-users
+   */
+  getLiveUsers: async (req: AuthRequest, res: Response) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return sendError(res, 'Company ID is required', 400);
+      }
+      const users = await getLiveUsers(companyId);
+      return sendSuccess(res, users, 'Live users retrieved successfully');
+    } catch (error) {
+      if (error instanceof AppError) {
+        return sendError(res, error.message, error.statusCode);
+      }
+      return sendError(res, 'Failed to retrieve live users', 500);
+    }
+  },
+
+  /**
+   * Get live user detail (work history, activity, etc.)
+   * GET /api/admin/live-users/:userId/detail
+   */
+  getLiveUserDetail: async (req: AuthRequest, res: Response) => {
+    try {
+      const companyId = req.user?.companyId;
+      const userId = req.params.userId;
+      if (!companyId || !userId) {
+        return sendError(res, 'Company ID and user ID are required', 400);
+      }
+      const detail = await getLiveUserDetail(userId, companyId);
+      if (!detail) {
+        return sendError(res, 'Live user not found', 404);
+      }
+      return sendSuccess(res, detail, 'Live user detail retrieved successfully');
+    } catch (error) {
+      if (error instanceof AppError) {
+        return sendError(res, error.message, error.statusCode);
+      }
+      return sendError(res, 'Failed to retrieve live user detail', 500);
+    }
+  },
+
+  /**
+   * Get client users (Users with Client role) for project assignment
+   * GET /api/admin/client-users
+   */
+  getClientUsers: async (req: AuthRequest, res: Response) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return sendError(res, 'Company ID is required', 400);
+      }
+      const users = await adminService.getClientUsers(companyId);
+      return sendSuccess(res, users, 'Client users retrieved successfully');
+    } catch (error) {
+      if (error instanceof AppError) {
+        return sendError(res, error.message, error.statusCode);
+      }
+      return sendError(res, 'Failed to retrieve client users', 500);
+    }
+  },
+
+  /**
+   * Create project (admin)
+   * POST /api/admin/projects
+   */
+  createProject: async (req: AuthRequest, res: Response) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return sendError(res, 'Company ID is required', 400);
+      }
+      const validatedData = createProjectSchema.parse(req.body);
+      const project = await adminService.createProject(companyId, {
+        clientId: validatedData.clientId,
+        serviceId: validatedData.serviceId,
+        title: validatedData.title,
+        description: validatedData.description,
+        budget: validatedData.budget,
+        time: validatedData.time,
+        deliveryStartDate: validatedData.deliveryStartDate
+          ? new Date(validatedData.deliveryStartDate as string | Date)
+          : undefined,
+        deliveryEndDate: validatedData.deliveryEndDate
+          ? new Date(validatedData.deliveryEndDate as string | Date)
+          : undefined,
+      });
+      return sendSuccess(res, project, 'Project created successfully', 201);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return sendError(res, error.errors[0].message, 400);
+      }
+      if (error instanceof AppError) {
+        return sendError(res, error.message, error.statusCode);
+      }
+      return sendError(res, 'Failed to create project', 500);
+    }
+  },
+
   /**
    * Get all projects
    * GET /api/admin/projects

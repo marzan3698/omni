@@ -18,6 +18,7 @@ import { ClientLeads } from './pages/ClientLeads';
 import { ProjectSign } from './pages/ProjectSign';
 import { Inbox } from './pages/Inbox';
 import InboxReport from './pages/InboxReport';
+import CpanelAutoDeploymentGuide from './pages/CpanelAutoDeploymentGuide';
 import ActivityMonitor from './pages/ActivityMonitor';
 import ActivityDetail from './pages/ActivityDetail';
 import { Settings } from './pages/Settings';
@@ -61,8 +62,13 @@ import ProductCategoryForm from './pages/ProductCategoryForm';
 import { Services } from './pages/Services';
 import { ServiceForm } from './pages/ServiceForm';
 import { AdminProjectsClients } from './pages/AdminProjectsClients';
+import { ProjectList } from './pages/ProjectList';
+import { ProjectDetail } from './pages/ProjectDetail';
+import { ProjectCreate } from './pages/ProjectCreate';
 import { ClientInvoices } from './pages/ClientInvoices';
 import { InvoiceView } from './pages/InvoiceView';
+import { InvoiceList } from './pages/InvoiceList';
+import { InvoiceCreate } from './pages/InvoiceCreate';
 import About from './pages/public/About';
 import Contact from './pages/public/Contact';
 import Terms from './pages/public/Terms';
@@ -112,6 +118,18 @@ function App() {
                   <Layout>
                     <PermissionGuard permission="can_manage_root_items">
                       <InboxReport />
+                    </PermissionGuard>
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/cpanel-auto-deployment-guide"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <PermissionGuard permission="can_manage_root_items">
+                      <CpanelAutoDeploymentGuide />
                     </PermissionGuard>
                   </Layout>
                 </ProtectedRoute>
@@ -241,6 +259,36 @@ function App() {
                 <ProtectedRoute>
                   <Layout>
                     <Finance />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/invoice"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <InvoiceList />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/invoice/new"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <InvoiceCreate />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/invoice/:id"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <InvoiceView />
                   </Layout>
                 </ProtectedRoute>
               }
@@ -598,6 +646,42 @@ function App() {
                   <Layout>
                     <PermissionGuard permission="can_manage_products">
                       <ServiceForm />
+                    </PermissionGuard>
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/projects"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <PermissionGuard permission="can_manage_projects">
+                      <ProjectList />
+                    </PermissionGuard>
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/projects/new"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <PermissionGuard permission="can_manage_projects">
+                      <ProjectCreate />
+                    </PermissionGuard>
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/projects/:id"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <PermissionGuard permission="can_manage_projects">
+                      <ProjectDetail />
                     </PermissionGuard>
                   </Layout>
                 </ProtectedRoute>

@@ -12,5 +12,6 @@
   "update_task_status_enum.sql",
   "add_conversation_labels.sql",
   "add_product_lead_customer_points.sql",
-  "add_lead_converted_to_client_id.sql"
+  "add_lead_converted_to_client_id.sql",
+  "add_invoice_item_product_id.sql"
 ]

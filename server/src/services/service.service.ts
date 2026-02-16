@@ -11,8 +11,11 @@ interface CreateServiceData {
   title: string;
   details: string;
   pricing: number;
-  deliveryStartDate: Date;
-  deliveryEndDate: Date;
+  useDeliveryDate?: boolean;
+  durationDays?: number;
+  deliveryStartDate?: Date;
+  deliveryEndDate?: Date;
+  currency?: string;
   attributes: ServiceAttributes;
 }
 
@@ -20,8 +23,11 @@ interface UpdateServiceData {
   title?: string;
   details?: string;
   pricing?: number;
-  deliveryStartDate?: Date;
-  deliveryEndDate?: Date;
+  useDeliveryDate?: boolean;
+  durationDays?: number | null;
+  deliveryStartDate?: Date | null;
+  deliveryEndDate?: Date | null;
+  currency?: string;
   attributes?: ServiceAttributes;
   isActive?: boolean;
 }
@@ -31,12 +37,16 @@ export const serviceService = {
    * Create a new service
    */
   async createService(data: CreateServiceData) {
-    // Validate date range
-    if (data.deliveryStartDate >= data.deliveryEndDate) {
-      throw new AppError('Delivery end date must be after start date', 400);
+    const useDelivery = data.useDeliveryDate !== false;
+
+    if (useDelivery && data.deliveryStartDate && data.deliveryEndDate) {
+      if (data.deliveryStartDate >= data.deliveryEndDate) {
+        throw new AppError('Delivery end date must be after start date', 400);
+      }
+    } else if (!useDelivery && (!data.durationDays || data.durationDays < 1)) {
+      throw new AppError('Duration (days) is required when delivery date is disabled', 400);
     }
 
-    // Validate attributes structure
     if (data.attributes) {
       if (data.attributes.keyValuePairs && typeof data.attributes.keyValuePairs !== 'object') {
         throw new AppError('Invalid attributes format: keyValuePairs must be an object', 400);
@@ -46,18 +56,28 @@ export const serviceService = {
       }
     }
 
-    const service = await prisma.service.create({
-      data: {
-        companyId: data.companyId,
-        title: data.title,
-        details: data.details,
-        pricing: data.pricing,
-        deliveryStartDate: data.deliveryStartDate,
-        deliveryEndDate: data.deliveryEndDate,
-        attributes: data.attributes || { keyValuePairs: {}, tags: [] },
-      },
-    });
+    const createData: Record<string, unknown> = {
+      companyId: data.companyId,
+      title: data.title,
+      details: data.details,
+      pricing: data.pricing,
+      useDeliveryDate: useDelivery,
+      currency: data.currency || 'BDT',
+      attributes: data.attributes || { keyValuePairs: {}, tags: [] },
+    };
+    if (useDelivery) {
+      createData.deliveryStartDate = data.deliveryStartDate;
+      createData.deliveryEndDate = data.deliveryEndDate;
+      createData.durationDays = null;
+    } else {
+      createData.durationDays = data.durationDays;
+      createData.deliveryStartDate = null;
+      createData.deliveryEndDate = null;
+    }
 
+    const service = await prisma.service.create({
+      data: createData as any,
+    });
     return service;
   },
 
@@ -119,32 +139,19 @@ export const serviceService = {
    */
   async updateService(id: number, companyId: number, data: UpdateServiceData) {
     const service = await prisma.service.findFirst({
-      where: {
-        id,
-        companyId,
-      },
+      where: { id, companyId },
     });
+    if (!service) throw new AppError('Service not found', 404);
 
-    if (!service) {
-      throw new AppError('Service not found', 404);
-    }
-
-    // Validate date range if both dates are being updated
-    if (data.deliveryStartDate && data.deliveryEndDate) {
+    const useDelivery = data.useDeliveryDate ?? service.useDeliveryDate;
+    if (useDelivery && data.deliveryStartDate && data.deliveryEndDate) {
       if (data.deliveryStartDate >= data.deliveryEndDate) {
         throw new AppError('Delivery end date must be after start date', 400);
       }
-    } else if (data.deliveryStartDate) {
-      if (data.deliveryStartDate >= service.deliveryEndDate) {
-        throw new AppError('Delivery start date must be before end date', 400);
-      }
-    } else if (data.deliveryEndDate) {
-      if (service.deliveryStartDate >= data.deliveryEndDate) {
-        throw new AppError('Delivery end date must be after start date', 400);
-      }
+    } else if (!useDelivery && data.durationDays !== undefined && data.durationDays !== null && data.durationDays < 1) {
+      throw new AppError('Duration (days) must be at least 1 when delivery date is disabled', 400);
     }
 
-    // Validate attributes structure
     if (data.attributes) {
       if (data.attributes.keyValuePairs && typeof data.attributes.keyValuePairs !== 'object') {
         throw new AppError('Invalid attributes format: keyValuePairs must be an object', 400);
@@ -154,19 +161,29 @@ export const serviceService = {
       }
     }
 
+    const updateData: Record<string, unknown> = {
+      title: data.title,
+      details: data.details,
+      pricing: data.pricing,
+      useDeliveryDate: useDelivery,
+      currency: data.currency,
+      attributes: data.attributes,
+      isActive: data.isActive,
+    };
+    if (useDelivery) {
+      updateData.deliveryStartDate = data.deliveryStartDate ?? service.deliveryStartDate;
+      updateData.deliveryEndDate = data.deliveryEndDate ?? service.deliveryEndDate;
+      updateData.durationDays = null;
+    } else if (data.durationDays !== undefined) {
+      updateData.durationDays = data.durationDays;
+      updateData.deliveryStartDate = null;
+      updateData.deliveryEndDate = null;
+    }
+
     const updatedService = await prisma.service.update({
       where: { id },
-      data: {
-        title: data.title,
-        details: data.details,
-        pricing: data.pricing,
-        deliveryStartDate: data.deliveryStartDate,
-        deliveryEndDate: data.deliveryEndDate,
-        attributes: data.attributes,
-        isActive: data.isActive,
-      },
+      data: Object.fromEntries(Object.entries(updateData).filter(([, v]) => v !== undefined)) as any,
     });
-
     return updatedService;
   },
 

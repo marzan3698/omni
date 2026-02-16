@@ -31,7 +31,8 @@ import {
   Layout,
   Menu,
   FileCode,
-  Monitor
+  Monitor,
+  Receipt
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -145,10 +146,12 @@ const menuSections: MenuSection[] = [
       },
     ],
   },
-  // Section 3: Project Management (প্রকল্প ব্যবস্থাপনা)
+  // Section 3: Project Management (প্রজেক্ট ম্যানেজমেন্ট)
   {
     label: 'Project Management',
     items: [
+      { label: 'Create Project', icon: Briefcase, path: '/admin/projects/new', permission: 'can_manage_projects' },
+      { label: 'Project List', icon: FileCode, path: '/admin/projects', permission: 'can_manage_projects' },
       { label: 'Projects & Clients', icon: Users, path: '/admin/projects-clients', permission: 'can_manage_companies' },
     ]
   },
@@ -158,6 +161,24 @@ const menuSections: MenuSection[] = [
     items: [
       { label: 'ক্লায়েন্ট সেটাপ', icon: Users, path: '/client-setup/pending-clients', permission: 'can_approve_clients' },
     ]
+  },
+  // Section 3.7: Invoice Management (ইনভয়েজ ম্যানেজমেন্ট)
+  {
+    label: 'Invoice Management',
+    items: [
+      {
+        label: 'Create Invoice',
+        icon: Receipt,
+        path: '/invoice/new',
+        permission: 'can_manage_invoices',
+      },
+      {
+        label: 'Invoice List',
+        icon: FileCode,
+        path: '/invoice',
+        permission: 'can_manage_invoices',
+      },
+    ],
   },
   // Section 4: Finance (আর্থিক)
   {
@@ -233,7 +254,19 @@ const menuSections: MenuSection[] = [
       },
     ]
   },
-  // Section 7: Facebook (SuperAdmin – set App ID/Secret before connecting pages)
+  // Section 7: SuperAdmin Dashboard
+  {
+    label: 'SuperAdmin Dashboard',
+    items: [
+      {
+        label: 'Cpanel Auto Deployment গাইড',
+        icon: FileCode,
+        path: '/admin/cpanel-auto-deployment-guide',
+        permission: 'can_manage_root_items',
+      },
+    ]
+  },
+  // Section 8: Facebook (SuperAdmin – set App ID/Secret before connecting pages)
   {
     label: 'Facebook',
     items: [
@@ -293,48 +326,66 @@ export function Sidebar() {
 
   return (
     <>
-      {/* Mobile overlay */}
+      {/* Mobile overlay - game-style blur */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/60 z-40 lg:hidden animate-game-sidebar-overlay backdrop-blur-sm"
           onClick={() => setIsOpen(false)}
+          aria-hidden
         />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar - Game setup design */}
       <aside
         className={cn(
-          "fixed left-0 top-0 z-50 h-full w-64 bg-white border-r border-gray-200 transition-transform duration-300 ease-in-out flex flex-col",
+          "fixed left-0 top-0 z-50 h-full w-64 flex flex-col transition-transform duration-300 ease-out",
+          "transition-[transform,box-shadow] duration-300 ease-[cubic-bezier(0.34,1.2,0.64,1)]",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
+        style={{
+          clipPath: 'polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)',
+          background: 'linear-gradient(175deg, #0f172a 0%, #1e293b 25%, #0c0a1a 60%, #1e1b4b 100%)',
+          boxShadow: isOpen ? '4px 0 24px -4px rgba(0,0,0,0.5), 0 0 0 1px rgba(217,119,6,0.25)' : 'none',
+        }}
       >
+        {/* Golden accent line - shimmer */}
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-amber-500/90 to-transparent pointer-events-none z-10" style={{ boxShadow: '0 1px 4px rgba(217,119,6,0.4)' }} />
+        {/* Corner frame accents */}
+        <div className="absolute top-0 left-0 w-10 h-10 border-l-2 border-t-2 border-amber-500/60 rounded-tl-lg pointer-events-none z-10" />
+        <div className="absolute top-0 right-0 w-10 h-10 border-r-2 border-t-2 border-amber-500/60 rounded-tr-lg pointer-events-none z-10" />
+        <div className="absolute bottom-0 left-0 w-10 h-10 border-l-2 border-b-2 border-amber-500/40 rounded-bl-lg pointer-events-none z-10" />
+        <div className="absolute bottom-0 right-0 w-10 h-10 border-r-2 border-b-2 border-amber-500/40 rounded-br-lg pointer-events-none z-10" />
+
         {/* Header */}
-        <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200 flex-shrink-0">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between h-16 px-4 border-b border-amber-500/20 flex-shrink-0 relative z-10">
+          <div className="flex items-center gap-3">
             {siteLogo ? (
               <img
                 src={getImageUrl(siteLogo)}
                 alt={siteName}
-                className="h-8 w-auto object-contain"
+                className="h-8 w-auto object-contain drop-shadow-[0_0_8px_rgba(217,119,6,0.3)]"
               />
             ) : (
-              <div className="w-8 h-8 bg-indigo-600 rounded-md flex items-center justify-center">
+              <div
+                className="w-9 h-9 rounded-lg flex items-center justify-center border border-amber-500/50 bg-gradient-to-br from-amber-600 to-amber-800"
+                style={{ boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.2), 0 0 12px rgba(217,119,6,0.2)' }}
+              >
                 <span className="text-white font-bold text-sm">O</span>
               </div>
             )}
-            <span className="font-semibold text-slate-900 text-lg">{siteName}</span>
+            <span className="font-bold text-amber-100 text-base tracking-wide">{siteName}</span>
           </div>
           <button
             onClick={() => setIsOpen(false)}
-            className="lg:hidden p-2 hover:bg-gray-100 rounded-md transition-colors"
+            className="lg:hidden p-2 rounded-lg text-amber-200/90 hover:text-white hover:bg-amber-500/20 transition-all duration-200 hover:scale-105"
             aria-label="Close sidebar"
           >
-            <X className="w-5 h-5 text-slate-600" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-4 min-h-0">
+        <nav className="game-sidebar-nav flex-1 overflow-y-auto py-4 min-h-0">
           {menuSections.map((section, sectionIndex) => {
             // Filter items by permission and role
             const visibleItems = section.items.filter(item => {
@@ -354,19 +405,20 @@ export function Sidebar() {
             if (visibleItems.length === 0) return null;
 
             return (
-              <div key={section.label || `section-${sectionIndex}`} className={cn(section.label && "mt-6 first:mt-0")}>
-                {/* Section Header */}
+              <div key={section.label || `section-${sectionIndex}`} className={cn(section.label && "mt-5 first:mt-0")}>
+                {/* Section Header - game-style */}
                 {section.label && (
-                  <div className="px-4 py-2 mb-2">
-                    <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  <div className="px-4 py-2 mb-2 relative" style={{ animationDelay: `${sectionIndex * 50}ms` }}>
+                    <h3 className="text-[10px] font-bold text-amber-500/80 uppercase tracking-[0.2em]">
                       {section.label}
                     </h3>
+                    <div className="absolute bottom-0 left-4 right-4 h-px bg-gradient-to-r from-transparent via-amber-500/40 to-transparent" />
                   </div>
                 )}
 
                 {/* Section Items */}
                 <ul className="space-y-1">
-                  {visibleItems.map((item) => {
+                  {visibleItems.map((item, itemIndex) => {
                     const Icon = item.icon;
                     const isActive = item.path ? location.pathname === item.path : item.submenu?.some(sub => location.pathname === sub.path);
 
@@ -375,36 +427,44 @@ export function Sidebar() {
                       const isDropdownOpen = openDropdowns[item.label] || false;
                       const hasActiveSubmenu = item.submenu.some(sub => location.pathname === sub.path);
 
+                      const staggerMs = sectionIndex * 20 + itemIndex * 35;
                       return (
-                        <li key={item.label}>
+                        <li
+                          key={item.label}
+                          className="animate-game-nav-reveal"
+                          style={{ animationDelay: `${staggerMs}ms`, animationFillMode: 'both' }}
+                        >
                           <button
                             onClick={() => toggleDropdown(item.label)}
                             className={cn(
-                              "w-full flex items-center gap-3 px-4 py-2.5 rounded-md text-sm font-medium transition-all duration-200",
-                              "hover:bg-gray-50",
+                              "group/nav w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 mx-2",
+                              "hover:bg-amber-500/15 hover:border-l-2 hover:border-amber-500/60",
                               hasActiveSubmenu
-                                ? "bg-indigo-50 text-indigo-700 border-l-4 border-indigo-600"
-                                : "text-slate-700 hover:text-slate-900"
+                                ? "bg-amber-500/20 text-amber-200 border-l-2 border-amber-500"
+                                : "text-slate-300 hover:text-amber-100 border-l-2 border-transparent"
                             )}
                           >
                             <Icon className={cn(
-                              "w-5 h-5 flex-shrink-0 transition-colors",
-                              hasActiveSubmenu ? "text-indigo-600" : "text-slate-500"
+                              "w-5 h-5 flex-shrink-0 transition-all duration-200 group-hover/nav:scale-110",
+                              hasActiveSubmenu ? "text-amber-400" : "text-slate-400 group-hover/nav:text-amber-400"
                             )} />
                             <span className="flex-1 text-left">{item.label}</span>
-                            <div className="flex-shrink-0 transition-transform duration-200" style={{
-                              transform: isDropdownOpen ? 'rotate(0deg)' : 'rotate(-90deg)'
-                            }}>
-                              <ChevronDown className="w-4 h-4 text-slate-500" />
+                            <div
+                              className={cn(
+                                "flex-shrink-0 transition-transform duration-300",
+                                isDropdownOpen ? "rotate-0" : "-rotate-90"
+                              )}
+                            >
+                              <ChevronDown className="w-4 h-4 text-amber-500/70" />
                             </div>
                           </button>
                           <div
                             className={cn(
-                              "overflow-hidden transition-all duration-300 ease-in-out",
+                              "overflow-hidden transition-all duration-300 ease-out",
                               isDropdownOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
                             )}
                           >
-                            <ul className="ml-6 mt-1 mb-1 space-y-1 border-l-2 border-indigo-200 pl-4">
+                            <ul className="ml-6 mt-1 mb-2 space-y-0.5 border-l-2 border-amber-500/30 pl-3">
                               {item.submenu
                                 .filter((subItem) => !subItem.permission || user?.permissions?.[subItem.permission] || user?.roleName === 'SuperAdmin')
                                 .map((subItem) => {
@@ -421,17 +481,17 @@ export function Sidebar() {
                                       <button
                                         onClick={() => toggleDropdown(nestedDropdownKey)}
                                         className={cn(
-                                          "w-full flex items-center gap-3 px-4 py-2 rounded-md text-sm font-normal transition-colors",
-                                          "hover:bg-gray-50",
+                                          "group/sub w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-normal transition-all duration-200",
+                                          "hover:bg-amber-500/10 hover:text-amber-200",
                                           hasActiveNestedSubmenu
-                                            ? "bg-indigo-50 text-indigo-600 font-medium"
-                                            : "text-slate-600 hover:text-slate-900"
+                                            ? "bg-amber-500/15 text-amber-200 font-medium"
+                                            : "text-slate-400"
                                         )}
                                       >
-                                        <SubIcon className="w-4 h-4 flex-shrink-0" />
+                                        <SubIcon className="w-4 h-4 flex-shrink-0 transition-transform group-hover/sub:scale-110" />
                                         <span className="flex-1 text-left">{subItem.label}</span>
                                         <ChevronRight className={cn(
-                                          "w-4 h-4 text-slate-500 transition-transform duration-200",
+                                          "w-4 h-4 text-amber-500/50 transition-transform duration-300",
                                           isNestedDropdownOpen && "rotate-90"
                                         )} />
                                       </button>
@@ -441,7 +501,7 @@ export function Sidebar() {
                                           isNestedDropdownOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
                                         )}
                                       >
-                                        <ul className="ml-4 mt-1 mb-1 space-y-1 border-l-2 border-indigo-100 pl-4">
+                                        <ul className="ml-3 mt-1 mb-1 space-y-0.5 border-l-2 border-amber-500/20 pl-3">
                                           {subItem.submenu!.map((nestedItem) => {
                                             const NestedIcon = nestedItem.icon || Eye;
                                             const isNestedActive = location.pathname === nestedItem.path;
@@ -451,19 +511,17 @@ export function Sidebar() {
                                                 <Link
                                                   to={nestedItem.path!}
                                                   onClick={() => {
-                                                    if (window.innerWidth < 1024) {
-                                                      setIsOpen(false);
-                                                    }
+                                                    if (window.innerWidth < 1024) setIsOpen(false);
                                                   }}
                                                   className={cn(
-                                                    "flex items-center gap-3 px-4 py-2 rounded-md text-sm font-normal transition-colors",
-                                                    "hover:bg-gray-50",
+                                                    "group/lnk flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-normal transition-all duration-200",
+                                                    "hover:bg-amber-500/10 hover:text-amber-200",
                                                     isNestedActive
-                                                      ? "bg-indigo-50 text-indigo-600 font-medium"
-                                                      : "text-slate-600 hover:text-slate-900"
+                                                      ? "bg-amber-500/15 text-amber-200 font-medium"
+                                                      : "text-slate-400"
                                                   )}
                                                 >
-                                                  <NestedIcon className="w-4 h-4 flex-shrink-0" />
+                                                  <NestedIcon className="w-4 h-4 flex-shrink-0 transition-transform group-hover/lnk:scale-110" />
                                                   <span className="flex-1 text-left">{nestedItem.label}</span>
                                                 </Link>
                                               </li>
@@ -480,19 +538,17 @@ export function Sidebar() {
                                     <Link
                                       to={subItem.path!}
                                       onClick={() => {
-                                        if (window.innerWidth < 1024) {
-                                          setIsOpen(false);
-                                        }
+                                        if (window.innerWidth < 1024) setIsOpen(false);
                                       }}
                                       className={cn(
-                                        "flex items-center gap-3 px-4 py-2 rounded-md text-sm font-normal transition-colors",
-                                        "hover:bg-gray-50",
+                                        "group/subLink flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-normal transition-all duration-200",
+                                        "hover:bg-amber-500/10 hover:text-amber-200",
                                         isSubActive
-                                          ? "bg-indigo-50 text-indigo-600 font-medium"
-                                          : "text-slate-600 hover:text-slate-900"
+                                          ? "bg-amber-500/15 text-amber-200 font-medium"
+                                          : "text-slate-400"
                                       )}
                                     >
-                                      <SubIcon className="w-4 h-4 flex-shrink-0" />
+                                      <SubIcon className="w-4 h-4 flex-shrink-0 transition-transform group-hover/subLink:scale-110" />
                                       <span className="flex-1 text-left">{subItem.label}</span>
                                     </Link>
                                   </li>
@@ -504,37 +560,35 @@ export function Sidebar() {
                       );
                     }
 
-                    // Render regular menu item
+                    // Render regular menu item - game-style
+                    const staggerMs = sectionIndex * 20 + itemIndex * 35;
                     return (
-                      <li key={item.path}>
+                      <li
+                        key={item.path}
+                        className="animate-game-nav-reveal"
+                        style={{ animationDelay: `${staggerMs}ms`, animationFillMode: 'both' }}
+                      >
                         <Link
                           to={item.path!}
                           onClick={() => {
-                            // Close sidebar when clicking Inbox menu item (all screen sizes)
-                            if (item.path === '/inbox') {
-                              setIsOpen(false);
-                            } else {
-                              // Close sidebar on mobile when navigating to other pages
-                              if (window.innerWidth < 1024) {
-                                setIsOpen(false);
-                              }
-                            }
+                            if (item.path === '/inbox') setIsOpen(false);
+                            else if (window.innerWidth < 1024) setIsOpen(false);
                           }}
                           className={cn(
-                            "flex items-center gap-3 px-4 py-2.5 rounded-md text-sm font-medium transition-colors",
-                            "hover:bg-gray-50",
+                            "group/nav flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 mx-2",
+                            "hover:bg-amber-500/15 hover:border-l-2 hover:border-amber-500/60",
                             isActive
-                              ? "bg-indigo-50 text-indigo-700 border-l-4 border-indigo-600"
-                              : "text-slate-700 hover:text-slate-900"
+                              ? "bg-amber-500/20 text-amber-200 border-l-2 border-amber-500"
+                              : "text-slate-300 hover:text-amber-100 border-l-2 border-transparent"
                           )}
                         >
                           <Icon className={cn(
-                            "w-5 h-5 flex-shrink-0",
-                            isActive ? "text-indigo-600" : "text-slate-500"
+                            "w-5 h-5 flex-shrink-0 transition-all duration-200 group-hover/nav:scale-110",
+                            isActive ? "text-amber-400" : "text-slate-400 group-hover/nav:text-amber-400"
                           )} />
                           <span className="flex-1 text-left">{item.label}</span>
                           {item.badge && (
-                            <span className="bg-indigo-600 text-white text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0">
+                            <span className="bg-amber-500/90 text-amber-950 text-xs font-bold px-2 py-0.5 rounded-md flex-shrink-0 animate-game-badge-pulse">
                               {item.badge}
                             </span>
                           )}
@@ -548,36 +602,42 @@ export function Sidebar() {
           })}
         </nav>
 
-        {/* Footer */}
-        <div className="p-4 border-t border-gray-200 flex-shrink-0">
-          <div className="flex items-center gap-3 px-3 py-2 mb-2">
-            <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center">
+        {/* Footer - game-style user card */}
+        <div className="p-4 border-t border-amber-500/20 flex-shrink-0 relative z-10">
+          <div
+            className="flex items-center gap-3 px-3 py-2.5 mb-2 rounded-lg border border-amber-500/20 bg-slate-800/40"
+            style={{ boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)' }}
+          >
+            <div
+              className="w-9 h-9 rounded-full flex items-center justify-center border-2 border-amber-500/50 overflow-hidden flex-shrink-0 bg-slate-800/80"
+              style={{ boxShadow: '0 0 10px rgba(217,119,6,0.2)' }}
+            >
               {user?.profileImage ? (
                 <img
                   src={user.profileImage}
                   alt={user.email}
-                  className="w-8 h-8 rounded-full object-cover"
+                  className="w-full h-full object-cover"
                 />
               ) : (
-                <span className="text-white text-xs font-medium">
+                <span className="text-amber-200 text-sm font-bold">
                   {user?.email?.charAt(0).toUpperCase() || 'U'}
                 </span>
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-slate-900 truncate">
+              <p className="text-sm font-medium text-amber-100 truncate">
                 {user?.email || 'User'}
               </p>
-              <p className="text-xs text-slate-500 truncate">
+              <p className="text-xs text-amber-500/80 truncate">
                 {user?.roleName || 'User'}
               </p>
             </div>
           </div>
           <button
             onClick={logout}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-slate-700 hover:bg-gray-100 transition-colors"
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-300 hover:text-amber-200 hover:bg-amber-500/15 border border-transparent hover:border-amber-500/30 transition-all duration-200"
           >
-            <LogOut className="w-5 h-5 text-slate-500" />
+            <LogOut className="w-5 h-5 text-amber-500/70" />
             <span>Logout</span>
           </button>
         </div>

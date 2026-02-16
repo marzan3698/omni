@@ -1,6 +1,7 @@
 import { prisma } from '../lib/prisma.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { ProjectStatus } from '@prisma/client';
+import { projectService } from './project.service.js';
 
 interface UpdateProjectData {
   title?: string;
@@ -68,6 +69,67 @@ export const adminService = {
         },
       },
       orderBy: { createdAt: 'desc' },
+    });
+  },
+
+  /**
+   * Get client users (Users with Client role) for project assignment
+   */
+  async getClientUsers(companyId: number) {
+    const clientRole = await prisma.role.findFirst({
+      where: { name: 'Client' },
+    });
+    if (!clientRole) {
+      return [];
+    }
+    return await prisma.user.findMany({
+      where: {
+        companyId,
+        roleId: clientRole.id,
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        phone: true,
+      },
+      orderBy: { email: 'asc' },
+    });
+  },
+
+  /**
+   * Create project (admin)
+   */
+  async createProject(companyId: number, data: {
+    clientId: string;
+    serviceId: number;
+    title?: string;
+    description?: string;
+    budget: number;
+    time: string;
+    deliveryStartDate?: Date;
+    deliveryEndDate?: Date;
+  }) {
+    const user = await prisma.user.findFirst({
+      where: { id: data.clientId, companyId },
+      include: { role: true },
+    });
+    if (!user) {
+      throw new AppError('Client user not found', 404);
+    }
+    if (user.role.name !== 'Client') {
+      throw new AppError('Selected user is not a client', 400);
+    }
+    return await projectService.createProject({
+      companyId,
+      clientId: data.clientId,
+      serviceId: data.serviceId,
+      title: data.title,
+      description: data.description,
+      budget: data.budget,
+      time: data.time,
+      deliveryStartDate: data.deliveryStartDate,
+      deliveryEndDate: data.deliveryEndDate,
     });
   },
 
@@ -488,6 +550,9 @@ export const adminService = {
             title: true,
             details: true,
             pricing: true,
+            currency: true,
+            useDeliveryDate: true,
+            durationDays: true,
             deliveryStartDate: true,
             deliveryEndDate: true,
           },

@@ -6,7 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { ArrowLeft, Plus, X } from 'lucide-react';
+import { formatDaysToMonthsDays } from '@/lib/utils';
 
 export function ServiceForm() {
   const { id } = useParams<{ id: string }>();
@@ -18,8 +20,11 @@ export function ServiceForm() {
     title: '',
     details: '',
     pricing: '',
+    useDeliveryDate: true,
+    durationDays: '' as string,
     deliveryStartDate: '',
     deliveryEndDate: '',
+    currency: 'BDT' as 'BDT' | 'USD',
     attributes: {
       keyValuePairs: {} as { [key: string]: string },
       tags: [] as string[],
@@ -44,12 +49,20 @@ export function ServiceForm() {
       const attributes = typeof serviceData.attributes === 'string'
         ? JSON.parse(serviceData.attributes)
         : serviceData.attributes;
+      const useDelivery = serviceData.useDeliveryDate !== false;
       setFormData({
         title: serviceData.title || '',
         details: serviceData.details || '',
         pricing: String(serviceData.pricing || ''),
-        deliveryStartDate: new Date(serviceData.deliveryStartDate).toISOString().split('T')[0],
-        deliveryEndDate: new Date(serviceData.deliveryEndDate).toISOString().split('T')[0],
+        useDeliveryDate: useDelivery,
+        durationDays: serviceData.durationDays != null ? String(serviceData.durationDays) : '',
+        deliveryStartDate: serviceData.deliveryStartDate
+          ? new Date(serviceData.deliveryStartDate).toISOString().split('T')[0]
+          : '',
+        deliveryEndDate: serviceData.deliveryEndDate
+          ? new Date(serviceData.deliveryEndDate).toISOString().split('T')[0]
+          : '',
+        currency: (serviceData.currency === 'USD' ? 'USD' : 'BDT') as 'BDT' | 'USD',
         attributes: {
           keyValuePairs: attributes?.keyValuePairs || {},
           tags: attributes?.tags || [],
@@ -77,14 +90,22 @@ export function ServiceForm() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const data = {
+    const data: Record<string, unknown> = {
       title: formData.title,
       details: formData.details,
       pricing: parseFloat(formData.pricing),
-      deliveryStartDate: formData.deliveryStartDate,
-      deliveryEndDate: formData.deliveryEndDate,
+      useDeliveryDate: formData.useDeliveryDate,
+      currency: formData.currency,
       attributes: formData.attributes,
     };
+    if (formData.useDeliveryDate) {
+      data.deliveryStartDate = formData.deliveryStartDate || undefined;
+      data.deliveryEndDate = formData.deliveryEndDate || undefined;
+    } else {
+      data.durationDays = formData.durationDays ? parseInt(formData.durationDays, 10) : undefined;
+      data.deliveryStartDate = undefined;
+      data.deliveryEndDate = undefined;
+    }
 
     if (isEdit) {
       updateMutation.mutate(data);
@@ -186,41 +207,89 @@ export function ServiceForm() {
               />
             </div>
 
-            <div>
-              <Label htmlFor="pricing">Pricing *</Label>
-              <Input
-                id="pricing"
-                type="number"
-                step="0.01"
-                value={formData.pricing}
-                onChange={(e) => setFormData({ ...formData, pricing: e.target.value })}
-                required
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="pricing">Pricing *</Label>
+                <Input
+                  id="pricing"
+                  type="number"
+                  step="0.01"
+                  value={formData.pricing}
+                  onChange={(e) => setFormData({ ...formData, pricing: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="currency">Currency</Label>
+                <select
+                  id="currency"
+                  value={formData.currency}
+                  onChange={(e) => setFormData({ ...formData, currency: e.target.value as 'BDT' | 'USD' })}
+                  className="w-full border rounded-md px-3 py-2 mt-1"
+                >
+                  <option value="BDT">BDT (টাকা ৳)</option>
+                  <option value="USD">USD ($)</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between rounded-lg border p-4">
+              <div>
+                <Label htmlFor="useDeliveryDate">ডেলিভারি ডেট ব্যবহার করুন</Label>
+                <p className="text-sm text-slate-500">অফ করলে Duration (দিন) ব্যবহার হবে</p>
+              </div>
+              <Switch
+                id="useDeliveryDate"
+                checked={formData.useDeliveryDate}
+                onCheckedChange={(checked) =>
+                  setFormData({ ...formData, useDeliveryDate: checked })
+                }
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="deliveryStartDate">Delivery Start Date *</Label>
-                <Input
-                  id="deliveryStartDate"
-                  type="date"
-                  value={formData.deliveryStartDate}
-                  onChange={(e) => setFormData({ ...formData, deliveryStartDate: e.target.value })}
-                  required
-                />
+            {formData.useDeliveryDate ? (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="deliveryStartDate">Delivery Start Date *</Label>
+                  <Input
+                    id="deliveryStartDate"
+                    type="date"
+                    value={formData.deliveryStartDate}
+                    onChange={(e) => setFormData({ ...formData, deliveryStartDate: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="deliveryEndDate">Delivery End Date *</Label>
+                  <Input
+                    id="deliveryEndDate"
+                    type="date"
+                    value={formData.deliveryEndDate}
+                    onChange={(e) => setFormData({ ...formData, deliveryEndDate: e.target.value })}
+                    min={formData.deliveryStartDate}
+                    required
+                  />
+                </div>
               </div>
+            ) : (
               <div>
-                <Label htmlFor="deliveryEndDate">Delivery End Date *</Label>
+                <Label htmlFor="durationDays">Duration (দিন) *</Label>
                 <Input
-                  id="deliveryEndDate"
-                  type="date"
-                  value={formData.deliveryEndDate}
-                  onChange={(e) => setFormData({ ...formData, deliveryEndDate: e.target.value })}
-                  min={formData.deliveryStartDate}
-                  required
+                  id="durationDays"
+                  type="number"
+                  min="1"
+                  value={formData.durationDays}
+                  onChange={(e) => setFormData({ ...formData, durationDays: e.target.value })}
+                  placeholder="যেমন: 40"
+                  required={!formData.useDeliveryDate}
                 />
+                {formData.durationDays && (
+                  <p className="text-sm text-indigo-600 mt-1">
+                    মেয়াদ: {formatDaysToMonthsDays(parseInt(formData.durationDays, 10) || 0)}
+                  </p>
+                )}
               </div>
-            </div>
+            )}
 
             <div>
               <Label>Attributes - Key-Value Pairs</Label>
