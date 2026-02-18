@@ -145,6 +145,38 @@ export const uploadThemeLogo = multer({
 export const singleThemeLogo = uploadThemeLogo.single('logo');
 
 // ============================================
+// Service Category Icon Upload
+// ============================================
+
+const serviceCategoryIconDir = path.join(process.cwd(), 'uploads', 'service-categories');
+if (!fs.existsSync(serviceCategoryIconDir)) {
+  fs.mkdirSync(serviceCategoryIconDir, { recursive: true });
+}
+
+const serviceCategoryIconStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, serviceCategoryIconDir),
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    const ext = path.extname(file.originalname);
+    cb(null, `icon-${uniqueSuffix}${ext}`);
+  },
+});
+
+const serviceCategoryIconFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+  if (allowedMimes.includes(file.mimetype)) cb(null, true);
+  else cb(new Error('Invalid file type. Only JPEG, PNG, GIF, WebP, and SVG images are allowed.'));
+};
+
+export const uploadServiceCategoryIcon = multer({
+  storage: serviceCategoryIconStorage,
+  fileFilter: serviceCategoryIconFilter,
+  limits: { fileSize: 2 * 1024 * 1024 },
+});
+
+export const singleServiceCategoryIcon = uploadServiceCategoryIcon.single('icon');
+
+// ============================================
 // Task Attachments Upload (Images, PDFs, Videos, Audio)
 // ============================================
 

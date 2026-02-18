@@ -36,3 +36,6 @@ prisma/migrations/
 
 # Deployment package (created during CI/CD build)
 deployment-package/
+
+# Server uploads (user-generated, do not deploy via Git)
+server/uploads/

@@ -7,6 +7,7 @@ import { z } from 'zod';
 
 // Validation schemas
 const createServiceSchema = z.object({
+  categoryId: z.number().int().positive('Category is required'),
   title: z.string().min(1, 'Title is required'),
   details: z.string().min(1, 'Details are required'),
   pricing: z.number().positive('Pricing must be greater than 0'),
@@ -30,6 +31,7 @@ const createServiceSchema = z.object({
 );
 
 const updateServiceSchema = z.object({
+  categoryId: z.number().int().positive().optional(),
   title: z.string().min(1).optional(),
   details: z.string().min(1).optional(),
   pricing: z.number().positive().optional(),

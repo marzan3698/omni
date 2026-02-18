@@ -221,7 +221,16 @@ const menuSections: MenuSection[] = [
           { label: 'Add Category', path: '/product-categories/new', icon: Plus },
         ]
       },
-      { label: 'Services', icon: Package, path: '/services', permission: 'can_manage_products' },
+      {
+        label: 'Services',
+        icon: Package,
+        permission: 'can_manage_products',
+        submenu: [
+          { label: 'All Services', path: '/services', icon: Eye },
+          { label: 'Add New Service', path: '/services/new', icon: Plus },
+          { label: 'Service Categories', path: '/service-categories', icon: Eye },
+        ],
+      },
     ]
   },
   // Section 6: System Administration (সিস্টেম প্রশাসন)

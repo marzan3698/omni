@@ -58,10 +58,12 @@ import Products from './pages/Products';
 import ProductForm from './pages/ProductForm';
 import ProductView from './pages/ProductView';
 import ProductCategories from './pages/ProductCategories';
+import ServiceCategories from './pages/ServiceCategories';
 import ProductCategoryForm from './pages/ProductCategoryForm';
 import { Services } from './pages/Services';
 import { ServiceForm } from './pages/ServiceForm';
 import { AdminProjectsClients } from './pages/AdminProjectsClients';
+import { ClientJourneyPage } from './pages/ClientJourneyPage';
 import { ProjectList } from './pages/ProjectList';
 import { ProjectDetail } from './pages/ProjectDetail';
 import { ProjectCreate } from './pages/ProjectCreate';
@@ -606,6 +608,16 @@ function App() {
               }
             />
             <Route
+              path="/service-categories"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <ServiceCategories />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/product-categories/new"
               element={
                 <ProtectedRoute>
@@ -694,6 +706,18 @@ function App() {
                   <Layout>
                     <PermissionGuard permission="can_manage_companies">
                       <AdminProjectsClients />
+                    </PermissionGuard>
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/projects-clients/clients/:id"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <PermissionGuard permission="can_manage_companies">
+                      <ClientJourneyPage />
                     </PermissionGuard>
                   </Layout>
                 </ProtectedRoute>

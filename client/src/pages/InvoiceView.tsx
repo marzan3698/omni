@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Download, DollarSign, Calendar, Link as LinkIcon, BadgeCheck, CreditCard, CheckCircle2, XCircle, Clock, Loader2, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Download, DollarSign, Calendar, Link as LinkIcon, BadgeCheck, CreditCard, CheckCircle2, XCircle, Clock, Loader2, RefreshCw, FileText, Receipt, Package, Wrench, ImageIcon } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -28,6 +28,8 @@ export function InvoiceView() {
     const { user } = useAuth();
     const queryClient = useQueryClient();
     const [showPaymentForm, setShowPaymentForm] = useState(false);
+    const [downloadingPdf, setDownloadingPdf] = useState(false);
+    const [downloadingImage, setDownloadingImage] = useState(false);
 
     const { data: invoiceResponse, isLoading } = useQuery({
         queryKey: ['invoice', id],
@@ -180,9 +182,102 @@ export function InvoiceView() {
         }
     };
 
+    // Build dynamic timeline from invoice + payments
+    const timelineEvents = (() => {
+        const events: Array<{
+            id: string;
+            type: 'issued' | 'created' | 'payment' | 'due' | 'paid';
+            date: string;
+            title: string;
+            description: string;
+            icon: 'indigo' | 'amber' | 'emerald' | 'blue' | 'gray';
+        }> = [];
+
+        if (invoice.issueDate) {
+            events.push({
+                id: 'issued',
+                type: 'issued',
+                date: invoice.issueDate,
+                title: 'ইনভয়েস ইস্যু হয়েছে',
+                description: `ইনভয়েস #${invoice.invoiceNumber} ইস্যু হয়েছে`,
+                icon: 'indigo',
+            });
+        }
+        if (invoice.createdAt) {
+            events.push({
+                id: 'created',
+                type: 'created',
+                date: invoice.createdAt,
+                title: 'সিস্টেমে রেকর্ড করা হয়েছে',
+                description: new Date(invoice.createdAt).toLocaleString(),
+                icon: 'blue',
+            });
+        }
+        (payments || []).forEach((p: any, idx: number) => {
+            events.push({
+                id: `payment-${p.id}`,
+                type: 'payment',
+                date: p.createdAt,
+                title: `পেমেন্ট জমা করা হয়েছে - ৳${Number(p.amount).toLocaleString()}`,
+                description: `${p.paymentMethod || 'N/A'} • ${p.status} • ${p.transactionId ? `Txn: ${p.transactionId}` : ''} • ${new Date(p.createdAt).toLocaleString()}`,
+                icon: p.status === 'Approved' ? 'emerald' : p.status === 'Rejected' ? 'gray' : 'amber',
+            });
+            if (p.verifiedAt || (p.status === 'Approved' && p.updatedAt)) {
+                const verifiedDate = p.verifiedAt || p.updatedAt;
+                events.push({
+                    id: `payment-${p.id}-verified`,
+                    type: 'payment',
+                    date: verifiedDate,
+                    title: `পেমেন্ট ${p.status === 'Approved' ? 'অ্যাপ্রুভ' : 'রিজেক্ট'} হয়েছে`,
+                    description: `৳${Number(p.amount).toLocaleString()} • ${new Date(verifiedDate).toLocaleString()}`,
+                    icon: p.status === 'Approved' ? 'emerald' : 'gray',
+                });
+            }
+        });
+        if (invoice.dueDate) {
+            events.push({
+                id: 'due',
+                type: 'due',
+                date: invoice.dueDate,
+                title: 'ডিউ ডেট',
+                description: new Date(invoice.dueDate).toLocaleDateString(),
+                icon: 'amber',
+            });
+        }
+        if (invoice.status === 'Paid') {
+            const approvedPayments = payments?.filter((p: any) => p.status === 'Approved') || [];
+            const lastPayment = approvedPayments.sort(
+                (a: any, b: any) => new Date(b.verifiedAt || b.updatedAt || 0).getTime() - new Date(a.verifiedAt || a.updatedAt || 0).getTime()
+            )[0];
+            const paidDate = lastPayment?.verifiedAt || lastPayment?.updatedAt || invoice.updatedAt || invoice.createdAt;
+            events.push({
+                id: 'paid',
+                type: 'paid',
+                date: paidDate,
+                title: 'সম্পূর্ণ পেমেন্ট সম্পন্ন',
+                description: 'ইনভয়েস পুরোপুরি পেড হয়েছে',
+                icon: 'emerald',
+            });
+        }
+        return events.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    })();
+
+    const getTimelineIconColor = (icon: string) => {
+        switch (icon) {
+            case 'indigo': return 'bg-indigo-600';
+            case 'amber': return 'bg-amber-500';
+            case 'emerald': return 'bg-emerald-600';
+            case 'blue': return 'bg-blue-600';
+            default: return 'bg-gray-500';
+        }
+    };
+
     return (
         <div className="space-y-6">
-            <Button variant="ghost" onClick={() => navigate('/client/invoices')}>
+            <Button
+                variant="ghost"
+                onClick={() => navigate(user?.roleName === 'Client' ? '/client/invoices' : '/invoice')}
+            >
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to Invoices
             </Button>
@@ -218,9 +313,73 @@ export function InvoiceView() {
                                     রিনিউ করুন
                                 </Button>
                             )}
-                            <Button variant="outline" size="sm">
-                                <Download className="w-4 h-4 mr-1" />
-                                Download
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={downloadingPdf}
+                                onClick={async () => {
+                                    if (!invoice?.id) return;
+                                    setDownloadingPdf(true);
+                                    try {
+                                        const { data } = await invoiceApi.getPdf(
+                                            invoice.id,
+                                            user?.companyId || undefined
+                                        );
+                                        const url = window.URL.createObjectURL(
+                                            data instanceof Blob ? data : new Blob([data])
+                                        );
+                                        const a = document.createElement('a');
+                                        a.href = url;
+                                        a.download = `invoice-${invoice.invoiceNumber.replace(/\s/g, '-')}.pdf`;
+                                        a.click();
+                                        window.URL.revokeObjectURL(url);
+                                    } catch {
+                                        alert('Failed to download PDF');
+                                    } finally {
+                                        setDownloadingPdf(false);
+                                    }
+                                }}
+                            >
+                                {downloadingPdf ? (
+                                    <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                                ) : (
+                                    <Download className="w-4 h-4 mr-1" />
+                                )}
+                                {downloadingPdf ? 'Downloading...' : 'Download PDF'}
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={downloadingImage}
+                                onClick={async () => {
+                                    if (!invoice?.id) return;
+                                    setDownloadingImage(true);
+                                    try {
+                                        const { data } = await invoiceApi.getImage(
+                                            invoice.id,
+                                            user?.companyId || undefined
+                                        );
+                                        const url = window.URL.createObjectURL(
+                                            data instanceof Blob ? data : new Blob([data])
+                                        );
+                                        const a = document.createElement('a');
+                                        a.href = url;
+                                        a.download = `invoice-${invoice.invoiceNumber.replace(/\s/g, '-')}.png`;
+                                        a.click();
+                                        window.URL.revokeObjectURL(url);
+                                    } catch {
+                                        alert('Failed to download image');
+                                    } finally {
+                                        setDownloadingImage(false);
+                                    }
+                                }}
+                            >
+                                {downloadingImage ? (
+                                    <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                                ) : (
+                                    <ImageIcon className="w-4 h-4 mr-1" />
+                                )}
+                                {downloadingImage ? 'Downloading...' : 'Download Image'}
                             </Button>
                         </div>
                     </div>
@@ -252,10 +411,30 @@ export function InvoiceView() {
                                     <div className="text-sm text-slate-600 space-y-2">
                                         <div className="flex items-center gap-2">
                                             <Calendar className="w-4 h-4" />
-                                            <span>Due Date: {new Date(invoice.dueDate).toLocaleDateString()}</span>
+                                            <span>Issue: {new Date(invoice.issueDate).toLocaleDateString()}</span>
                                         </div>
+                                        <div className="flex items-center gap-2">
+                                            <Calendar className="w-4 h-4" />
+                                            <span>Due: {new Date(invoice.dueDate).toLocaleDateString()}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <FileText className="w-4 h-4" />
+                                            <span>Invoice #: {invoice.invoiceNumber}</span>
+                                        </div>
+                                        {invoice.createdAt && (
+                                            <div className="flex items-center gap-2 text-slate-500">
+                                                <Clock className="w-4 h-4" />
+                                                <span>Created: {new Date(invoice.createdAt).toLocaleString()}</span>
+                                            </div>
+                                        )}
+                                        {invoice.updatedAt && invoice.updatedAt !== invoice.createdAt && (
+                                            <div className="flex items-center gap-2 text-slate-500">
+                                                <RefreshCw className="w-4 h-4" />
+                                                <span>Updated: {new Date(invoice.updatedAt).toLocaleString()}</span>
+                                            </div>
+                                        )}
                                         {invoice.project && (
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-2 pt-1">
                                                 <BadgeCheck className="w-4 h-4 text-indigo-600" />
                                                 <span>Project: {invoice.project.title}</span>
                                             </div>
@@ -273,8 +452,9 @@ export function InvoiceView() {
                                     <table className="w-full">
                                         <thead className="bg-gray-50">
                                             <tr>
+                                                <th className="text-left p-3 text-xs font-semibold text-slate-600">Type</th>
                                                 <th className="text-left p-3 text-xs font-semibold text-slate-600">Description</th>
-                                                <th className="text-right p-3 text-xs font-semibold text-slate-600">Quantity</th>
+                                                <th className="text-right p-3 text-xs font-semibold text-slate-600">Qty</th>
                                                 <th className="text-right p-3 text-xs font-semibold text-slate-600">Unit Price</th>
                                                 <th className="text-right p-3 text-xs font-semibold text-slate-600">Total</th>
                                             </tr>
@@ -282,7 +462,32 @@ export function InvoiceView() {
                                         <tbody>
                                             {invoice.items?.map((item: any, idx: number) => (
                                                 <tr key={idx} className="border-t">
-                                                    <td className="p-3 text-sm text-slate-800">{item.description}</td>
+                                                    <td className="p-3">
+                                                        {item.productId != null || item.product ? (
+                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
+                                                                <Package className="w-3.5 h-3.5" />
+                                                                Product
+                                                            </span>
+                                                        ) : item.serviceId != null || item.service ? (
+                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800">
+                                                                <Wrench className="w-3.5 h-3.5" />
+                                                                Service
+                                                            </span>
+                                                        ) : (
+                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-600">
+                                                                <Receipt className="w-3.5 h-3.5" />
+                                                                Custom
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td className="p-3 text-sm text-slate-800">
+                                                        {item.description}
+                                                        {(item.product?.name || item.service?.title) && (
+                                                            <span className="block text-xs text-slate-500 mt-0.5">
+                                                                → {item.product?.name || item.service?.title}
+                                                            </span>
+                                                        )}
+                                                    </td>
                                                     <td className="p-3 text-right text-sm text-slate-700">{Number(item.quantity).toLocaleString()}</td>
                                                     <td className="p-3 text-right text-sm text-slate-700">৳{Number(item.unitPrice).toLocaleString()}</td>
                                                     <td className="p-3 text-right font-medium text-slate-900">
@@ -293,7 +498,7 @@ export function InvoiceView() {
                                         </tbody>
                                         <tfoot className="bg-gray-50">
                                             <tr>
-                                                <td colSpan={3} className="p-3 text-right font-semibold text-slate-800">
+                                                <td colSpan={4} className="p-3 text-right font-semibold text-slate-800">
                                                     Total Amount:
                                                 </td>
                                                 <td className="p-3 text-right font-bold text-lg text-indigo-700">
@@ -317,6 +522,29 @@ export function InvoiceView() {
                         </div>
 
                         <div className="space-y-4">
+                            {/* Invoice Summary */}
+                            <Card className="shadow-sm border-gray-200">
+                                <CardHeader className="pb-2">
+                                    <CardTitle className="text-sm text-slate-800">Payment Summary</CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-2 text-sm">
+                                    <div className="flex justify-between">
+                                        <span className="text-slate-600">Total Amount</span>
+                                        <span className="font-semibold">৳{Number(invoice.totalAmount).toLocaleString()}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-slate-600">Total Paid</span>
+                                        <span className="font-medium text-emerald-600">৳{totalPaid.toLocaleString()}</span>
+                                    </div>
+                                    <div className="flex justify-between pt-2 border-t">
+                                        <span className="text-slate-700 font-medium">Due</span>
+                                        <span className={`font-semibold ${remainingAmount > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                                            ৳{remainingAmount.toLocaleString()}
+                                        </span>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
                             {project && (
                                 <Card className="shadow-sm border-gray-200">
                                     <CardHeader className="pb-3">
@@ -545,40 +773,31 @@ export function InvoiceView() {
                             <Card className="shadow-sm border-gray-200">
                                 <CardHeader>
                                     <CardTitle className="text-sm text-slate-800">Timeline</CardTitle>
-                                    <CardDescription>Static UI; will be dynamic later</CardDescription>
+                                    <CardDescription>
+                                        ইনভয়েস সংক্রান্ত সকল ইভেন্টের ক্রম
+                                    </CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-4 text-sm">
-                                    <div className="flex items-start gap-3">
-                                        <div className="mt-1">
-                                            <div className="w-3 h-3 rounded-full bg-indigo-600"></div>
+                                    {timelineEvents.length === 0 ? (
+                                        <p className="text-slate-500 text-sm">কোনো ইভেন্ট নেই</p>
+                                    ) : (
+                                        <div className="relative pl-6 border-l-2 border-slate-200 ml-2 space-y-4">
+                                            {timelineEvents.map((event, idx) => (
+                                                <div key={event.id} className="relative flex items-start gap-3 -ml-7">
+                                                    <div
+                                                        className={`mt-1 w-3 h-3 rounded-full shrink-0 ${getTimelineIconColor(event.icon)}`}
+                                                    />
+                                                    <div className="flex-1 min-w-0 pb-2">
+                                                        <p className="font-semibold text-slate-900">{event.title}</p>
+                                                        <p className="text-slate-600 text-xs mt-0.5">{event.description}</p>
+                                                        <p className="text-slate-400 text-xs mt-1">
+                                                            {new Date(event.date).toLocaleString()}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            ))}
                                         </div>
-                                        <div className="flex-1">
-                                            <p className="font-semibold text-slate-900">Invoice Created</p>
-                                            <p className="text-slate-600">
-                                                {new Date(invoice.issueDate).toLocaleString()}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-start gap-3">
-                                        <div className="mt-1">
-                                            <div className="w-3 h-3 rounded-full bg-amber-500"></div>
-                                        </div>
-                                        <div className="flex-1">
-                                            <p className="font-semibold text-slate-900">Accepted</p>
-                                            <p className="text-slate-600">Pending (will update when available)</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-start gap-3">
-                                        <div className="mt-1">
-                                            <div className="w-3 h-3 rounded-full bg-emerald-600"></div>
-                                        </div>
-                                        <div className="flex-1">
-                                            <p className="font-semibold text-slate-900">Paid</p>
-                                            <p className="text-slate-600">
-                                                {invoice.status === 'Paid' ? 'Completed' : 'Pending'}
-                                            </p>
-                                        </div>
-                                    </div>
+                                    )}
                                 </CardContent>
                             </Card>
                         </div>

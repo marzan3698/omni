@@ -1,5 +1,9 @@
+import { appendFileSync, mkdirSync } from 'fs';
+import { dirname } from 'path';
 import { Request, Response } from 'express';
 import { invoiceService } from '../services/invoice.service.js';
+import { paymentService } from '../services/payment.service.js';
+import { themeService } from '../services/theme.service.js';
 import { transactionService } from '../services/transaction.service.js';
 import { budgetService } from '../services/budget.service.js';
 import { expenseCategoryService } from '../services/expenseCategory.service.js';
@@ -10,19 +14,27 @@ import { AuthRequest } from '../types/index.js';
 import { z } from 'zod';
 import { InvoiceStatus, TransactionType } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
+import { generateInvoicePDF } from '../utils/pdfGenerator.js';
+import { generateInvoiceImage } from '../utils/invoiceImageGenerator.js';
+
+const DEBUG_LOG = '/Applications/XAMPP/xamppfiles/htdocs/omni/.cursor/debug.log';
+function debugLog(payload: object) {
+  try { mkdirSync(dirname(DEBUG_LOG), { recursive: true }); appendFileSync(DEBUG_LOG, JSON.stringify(payload) + '\n'); } catch (_) {}
+}
 
 // Validation schemas
 const createInvoiceSchema = z.object({
   companyId: z.number().int().positive(),
   clientId: z.number().int().positive(),
   invoiceNumber: z.string().optional(),
-  issueDate: z.string().datetime().or(z.date()),
-  dueDate: z.string().datetime().or(z.date()),
+  issueDate: z.union([z.string(), z.coerce.date()]),
+  dueDate: z.union([z.string(), z.coerce.date()]),
   items: z.array(z.object({
     description: z.string().min(1),
     quantity: z.number().positive(),
     unitPrice: z.number().positive(),
     productId: z.number().int().positive().optional(),
+    serviceId: z.number().int().positive().optional(),
   })).min(1, 'At least one item is required'),
   notes: z.string().optional(),
 });
@@ -34,6 +46,7 @@ const createInvoiceFromProjectSchema = z.object({
     quantity: z.coerce.number().positive(),
     unitPrice: z.coerce.number().positive(),
     productId: z.coerce.number().int().positive().optional(),
+    serviceId: z.coerce.number().int().positive().optional(),
   })).min(1, 'At least one item is required'),
   issueDate: z.union([z.string(), z.coerce.date()]).optional(),
   dueDate: z.union([z.string(), z.coerce.date()]).optional(),
@@ -164,6 +177,179 @@ export const financeController = {
     }
   },
 
+  getInvoicePdf: async (req: AuthRequest, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const companyId = req.user?.companyId || parseInt(req.query.companyId as string);
+      if (isNaN(id) || isNaN(companyId)) return sendError(res, 'Invalid ID', 400);
+
+      const invoice = await invoiceService.getInvoiceById(id, companyId);
+
+      if (req.user?.role?.name === 'Client') {
+        const userEmail = req.user.email?.toLowerCase();
+        const userId = req.user.id;
+        const clientEmail = invoice.client?.contactInfo && typeof invoice.client.contactInfo === 'object'
+          ? (invoice.client.contactInfo as any).email?.toLowerCase()
+          : null;
+        let isAuthorized = clientEmail === userEmail;
+        if (!isAuthorized && invoice.projectId && userId) {
+          const project = await prisma.project.findFirst({
+            where: { id: invoice.projectId, clientId: userId, companyId },
+          });
+          if (project) isAuthorized = true;
+        }
+        if (!isAuthorized) return sendError(res, 'Unauthorized', 403);
+      }
+
+      const payments = await paymentService.getPaymentsByInvoice(id, companyId);
+      const totalPaid = payments
+        .filter((p: any) => p.status === 'Approved')
+        .reduce((sum: number, p: any) => sum + Number(p.amount), 0);
+      const dueAmount = Math.max(0, Number(invoice.totalAmount) - totalPaid);
+
+      let companyLogoPath: string | null = null;
+      try {
+        const header = await themeService.getHeaderSettings(companyId);
+        companyLogoPath = header?.logo || null;
+        if (!companyLogoPath) {
+          const theme = await themeService.getThemeSettings(companyId);
+          companyLogoPath = theme?.siteLogo || null;
+        }
+      } catch (_) {
+        companyLogoPath = null;
+      }
+
+      const filename = `invoice-${invoice.invoiceNumber.replace(/\s/g, '-')}.pdf`;
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      generateInvoicePDF(
+        {
+          id: invoice.id,
+          invoiceNumber: invoice.invoiceNumber,
+          issueDate: invoice.issueDate,
+          dueDate: invoice.dueDate,
+          totalAmount: Number(invoice.totalAmount),
+          totalPaid,
+          dueAmount,
+          status: invoice.status,
+          notes: invoice.notes,
+          client: invoice.client ? {
+            name: invoice.client.name,
+            contactInfo: invoice.client.contactInfo as any,
+          } : undefined,
+          items: invoice.items?.map((i: any) => ({
+            description: i.description,
+            quantity: Number(i.quantity),
+            unitPrice: Number(i.unitPrice),
+            total: Number(i.total),
+            product: i.product,
+            service: i.service,
+          })),
+          payments: payments.map((p: any) => ({
+            amount: Number(p.amount),
+            status: p.status,
+            paymentMethod: p.paymentMethod,
+            transactionId: p.transactionId,
+            paidBy: p.paidBy,
+            createdAt: p.createdAt,
+            verifiedAt: p.verifiedAt,
+          })),
+          project: invoice.project ? { title: invoice.project.title } : undefined,
+          companyLogoPath,
+        },
+        res
+      );
+    } catch (error) {
+      if (error instanceof AppError) return sendError(res, error.message, error.statusCode);
+      return sendError(res, 'Failed to generate PDF', 500);
+    }
+  },
+
+  getInvoiceImage: async (req: AuthRequest, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const companyId = req.user?.companyId || parseInt(req.query.companyId as string);
+      if (isNaN(id) || isNaN(companyId)) return sendError(res, 'Invalid ID', 400);
+
+      const invoice = await invoiceService.getInvoiceById(id, companyId);
+
+      if (req.user?.role?.name === 'Client') {
+        const userEmail = req.user.email?.toLowerCase();
+        const userId = req.user.id;
+        const clientEmail = invoice.client?.contactInfo && typeof invoice.client.contactInfo === 'object'
+          ? (invoice.client.contactInfo as any).email?.toLowerCase()
+          : null;
+        let isAuthorized = clientEmail === userEmail;
+        if (!isAuthorized && invoice.projectId && userId) {
+          const project = await prisma.project.findFirst({
+            where: { id: invoice.projectId, clientId: userId, companyId },
+          });
+          if (project) isAuthorized = true;
+        }
+        if (!isAuthorized) return sendError(res, 'Unauthorized', 403);
+      }
+
+      const payments = await paymentService.getPaymentsByInvoice(id, companyId);
+      const totalPaid = payments
+        .filter((p: any) => p.status === 'Approved')
+        .reduce((sum: number, p: any) => sum + Number(p.amount), 0);
+      const dueAmount = Math.max(0, Number(invoice.totalAmount) - totalPaid);
+
+      let companyLogoPath: string | null = null;
+      try {
+        const header = await themeService.getHeaderSettings(companyId);
+        companyLogoPath = header?.logo || null;
+        if (!companyLogoPath) {
+          const theme = await themeService.getThemeSettings(companyId);
+          companyLogoPath = theme?.siteLogo || null;
+        }
+      } catch (_) {
+        companyLogoPath = null;
+      }
+
+      const buffer = await generateInvoiceImage({
+        id: invoice.id,
+        invoiceNumber: invoice.invoiceNumber,
+        issueDate: invoice.issueDate,
+        dueDate: invoice.dueDate,
+        totalAmount: Number(invoice.totalAmount),
+        totalPaid,
+        dueAmount,
+        status: invoice.status,
+        notes: invoice.notes,
+        client: invoice.client ? {
+          name: invoice.client.name,
+          contactInfo: invoice.client.contactInfo as any,
+        } : undefined,
+        items: invoice.items?.map((i: any) => ({
+          description: i.description,
+          quantity: Number(i.quantity),
+          unitPrice: Number(i.unitPrice),
+          total: Number(i.total),
+        })),
+        payments: payments.map((p: any) => ({
+          amount: Number(p.amount),
+          status: p.status,
+          paymentMethod: p.paymentMethod,
+          transactionId: p.transactionId,
+          paidBy: p.paidBy,
+          createdAt: p.createdAt,
+          verifiedAt: p.verifiedAt,
+        })),
+        project: invoice.project ? { title: invoice.project.title } : undefined,
+        companyLogoPath,
+      });
+
+      const filename = `invoice-${invoice.invoiceNumber.replace(/\s/g, '-')}.png`;
+      res.setHeader('Content-Type', 'image/png');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(buffer);
+    } catch (error) {
+      if (error instanceof AppError) return sendError(res, error.message, error.statusCode);
+      return sendError(res, 'Failed to generate image', 500);
+    }
+  },
+
   getClientInvoices: async (req: AuthRequest, res: Response) => {
     try {
       const userEmail = req.user?.email;
@@ -191,7 +377,13 @@ export const financeController = {
 
   createInvoice: async (req: Request, res: Response) => {
     try {
+      // #region agent log
+      debugLog({location:'finance.controller.ts:req.body',message:'Raw req.body before Zod parse',data:{itemsSample: (req.body as {items?: unknown[]})?.items?.slice(0,2), item0Keys: (req.body as {items?: unknown[]})?.items?.[0] ? Object.keys((req.body as {items?: unknown[]}).items[0] as object) : []},timestamp:Date.now(),hypothesisId:'E'});
+      // #endregion
       const validatedData = createInvoiceSchema.parse(req.body);
+      // #region agent log
+      debugLog({location:'finance.controller.ts:validatedData',message:'Validated items after Zod',data:{validatedItem0Keys: validatedData.items[0] ? Object.keys(validatedData.items[0] as object) : [], hasProduct: validatedData.items.some((i: Record<string, unknown>) => 'product' in i)},timestamp:Date.now(),hypothesisId:'E'});
+      // #endregion
       const invoiceNumber = validatedData.invoiceNumber || await invoiceService.generateInvoiceNumber(validatedData.companyId);
       
       const invoice = await invoiceService.createInvoice({
@@ -208,7 +400,13 @@ export const financeController = {
       if (error instanceof AppError) {
         return sendError(res, error.message, error.statusCode);
       }
-      return sendError(res, 'Failed to create invoice', 500);
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[Finance Controller] createInvoice error:', message, error);
+      return sendError(
+        res,
+        process.env.NODE_ENV === 'development' ? message : 'Failed to create invoice',
+        500
+      );
     }
   },
 

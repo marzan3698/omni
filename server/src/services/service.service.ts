@@ -8,6 +8,7 @@ interface ServiceAttributes {
 
 interface CreateServiceData {
   companyId: number;
+  categoryId: number;
   title: string;
   details: string;
   pricing: number;
@@ -20,6 +21,7 @@ interface CreateServiceData {
 }
 
 interface UpdateServiceData {
+  categoryId?: number;
   title?: string;
   details?: string;
   pricing?: number;
@@ -56,8 +58,14 @@ export const serviceService = {
       }
     }
 
+    const category = await prisma.serviceCategory.findFirst({
+      where: { id: data.categoryId, companyId: data.companyId },
+    });
+    if (!category) throw new AppError('Service category not found', 404);
+
     const createData: Record<string, unknown> = {
       companyId: data.companyId,
+      categoryId: data.categoryId,
       title: data.title,
       details: data.details,
       pricing: data.pricing,
@@ -91,11 +99,8 @@ export const serviceService = {
         ...(filters?.isActive !== undefined && { isActive: filters.isActive }),
       },
       include: {
-        _count: {
-          select: {
-            projects: true,
-          },
-        },
+        category: { select: { id: true, name: true, iconName: true, iconUrl: true } },
+        _count: { select: { projects: true } },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -111,19 +116,11 @@ export const serviceService = {
         companyId,
       },
       include: {
+        category: { select: { id: true, name: true, iconName: true, iconUrl: true } },
         projects: {
-          select: {
-            id: true,
-            title: true,
-            status: true,
-            createdAt: true,
-          },
+          select: { id: true, title: true, status: true, createdAt: true },
         },
-        _count: {
-          select: {
-            projects: true,
-          },
-        },
+        _count: { select: { projects: true } },
       },
     });
 
@@ -161,7 +158,15 @@ export const serviceService = {
       }
     }
 
+    if (data.categoryId !== undefined) {
+      const category = await prisma.serviceCategory.findFirst({
+        where: { id: data.categoryId, companyId },
+      });
+      if (!category) throw new AppError('Service category not found', 404);
+    }
+
     const updateData: Record<string, unknown> = {
+      categoryId: data.categoryId,
       title: data.title,
       details: data.details,
       pricing: data.pricing,

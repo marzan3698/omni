@@ -9,6 +9,8 @@ router.use(authMiddleware);
 
 // Client invoice routes (no permission check - clients can view their own)
 router.get('/invoices/client', financeController.getClientInvoices);
+router.get('/invoices/:id/pdf', financeController.getInvoicePdf);
+router.get('/invoices/:id/image', financeController.getInvoiceImage);
 router.get('/invoices/:id', financeController.getInvoiceById);
 router.post('/invoices/:id/renew', financeController.renewInvoice);
 

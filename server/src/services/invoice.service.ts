@@ -1,6 +1,13 @@
+import { appendFileSync, mkdirSync } from 'fs';
+import { dirname } from 'path';
 import { prisma } from '../lib/prisma.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { InvoiceStatus } from '@prisma/client';
+
+const DEBUG_LOG = '/Applications/XAMPP/xamppfiles/htdocs/omni/.cursor/debug.log';
+function debugLog(payload: object) {
+  try { mkdirSync(dirname(DEBUG_LOG), { recursive: true }); appendFileSync(DEBUG_LOG, JSON.stringify(payload) + '\n'); } catch (_) {}
+}
 
 interface CreateInvoiceData {
   companyId: number;
@@ -13,6 +20,7 @@ interface CreateInvoiceData {
     quantity: number;
     unitPrice: number;
     productId?: number;
+    serviceId?: number;
   }>;
   notes?: string;
 }
@@ -28,6 +36,7 @@ interface UpdateInvoiceData {
     quantity: number;
     unitPrice: number;
     productId?: number;
+    serviceId?: number;
   }>;
 }
 
@@ -109,7 +118,12 @@ export const invoiceService = {
       },
       include: {
         client: true,
-        items: true,
+        items: {
+          include: {
+            product: { select: { id: true, name: true } },
+            service: { select: { id: true, title: true } },
+          },
+        },
         project: {
           select: {
             id: true,
@@ -288,11 +302,32 @@ export const invoiceService = {
     }
 
     // Calculate total amount
-    const totalAmount = data.items.reduce((sum, item) => {
-      return sum + (item.quantity * item.unitPrice);
-    }, 0);
+    const totalAmount = data.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
 
-    // Create invoice with items
+    // Create invoice with items (match createInvoiceFromProject: plain numbers for Decimal fields)
+    // #region agent log
+    debugLog({location:'invoice.service.ts:data.items',message:'Raw data.items before mapping',data:{items: data.items, itemKeys: data.items.map((i: Record<string, unknown>) => Object.keys(i)), hasProduct: data.items.some((i: Record<string, unknown>) => 'product' in i)},timestamp:Date.now(),hypothesisId:'A'});
+    // #endregion
+    const itemRecords = data.items.map((item) => {
+      const base: Record<string, unknown> = {
+        description: item.description,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        total: item.quantity * item.unitPrice,
+      };
+      // Use relation connect instead of scalar productId/serviceId to avoid Prisma "Unknown arg product" (issue #8776)
+      if (item.productId != null && item.productId > 0) {
+        base.product = { connect: { id: item.productId } };
+      }
+      if (item.serviceId != null && item.serviceId > 0) {
+        base.service = { connect: { id: item.serviceId } };
+      }
+      return base;
+    });
+    // #region agent log
+    debugLog({location:'invoice.service.ts:itemRecords',message:'itemRecords passed to Prisma create',data:{itemRecords, firstItemKeys: itemRecords[0] ? Object.keys(itemRecords[0]) : [], hasProductInRecords: itemRecords.some((r: Record<string, unknown>) => 'product' in r)},timestamp:Date.now(),hypothesisId:'B'});
+    // #endregion
+
     const invoice = await prisma.invoice.create({
       data: {
         companyId: data.companyId,
@@ -301,15 +336,9 @@ export const invoiceService = {
         issueDate: data.issueDate,
         dueDate: data.dueDate,
         totalAmount,
-        notes: data.notes,
+        notes: data.notes ?? null,
         items: {
-          create: data.items.map(item => ({
-            description: item.description,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            total: item.quantity * item.unitPrice,
-            productId: item.productId ?? undefined,
-          })),
+          create: itemRecords,
         },
       },
       include: {
@@ -375,6 +404,7 @@ export const invoiceService = {
             unitPrice: item.unitPrice,
             total: item.total,
             productId: item.productId,
+            serviceId: item.serviceId,
           })),
         },
       },
@@ -482,6 +512,7 @@ export const invoiceService = {
           unitPrice: item.unitPrice,
           total: item.quantity * item.unitPrice,
           productId: item.productId ?? undefined,
+          serviceId: item.serviceId ?? undefined,
         })),
       });
 
@@ -527,7 +558,7 @@ export const invoiceService = {
    * Create invoice from project with custom items (for Add Invoice flow)
    */
   async createInvoiceFromProject(companyId: number, projectId: number, data: {
-    items: Array<{ description: string; quantity: number; unitPrice: number; productId?: number }>;
+    items: Array<{ description: string; quantity: number; unitPrice: number; productId?: number; serviceId?: number }>;
     issueDate?: Date;
     dueDate?: Date;
     notes?: string;
@@ -585,6 +616,7 @@ export const invoiceService = {
             unitPrice: i.unitPrice,
             total: i.quantity * i.unitPrice,
             productId: i.productId,
+            serviceId: i.serviceId,
           })),
         },
       },

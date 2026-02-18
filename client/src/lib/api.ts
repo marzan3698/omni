@@ -484,6 +484,30 @@ export const productCategoryApi = {
     apiClientInstance.delete<ApiResponse>(`/product-categories/${id}`, { params: { companyId } }),
 };
 
+// Service Category API
+export const serviceCategoryApi = {
+  /** Get all categories for client dashboard - uses auth user's companyId, no permission required */
+  getListForClient: () =>
+    apiClientInstance.get<ApiResponse>('/service-categories/list'),
+  getAll: (companyId: number, parentId?: number | null) =>
+    apiClientInstance.get<ApiResponse>('/service-categories', {
+      params: { companyId, ...(parentId !== undefined && { parentId: parentId ?? 'null' }) },
+    }),
+  getById: (id: number, companyId: number) =>
+    apiClientInstance.get<ApiResponse>(`/service-categories/${id}`, { params: { companyId } }),
+  create: (data: { name: string; parentId?: number | null; description?: string; iconName?: string; iconUrl?: string }) =>
+    apiClientInstance.post<ApiResponse>('/service-categories', data),
+  update: (id: number, data: { name?: string; parentId?: number | null; description?: string; iconName?: string | null; iconUrl?: string | null }, companyId: number) =>
+    apiClientInstance.put<ApiResponse>(`/service-categories/${id}`, data, { params: { companyId } }),
+  delete: (id: number, companyId: number) =>
+    apiClientInstance.delete<ApiResponse>(`/service-categories/${id}`, { params: { companyId } }),
+  uploadIcon: (id: number, file: File) => {
+    const formData = new FormData();
+    formData.append('icon', file);
+    return apiClientInstance.post<ApiResponse>(`/service-categories/${id}/upload-icon`, formData);
+  },
+};
+
 // Project API
 export const projectApi = {
   getAll: () => apiClientInstance.get<ApiResponse>('/projects'),
@@ -559,6 +583,16 @@ export const invoiceApi = {
   getById: (id: number) => apiClientInstance.get<ApiResponse>(`/finance/invoices/${id}`),
   getClientInvoices: () => apiClientInstance.get<ApiResponse>('/finance/invoices/client'),
   renew: (id: number) => apiClientInstance.post<ApiResponse>(`/finance/invoices/${id}/renew`),
+  getPdf: (id: number, companyId?: number) =>
+    apiClientInstance.get<Blob>(`/finance/invoices/${id}/pdf`, {
+      params: companyId ? { companyId } : {},
+      responseType: 'blob',
+    }),
+  getImage: (id: number, companyId?: number) =>
+    apiClientInstance.get<Blob>(`/finance/invoices/${id}/image`, {
+      params: companyId ? { companyId } : {},
+      responseType: 'blob',
+    }),
 };
 
 // Payment Gateway API

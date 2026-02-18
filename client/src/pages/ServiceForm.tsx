@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate, useParams } from 'react-router-dom';
-import { serviceApi } from '@/lib/api';
+import { useNavigate, useParams, Link } from 'react-router-dom';
+import { serviceApi, serviceCategoryApi } from '@/lib/api';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,9 +15,11 @@ export function ServiceForm() {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const isEdit = !!id;
 
   const [formData, setFormData] = useState({
+    categoryId: 0 as number,
     title: '',
     details: '',
     pricing: '',
@@ -34,6 +37,18 @@ export function ServiceForm() {
   const [newKeyValue, setNewKeyValue] = useState({ key: '', value: '' });
   const [newTag, setNewTag] = useState('');
 
+  const { data: categoriesResponse } = useQuery({
+    queryKey: ['service-categories', user?.companyId],
+    queryFn: async () => {
+      if (!user?.companyId) return [];
+      const res = await serviceCategoryApi.getAll(user.companyId);
+      return (res.data.data || []) as { id: number; name: string; parent?: { name: string } | null }[];
+    },
+    enabled: !!user?.companyId,
+  });
+
+  const categories = categoriesResponse || [];
+
   const { data: serviceData, isLoading } = useQuery({
     queryKey: ['service', id],
     queryFn: async () => {
@@ -50,7 +65,9 @@ export function ServiceForm() {
         ? JSON.parse(serviceData.attributes)
         : serviceData.attributes;
       const useDelivery = serviceData.useDeliveryDate !== false;
+      const catId = serviceData.categoryId ?? serviceData.category?.id ?? 0;
       setFormData({
+        categoryId: catId,
         title: serviceData.title || '',
         details: serviceData.details || '',
         pricing: String(serviceData.pricing || ''),
@@ -90,7 +107,12 @@ export function ServiceForm() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.categoryId && categories.length > 0) {
+      alert('Please select a category');
+      return;
+    }
     const data: Record<string, unknown> = {
+      categoryId: formData.categoryId || undefined,
       title: formData.title,
       details: formData.details,
       pricing: parseFloat(formData.pricing),
@@ -185,6 +207,29 @@ export function ServiceForm() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <Label htmlFor="category">Category *</Label>
+              <select
+                id="category"
+                value={formData.categoryId || ''}
+                onChange={(e) => setFormData({ ...formData, categoryId: parseInt(e.target.value, 10) || 0 })}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 mt-1"
+                required
+              >
+                <option value="">Select category</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.parent ? `${c.parent.name} › ${c.name}` : c.name}
+                  </option>
+                ))}
+              </select>
+              {categories.length === 0 && (
+                <p className="text-sm text-amber-600 mt-1">
+                  No categories yet. <Link to="/service-categories" className="underline">Add a service category</Link> first.
+                </p>
+              )}
+            </div>
+
             <div>
               <Label htmlFor="title">Title *</Label>
               <Input
@@ -293,6 +338,9 @@ export function ServiceForm() {
 
             <div>
               <Label>Attributes - Key-Value Pairs</Label>
+              <p className="text-sm text-slate-500 mt-1 mb-2">
+                Value এ &apos;yes&apos; বা &apos;no&apos; দিলে ক্লায়েন্ট ড্যাশবোর্ডে যথাক্রমে ✓ (টিক) ও ✗ (ক্রস) চিহ্ন দেখাবে।
+              </p>
               <div className="space-y-2">
                 <div className="flex gap-2">
                   <Input
@@ -369,7 +417,11 @@ export function ServiceForm() {
             <div className="flex gap-2">
               <Button
                 type="submit"
-                disabled={createMutation.isPending || updateMutation.isPending}
+                disabled={
+                  createMutation.isPending ||
+                  updateMutation.isPending ||
+                  (!isEdit && categories.length === 0)
+                }
               >
                 {isEdit ? 'Update Service' : 'Create Service'}
               </Button>

@@ -1,0 +1,13 @@
+---
+# cPanel Git Deployment - Omni CRM
+# Deploys client (React) build to public_html, builds server for Node.js
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/imocis/public_html/
+    - export REPOPATH=/home/imocis/omni
+    - cd $REPOPATH/client && npm ci && npm run build
+    - /bin/rm -rf $DEPLOYPATH/*
+    - /bin/cp -R $REPOPATH/client/dist/. $DEPLOYPATH
+    - cd $REPOPATH/server && npm ci && npm run build
+    - /bin/mkdir -p $REPOPATH/server/tmp
+    - /bin/touch $REPOPATH/server/tmp/restart.txt
