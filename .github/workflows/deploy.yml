@@ -5,15 +5,43 @@ on:
     branches:
       - main
       - master
-  workflow_dispatch: # Allow manual trigger from GitHub Actions tab
+  workflow_dispatch:
 
 jobs:
   deploy:
-    name: Deploy to cPanel via SSH
+    name: Build & Deploy to cPanel
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy via SSH
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build Frontend
+        working-directory: ./client
+        env:
+          VITE_API_URL: https://api.paaera.com/api
+        run: |
+          npm ci
+          npm run build
+          echo "✅ Frontend build completed"
+
+      - name: Deploy Frontend to public_html via SCP
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.CPANEL_HOST }}
+          username: ${{ secrets.CPANEL_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          source: "client/dist/*"
+          target: "~/public_html/"
+          strip_components: 2
+
+      - name: Setup .htaccess & Update Backend
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.CPANEL_HOST }}
@@ -21,30 +49,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
           script: |
-            echo "🚀 Starting deployment..."
-
-            # Pull latest code
-            cd ~/omni-repo
-            git pull origin main
-            echo "✅ Code updated"
-
-            # Install backend dependencies
-            cd ~/omni-repo/server
-            npm ci --production
-            echo "✅ Backend dependencies installed"
-
-            # Build backend
-            npm run build 2>/dev/null || echo "⚠️ No backend build step"
-
-            # Install frontend dependencies & build
-            cd ~/omni-repo/client
-            npm ci
-            npm run build
-            echo "✅ Frontend built"
-
-            # Deploy frontend to public_html
-            rm -rf ~/public_html/*
-            cp -r ~/omni-repo/client/dist/* ~/public_html/
+            echo "🚀 Post-deploy setup..."
 
             # Create .htaccess for React Router
             cat > ~/public_html/.htaccess << 'EOF'
@@ -58,25 +63,20 @@ jobs:
             </IfModule>
             EOF
 
-            echo "✅ Frontend deployed to public_html"
+            # Update backend source code
+            cd ~/omni-repo
+            git pull origin main
+            echo "✅ Backend source updated"
 
-            # Deploy backend to ~/api
-            mkdir -p ~/api
-            cp -r ~/omni-repo/server/dist/* ~/api/ 2>/dev/null || true
-            cp ~/omni-repo/server/package.json ~/api/
-            cp -r ~/omni-repo/server/prisma ~/api/ 2>/dev/null || true
-
-            # Set permissions
-            chmod -R 755 ~/public_html
-            chmod -R 755 ~/api
-
-            echo "🎉 Deployment completed successfully!"
+            echo "🎉 Deployment complete!"
+            echo "Frontend: ~/public_html"
+            echo "Backend source: ~/omni-repo/server"
 
       - name: Deployment Status
         if: always()
         run: |
           if [ "${{ job.status }}" == "success" ]; then
-            echo "✅ Deployment to cPanel completed successfully!"
+            echo "✅ Deployment completed successfully!"
           else
             echo "❌ Deployment failed! Check the logs above."
           fi
