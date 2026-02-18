@@ -36,10 +36,8 @@
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.0.2",
     "pdfkit": "^0.15.0",
-    "puppeteer": "^23.0.0",
     "qrcode": "^1.5.4",
     "socket.io": "^4.8.3",
-    "whatsapp-web.js": "^1.26.0",
     "zod": "^3.22.0"
   },
   "devDependencies": {
@@ -58,5 +56,9 @@
     "prisma": "^5.7.0",
     "tsx": "^4.7.0",
     "typescript": "^5.3.3"
+  },
+  "optionalDependencies": {
+    "puppeteer": "^23.0.0",
+    "whatsapp-web.js": "^1.26.0"
   }
 }
