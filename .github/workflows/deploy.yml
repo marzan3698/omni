@@ -9,192 +9,69 @@ on:
 
 jobs:
   deploy:
-    name: Build and Deploy to cPanel
+    name: Deploy to cPanel via SSH
     runs-on: ubuntu-latest
-    
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: |
-            client/package-lock.json
-            server/package-lock.json
-      
-      - name: Build Frontend
-        working-directory: ./client
-        env:
-          VITE_API_URL: https://api.paaera.com/api
-        run: |
-          npm ci
-          npm run build
-          echo "✅ Frontend build completed"
-      
-      - name: Build Backend
-        working-directory: ./server
-        run: |
-          npm ci
-          npx prisma generate
-          npm run build
-          echo "✅ Backend build completed"
-      
-      - name: Prepare Deployment Package
-        run: |
-          mkdir -p deployment-package
-          # Copy frontend build
-          cp -r client/dist deployment-package/frontend-dist
-          # Copy backend build
-          cp -r server/dist deployment-package/api-dist
-          cp server/package.json deployment-package/api-package.json
-          cp server/package-lock.json deployment-package/api-package-lock.json 2>/dev/null || true
-          cp -r server/prisma deployment-package/api-prisma
-          # Copy CommonJS wrapper for cPanel if it exists
-          cp server/server.cjs deployment-package/api-dist/server.cjs 2>/dev/null || true
-          # Copy pre-generated Prisma Client (generated during build step 39)
-          mkdir -p deployment-package/api-prisma-client
-          if [ -d "server/node_modules/.prisma" ]; then
-            cp -r server/node_modules/.prisma deployment-package/api-prisma-client/.prisma
-          fi
-          if [ -d "server/node_modules/@prisma/client" ]; then
-            cp -r server/node_modules/@prisma/client deployment-package/api-prisma-client/@prisma-client
-          fi
-          # Create uploads directory structure
-          mkdir -p deployment-package/api-uploads/{products,social,tasks,theme}
-          echo "✅ Deployment package prepared"
-      
-      - name: Deploy to cPanel via SSH
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.CPANEL_HOST }}
-          username: ${{ secrets.CPANEL_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT || 2222 }}
-          source: "deployment-package/"
-          target: "~/deployment-temp"
-          strip_components: 0
-      
-      - name: Run Deployment Script on Server
+      - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.CPANEL_HOST }}
           username: ${{ secrets.CPANEL_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT || 2222 }}
+          port: ${{ secrets.SSH_PORT }}
           script: |
-            # Check if deployment files exist
-            echo "Checking deployment files..."
-            ls -la ~/deployment-temp/ || echo "ERROR: deployment-temp directory not found"
-            
-            # Determine the correct source path
-            if [ -d ~/deployment-temp/deployment-package ]; then
-              DEPLOY_SRC=~/deployment-temp/deployment-package
-              echo "Found deployment-package subdirectory"
-            else
-              DEPLOY_SRC=~/deployment-temp
-              echo "Using deployment-temp directly"
-            fi
-            
-            echo "Deployment source: $DEPLOY_SRC"
-            ls -la $DEPLOY_SRC/
-            
-            # Frontend deployment
-            echo "Deploying frontend to public_html..."
-            mkdir -p ~/public_html
-            if [ -d $DEPLOY_SRC/frontend-dist ]; then
-              echo "Frontend files found, copying..."
-              rm -rf ~/public_html/*
-              cp -r $DEPLOY_SRC/frontend-dist/* ~/public_html/ || echo "ERROR: Failed to copy frontend files"
-              echo "Frontend files copied. Contents:"
-              ls -la ~/public_html/ | head -10
-            else
-              echo "ERROR: frontend-dist directory not found"
-              ls -la $DEPLOY_SRC/
-            fi
-            
-            # Create .htaccess for React Router and redirect /install
+            echo "🚀 Starting deployment..."
+
+            # Pull latest code
+            cd ~/omni-repo
+            git pull origin main
+            echo "✅ Code updated"
+
+            # Install backend dependencies
+            cd ~/omni-repo/server
+            npm ci --production
+            echo "✅ Backend dependencies installed"
+
+            # Build backend
+            npm run build 2>/dev/null || echo "⚠️ No backend build step"
+
+            # Install frontend dependencies & build
+            cd ~/omni-repo/client
+            npm ci
+            npm run build
+            echo "✅ Frontend built"
+
+            # Deploy frontend to public_html
+            rm -rf ~/public_html/*
+            cp -r ~/omni-repo/client/dist/* ~/public_html/
+
+            # Create .htaccess for React Router
             cat > ~/public_html/.htaccess << 'EOF'
             <IfModule mod_rewrite.c>
               RewriteEngine On
               RewriteBase /
-              
-              # Redirect /install to home page
-              RewriteRule ^install/?$ / [R=301,L]
-              
-              # React Router support
               RewriteRule ^index\.html$ - [L]
               RewriteCond %{REQUEST_FILENAME} !-f
               RewriteCond %{REQUEST_FILENAME} !-d
               RewriteRule . /index.html [L]
             </IfModule>
             EOF
-            
-            # Backend deployment (DEPLOY_SRC already set above)
-            echo "Deploying backend to ~/api..."
+
+            echo "✅ Frontend deployed to public_html"
+
+            # Deploy backend to ~/api
             mkdir -p ~/api
-            
-            cp -r $DEPLOY_SRC/api-dist ~/api/
-            cp $DEPLOY_SRC/api-package.json ~/api/package.json
-            cp $DEPLOY_SRC/api-package-lock.json ~/api/package-lock.json 2>/dev/null || true
-            cp -r $DEPLOY_SRC/api-prisma ~/api/
-            
-            # Copy pre-generated Prisma Client (generated during GitHub Actions build)
-            if [ -d "$DEPLOY_SRC/api-prisma-client/.prisma" ]; then
-              echo "Copying pre-generated Prisma Client..."
-              mkdir -p ~/api/node_modules/.prisma
-              cp -r $DEPLOY_SRC/api-prisma-client/.prisma/* ~/api/node_modules/.prisma/ 2>/dev/null || true
-            fi
-            if [ -d "$DEPLOY_SRC/api-prisma-client/@prisma-client" ]; then
-              mkdir -p ~/api/node_modules/@prisma
-              cp -r $DEPLOY_SRC/api-prisma-client/@prisma-client ~/api/node_modules/@prisma/client 2>/dev/null || true
-            fi
-            
-            echo "Backend files copied. Verifying package.json exists..."
-            ls -la ~/api/package.json
-            
-            # Install production dependencies for backend
-            # Note: Prisma Client is already generated during GitHub Actions build (step 39)
-            # We install dependencies first, then copy the pre-generated Prisma Client
-            cd ~/api
-            if [ -f "package-lock.json" ]; then
-              npm ci --production
-            else
-              npm install --production
-            fi
-            
-            # Copy pre-generated Prisma Client from deployment package (generated during build)
-            if [ -d "$DEPLOY_SRC/api-prisma-client" ]; then
-              echo "Copying pre-generated Prisma Client..."
-              if [ -d "$DEPLOY_SRC/api-prisma-client/.prisma" ]; then
-                mkdir -p ~/api/node_modules/.prisma
-                cp -r $DEPLOY_SRC/api-prisma-client/.prisma/* ~/api/node_modules/.prisma/ 2>/dev/null || true
-              fi
-              if [ -d "$DEPLOY_SRC/api-prisma-client/@prisma-client" ]; then
-                mkdir -p ~/api/node_modules/@prisma
-                cp -r $DEPLOY_SRC/api-prisma-client/@prisma-client ~/api/node_modules/@prisma/client 2>/dev/null || true
-              fi
-            fi
-            
-            echo "✅ Dependencies installed. Prisma Client pre-generated during build."
-            
-            # Create uploads directory if it doesn't exist
-            mkdir -p ~/api/uploads/{products,social,tasks,theme}
-            
+            cp -r ~/omni-repo/server/dist/* ~/api/ 2>/dev/null || true
+            cp ~/omni-repo/server/package.json ~/api/
+            cp -r ~/omni-repo/server/prisma ~/api/ 2>/dev/null || true
+
             # Set permissions
             chmod -R 755 ~/public_html
             chmod -R 755 ~/api
-            chmod -R 775 ~/api/uploads
-            
-            # Cleanup
-            rm -rf ~/deployment-temp
-            
-            echo "✅ Deployment completed successfully!"
-            echo "Frontend: ~/public_html"
-            echo "Backend: ~/api"
-      
+
+            echo "🎉 Deployment completed successfully!"
+
       - name: Deployment Status
         if: always()
         run: |
