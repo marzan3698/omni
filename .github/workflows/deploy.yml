@@ -24,7 +24,7 @@ jobs:
       - name: Build Frontend
         working-directory: ./client
         env:
-          VITE_API_URL: https://api.paaera.com/api
+          VITE_API_URL: https://imoics.com/api
         run: |
           npm ci
           npm run build
