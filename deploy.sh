@@ -52,7 +52,7 @@ echo "Copied. Contents of public_html:"
 ls -la "$DEPLOY/"
 
 echo "Building server..."
-cd "$REPO/server" && npm ci && npm run build
+cd "$REPO/server" && npm ci --include=dev && npm run build
 mkdir -p "$REPO/server/tmp"
 touch "$REPO/server/tmp/restart.txt"
 
