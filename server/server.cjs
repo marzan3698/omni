@@ -1,10 +1,7 @@
-// CommonJS wrapper for cPanel Node.js launcher
-// This file allows cPanel to require() the ES module
+// CommonJS wrapper for cPanel Node.js Passenger launcher
+// This file imports the compiled ES module from dist/
 
-require('dotenv').config();
-
-// Dynamically import the ES module (server.js will be in the same directory after deployment)
-import('./server.js')
+import('./dist/server.js')
   .then(() => {
     console.log('✅ ES Module loaded successfully');
   })
