@@ -1,11 +1,6 @@
 ---
 # cPanel Git Deployment - Omni CRM
-# Each task may run in separate shell - use full paths
+# Single script runs all steps in one shell; logs to ~/omni/deploy.log
 deployment:
   tasks:
-    - cd /home/imocis/omni/client && npm ci && npm run build
-    - /bin/rm -rf /home/imocis/public_html/*
-    - /bin/cp -R /home/imocis/omni/client/dist/. /home/imocis/public_html/
-    - cd /home/imocis/omni/server && npm ci && npm run build
-    - /bin/mkdir -p /home/imocis/omni/server/tmp
-    - /bin/touch /home/imocis/omni/server/tmp/restart.txt
+    - chmod +x /home/imocis/omni/deploy.sh && /home/imocis/omni/deploy.sh
