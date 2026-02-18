@@ -8,7 +8,7 @@
     "postinstall": "prisma generate",
     "migrate": "node scripts/migrate-simple.cjs",
     "dev": "tsx watch src/server.ts",
-    "prebuild": "PUPPETEER_SKIP_DOWNLOAD=true npm install --include=dev --no-audit --no-fund",
+    "prebuild": "PUPPETEER_SKIP_DOWNLOAD=true npm install --include=dev --ignore-scripts --no-audit --no-fund && NODE_OPTIONS='--max-old-space-size=2048' npx prisma generate",
     "build": "npx --package=typescript tsc --noEmitOnError false || echo 'Build completed with warnings'",
     "start": "node dist/server.js",
     "lint": "eslint src --ext .ts",

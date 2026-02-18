@@ -52,7 +52,7 @@ echo "Copied. Contents of public_html:"
 ls -la "$DEPLOY/"
 
 echo "Building server..."
-cd "$REPO/server" && PUPPETEER_SKIP_DOWNLOAD=true npm ci --include=dev && npm run build
+cd "$REPO/server" && PUPPETEER_SKIP_DOWNLOAD=true npm ci --include=dev --ignore-scripts && NODE_OPTIONS='--max-old-space-size=2048' npx prisma generate && npm run build
 mkdir -p "$REPO/server/tmp"
 touch "$REPO/server/tmp/restart.txt"
 
