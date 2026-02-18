@@ -30,6 +30,16 @@ jobs:
           npm run build
           echo "✅ Frontend build completed"
 
+      - name: Build Backend
+        working-directory: ./server
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: true
+        run: |
+          npm ci --ignore-scripts
+          npx prisma generate
+          npm run build
+          echo "✅ Backend build completed"
+
       - name: Deploy Frontend to public_html via SCP
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -41,7 +51,18 @@ jobs:
           target: "~/public_html/"
           strip_components: 2
 
-      - name: Setup .htaccess & Update Backend
+      - name: Deploy Backend dist/ to server via SCP
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.CPANEL_HOST }}
+          username: ${{ secrets.CPANEL_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          source: "server/dist/*"
+          target: "~/omni-repo/server/dist/"
+          strip_components: 2
+
+      - name: Setup .htaccess & Restart Backend
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.CPANEL_HOST }}
@@ -51,7 +72,7 @@ jobs:
           script: |
             echo "🚀 Post-deploy setup..."
 
-            # Create .htaccess for React Router
+            # Create .htaccess for React Router (exclude /api)
             cat > ~/public_html/.htaccess << 'EOF'
             <IfModule mod_rewrite.c>
               RewriteEngine On
@@ -66,11 +87,14 @@ jobs:
             # Update backend source code
             cd ~/omni-repo
             git pull origin main
-            echo "✅ Backend source updated"
+            echo "✅ Backend source & dist updated"
+
+            # Restart Node.js app via Passenger touch
+            mkdir -p ~/omni-repo/server/tmp
+            touch ~/omni-repo/server/tmp/restart.txt
+            echo "✅ Backend restart triggered"
 
             echo "🎉 Deployment complete!"
-            echo "Frontend: ~/public_html"
-            echo "Backend source: ~/omni-repo/server"
 
       - name: Deployment Status
         if: always()
