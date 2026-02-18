@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Enterprise CRM & Company Management System - Backend Server",
   "main": "dist/server.js",
+  "type": "module",
   "scripts": {
     "migrate": "node scripts/migrate-simple.cjs",
     "dev": "tsx watch src/server.ts",

@@ -7,7 +7,19 @@ import { integrationService } from './integration.service.js';
 import * as autoAssignService from './autoAssign.service.js';
 
 const require = createRequire(import.meta.url);
-const { Client, LocalAuth } = require('whatsapp-web.js');
+
+// Lazy-load whatsapp-web.js so server starts even if module is unavailable (e.g. cPanel)
+let whatsappAvailable = false;
+let WhatsAppClient: any = null;
+let LocalAuth: any = null;
+try {
+  const ww = require('whatsapp-web.js');
+  WhatsAppClient = ww.Client;
+  LocalAuth = ww.LocalAuth;
+  whatsappAvailable = true;
+} catch (e) {
+  console.warn('⚠️  whatsapp-web.js not available. WhatsApp features disabled.');
+}
 
 type SocketIOServer = import('socket.io').Server;
 
@@ -69,7 +81,11 @@ export async function initializeClient(
     await disconnectClient(companyId, slotId);
   }
 
-  const client = new Client({
+  if (!whatsappAvailable || !WhatsAppClient || !LocalAuth) {
+    return { success: false, message: 'WhatsApp is not available on this server.' };
+  }
+
+  const client = new WhatsAppClient({
     authStrategy: new LocalAuth({
       clientId: `company-${companyId}-slot-${slotId}`,
       dataPath: './whatsapp-sessions',
