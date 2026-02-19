@@ -12,6 +12,9 @@ const getAllowedOrigins = (): string[] => {
   const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
   return [
     clientUrl,
+    'https://imoics.com',
+    'https://www.imoics.com',
+    'http://imoics.com',
     'https://paaera.com',
     'https://www.paaera.com',
     'http://paaera.com',

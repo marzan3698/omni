@@ -36,12 +36,24 @@ export function useSocket(): UseSocketReturn {
       return;
     }
 
-    // Get API URL (remove /api suffix if present for Socket.IO)
+    // Get API URL — e.g. http://localhost:5001/api OR https://imoics.com/api
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
-    const socketUrl = apiUrl.replace(/\/api$/, '') || 'http://localhost:5001';
+    const parsedUrl = new URL(apiUrl);
+    const isLocalhost = parsedUrl.hostname === 'localhost' || parsedUrl.hostname === '127.0.0.1';
+
+    // Connect to the origin (no path in URL)
+    const socketUrl = parsedUrl.origin;
+
+    // In production on cPanel, Passenger proxies /api/* to Node.js.
+    // So WebSocket must connect to /api/socket.io (not root /socket.io).
+    // Locally, server runs standalone so use default /socket.io.
+    const socketPath = isLocalhost
+      ? '/socket.io'
+      : `${parsedUrl.pathname.replace(/\/$/, '')}/socket.io`; // e.g. /api/socket.io
 
     // Create Socket.IO connection
     const newSocket = io(socketUrl, {
+      path: socketPath,
       auth: {
         token,
       },

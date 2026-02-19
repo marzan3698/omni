@@ -9,13 +9,23 @@ import { setupWhatsAppHandlers } from './whatsappHandlers.js';
  */
 export const initializeSocketIO = (httpServer: HTTPServer): SocketIOServer => {
   const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+
+  // In production on cPanel, Passenger proxies /api/* to Node.js.
+  // Socket.IO requests arrive as /api/socket.io, so the path must match.
+  // Set SOCKET_IO_PATH=/api/socket.io in Node.js Selector env vars for production.
+  const socketPath = process.env.SOCKET_IO_PATH || '/socket.io';
+
   const io = new SocketIOServer(httpServer, {
+    path: socketPath,
     cors: {
       origin: [
         clientUrl,
+        'https://imoics.com',
+        'https://www.imoics.com',
         'https://paaera.com',
         'https://www.paaera.com',
         'http://localhost:5173',
+        'http://localhost:5174',
       ],
       methods: ['GET', 'POST'],
       credentials: true,
