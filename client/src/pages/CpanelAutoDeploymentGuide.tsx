@@ -80,6 +80,29 @@ const CMD_TEST_LOGIN = `curl -s -X POST https://imoics.com/api/auth/login \\
 
 const CMD_TEST_HEALTH = `curl -s https://imoics.com/api/health`;
 
+const SQL_DROP_ALL_TABLES = `-- ⚠️ এটি সব table DELETE করবে! আগে Enable foreign key checks uncheck করুন
+SET FOREIGN_KEY_CHECKS = 0;
+
+SELECT @schema := DATABASE();
+
+SET @tables = (
+  SELECT GROUP_CONCAT(table_name SEPARATOR ', ')
+  FROM information_schema.tables
+  WHERE table_schema = DATABASE()
+);
+
+SET @query = IF(
+  @tables IS NOT NULL,
+  CONCAT('DROP TABLE IF EXISTS ', @tables),
+  'SELECT 1'
+);
+
+PREPARE stmt FROM @query;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET FOREIGN_KEY_CHECKS = 1;`;
+
 const CMD_KILL_OLD_PROCESS = `# পুরনো process খুঁজুন
 ps aux | grep "node dist" | grep -v grep
 
@@ -567,7 +590,37 @@ export default function CpanelAutoDeploymentGuide() {
               <p className="mt-2"><strong className={s.strong}>সমাধান:</strong> Step 8 এর lazy load pattern ব্যবহার করুন, তারপর rebuild করুন (Step 9)।</p>
             </Section>
 
-            <Section icon={<AlertTriangle className="h-4 w-4" />} title='পরবর্তীতে আবার নতুন cPanel এ deploy করলে কি করতে হবে?'>
+            <Section icon={<Database className="h-4 w-4" />} title="Local Database থেকে Server Database-এ Data Import করুন" badge="Optional">
+              <p>আপনার local XAMPP database-এর data server-এ copy করতে নিচের ধাপ অনুসরণ করুন।</p>
+
+              <p className="font-medium text-amber-200">Step A — Local phpMyAdmin থেকে Export:</p>
+              <ol className="list-decimal list-inside space-y-1.5 pl-1">
+                <li><code className={s.inline}>http://localhost/phpmyadmin</code> খুলুন</li>
+                <li>বাম দিকে আপনার database select করুন (যেমন <code className={s.inline}>omni_db</code>)</li>
+                <li>উপরে <strong className={s.strong}>Export</strong> tab → Format: <strong>SQL</strong> → <strong>Go</strong></li>
+                <li><code className={s.inline}>.sql</code> file download হবে</li>
+              </ol>
+
+              <p className="font-medium text-amber-200 mt-3">Step B — Server-এ সব পুরনো Table Delete করুন:</p>
+              <p>cPanel phpMyAdmin → <strong className={s.strong}>imocis_database</strong> select → SQL tab-এ নিচের query paste করুন:</p>
+              <div className={s.warn}>
+                <strong>⚠️ গুরুত্বপূর্ণ:</strong> Query run করার আগে নিচের <strong>"Enable foreign key checks"</strong> checkbox <strong>uncheck</strong> করুন, নইলে <code className={s.inline}>#1451 foreign key constraint fails</code> error আসবে।
+              </div>
+              <CodeBlock code={SQL_DROP_ALL_TABLES} id="sql-drop" />
+
+              <p className="font-medium text-amber-200 mt-3">Step C — Local SQL File Import করুন:</p>
+              <ol className="list-decimal list-inside space-y-1.5 pl-1">
+                <li>cPanel phpMyAdmin → <strong className={s.strong}>imocis_database</strong> select করুন</li>
+                <li><strong className={s.strong}>Import</strong> tab → <strong>Choose File</strong> → ডাউনলোড করা <code className={s.inline}>.sql</code> file select করুন</li>
+                <li>নিচে <strong>"Enable foreign key checks"</strong> <strong>uncheck</strong> রাখুন</li>
+                <li><strong>Go</strong> click করুন → Import সম্পন্ন ✅</li>
+              </ol>
+              <div className={s.note}>
+                <strong>ℹ️ Note:</strong> Local SQL file-এ যদি <code className={s.inline}>USE `omni_db`;</code> এই ধরনের line থাকে, সেটা মুছে দিন বা server database নাম দিয়ে replace করুন import করার আগে।
+              </div>
+            </Section>
+
+            <Section icon={<AlertTriangle className="h-4 w-4" />} title="পরবর্তীতে আবার নতুন cPanel এ deploy করলে কি করতে হবে?">
               <div className={s.tip}>
                 <strong>✅ সংক্ষিপ্ত checklist নতুন cPanel-এর জন্য:</strong>
               </div>
@@ -576,7 +629,7 @@ export default function CpanelAutoDeploymentGuide() {
                 <li>cPanel-এ MySQL Database + User তৈরি করুন</li>
                 <li>Terminal-এ repo clone করুন</li>
                 <li>Node.js Selector-এ app তৈরি করুন (PORT ছাড়া env vars সেট করুন)</li>
-                <li><code className={s.inline}>schema.prisma</code> এ binaryTargets ঠিক আছে কিনা দেখুন (Steps 6)</li>
+                <li><code className={s.inline}>schema.prisma</code> এ binaryTargets ঠিক আছে কিনা দেখুন (Step 6)</li>
                 <li><code className={s.inline}>npm install → tsc build → prisma generate → db push</code> চালান</li>
                 <li>Superadmin account তৈরি করুন</li>
                 <li>Passenger restart করুন</li>
@@ -587,6 +640,7 @@ export default function CpanelAutoDeploymentGuide() {
                 <CodeBlock code={CMD_TEST_HEALTH} id="health-check" />
               </div>
             </Section>
+
 
           </div>
         </div>
