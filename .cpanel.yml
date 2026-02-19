@@ -1,6 +1,0 @@
----
-# cPanel Git Deployment - Omni CRM
-# Single script runs all steps in one shell; logs to ~/omni/deploy.log
-deployment:
-  tasks:
-    - chmod +x /home/imocis/omni/deploy.sh && /home/imocis/omni/deploy.sh
