@@ -268,7 +268,7 @@ const menuSections: MenuSection[] = [
     label: 'SuperAdmin Dashboard',
     items: [
       {
-        label: 'Cpanel Auto Deployment গাইড',
+        label: 'New cPanel Setup',
         icon: FileCode,
         path: '/admin/cpanel-auto-deployment-guide',
         permission: 'can_manage_root_items',
@@ -477,92 +477,92 @@ export function Sidebar() {
                               {item.submenu
                                 .filter((subItem) => !subItem.permission || user?.permissions?.[subItem.permission] || user?.roleName === 'SuperAdmin')
                                 .map((subItem) => {
-                                const SubIcon = subItem.icon || Eye;
-                                const isSubActive = location.pathname === subItem.path;
-                                const hasNestedSubmenu = subItem.submenu && subItem.submenu.length > 0;
-                                const nestedDropdownKey = `${item.label}-${subItem.label}`;
-                                const isNestedDropdownOpen = openDropdowns[nestedDropdownKey] || false;
-                                const hasActiveNestedSubmenu = subItem.submenu?.some(nested => location.pathname === nested.path);
+                                  const SubIcon = subItem.icon || Eye;
+                                  const isSubActive = location.pathname === subItem.path;
+                                  const hasNestedSubmenu = subItem.submenu && subItem.submenu.length > 0;
+                                  const nestedDropdownKey = `${item.label}-${subItem.label}`;
+                                  const isNestedDropdownOpen = openDropdowns[nestedDropdownKey] || false;
+                                  const hasActiveNestedSubmenu = subItem.submenu?.some(nested => location.pathname === nested.path);
 
-                                if (hasNestedSubmenu) {
+                                  if (hasNestedSubmenu) {
+                                    return (
+                                      <li key={subItem.label}>
+                                        <button
+                                          onClick={() => toggleDropdown(nestedDropdownKey)}
+                                          className={cn(
+                                            "group/sub w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-normal transition-all duration-200",
+                                            "hover:bg-amber-500/10 hover:text-amber-200",
+                                            hasActiveNestedSubmenu
+                                              ? "bg-amber-500/15 text-amber-200 font-medium"
+                                              : "text-slate-400"
+                                          )}
+                                        >
+                                          <SubIcon className="w-4 h-4 flex-shrink-0 transition-transform group-hover/sub:scale-110" />
+                                          <span className="flex-1 text-left">{subItem.label}</span>
+                                          <ChevronRight className={cn(
+                                            "w-4 h-4 text-amber-500/50 transition-transform duration-300",
+                                            isNestedDropdownOpen && "rotate-90"
+                                          )} />
+                                        </button>
+                                        <div
+                                          className={cn(
+                                            "overflow-hidden transition-all duration-300 ease-in-out",
+                                            isNestedDropdownOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+                                          )}
+                                        >
+                                          <ul className="ml-3 mt-1 mb-1 space-y-0.5 border-l-2 border-amber-500/20 pl-3">
+                                            {subItem.submenu!.map((nestedItem) => {
+                                              const NestedIcon = nestedItem.icon || Eye;
+                                              const isNestedActive = location.pathname === nestedItem.path;
+
+                                              return (
+                                                <li key={nestedItem.path}>
+                                                  <Link
+                                                    to={nestedItem.path!}
+                                                    onClick={() => {
+                                                      if (window.innerWidth < 1024) setIsOpen(false);
+                                                    }}
+                                                    className={cn(
+                                                      "group/lnk flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-normal transition-all duration-200",
+                                                      "hover:bg-amber-500/10 hover:text-amber-200",
+                                                      isNestedActive
+                                                        ? "bg-amber-500/15 text-amber-200 font-medium"
+                                                        : "text-slate-400"
+                                                    )}
+                                                  >
+                                                    <NestedIcon className="w-4 h-4 flex-shrink-0 transition-transform group-hover/lnk:scale-110" />
+                                                    <span className="flex-1 text-left">{nestedItem.label}</span>
+                                                  </Link>
+                                                </li>
+                                              );
+                                            })}
+                                          </ul>
+                                        </div>
+                                      </li>
+                                    );
+                                  }
+
                                   return (
-                                    <li key={subItem.label}>
-                                      <button
-                                        onClick={() => toggleDropdown(nestedDropdownKey)}
+                                    <li key={subItem.path}>
+                                      <Link
+                                        to={subItem.path!}
+                                        onClick={() => {
+                                          if (window.innerWidth < 1024) setIsOpen(false);
+                                        }}
                                         className={cn(
-                                          "group/sub w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-normal transition-all duration-200",
+                                          "group/subLink flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-normal transition-all duration-200",
                                           "hover:bg-amber-500/10 hover:text-amber-200",
-                                          hasActiveNestedSubmenu
+                                          isSubActive
                                             ? "bg-amber-500/15 text-amber-200 font-medium"
                                             : "text-slate-400"
                                         )}
                                       >
-                                        <SubIcon className="w-4 h-4 flex-shrink-0 transition-transform group-hover/sub:scale-110" />
+                                        <SubIcon className="w-4 h-4 flex-shrink-0 transition-transform group-hover/subLink:scale-110" />
                                         <span className="flex-1 text-left">{subItem.label}</span>
-                                        <ChevronRight className={cn(
-                                          "w-4 h-4 text-amber-500/50 transition-transform duration-300",
-                                          isNestedDropdownOpen && "rotate-90"
-                                        )} />
-                                      </button>
-                                      <div
-                                        className={cn(
-                                          "overflow-hidden transition-all duration-300 ease-in-out",
-                                          isNestedDropdownOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
-                                        )}
-                                      >
-                                        <ul className="ml-3 mt-1 mb-1 space-y-0.5 border-l-2 border-amber-500/20 pl-3">
-                                          {subItem.submenu!.map((nestedItem) => {
-                                            const NestedIcon = nestedItem.icon || Eye;
-                                            const isNestedActive = location.pathname === nestedItem.path;
-
-                                            return (
-                                              <li key={nestedItem.path}>
-                                                <Link
-                                                  to={nestedItem.path!}
-                                                  onClick={() => {
-                                                    if (window.innerWidth < 1024) setIsOpen(false);
-                                                  }}
-                                                  className={cn(
-                                                    "group/lnk flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-normal transition-all duration-200",
-                                                    "hover:bg-amber-500/10 hover:text-amber-200",
-                                                    isNestedActive
-                                                      ? "bg-amber-500/15 text-amber-200 font-medium"
-                                                      : "text-slate-400"
-                                                  )}
-                                                >
-                                                  <NestedIcon className="w-4 h-4 flex-shrink-0 transition-transform group-hover/lnk:scale-110" />
-                                                  <span className="flex-1 text-left">{nestedItem.label}</span>
-                                                </Link>
-                                              </li>
-                                            );
-                                          })}
-                                        </ul>
-                                      </div>
+                                      </Link>
                                     </li>
                                   );
-                                }
-
-                                return (
-                                  <li key={subItem.path}>
-                                    <Link
-                                      to={subItem.path!}
-                                      onClick={() => {
-                                        if (window.innerWidth < 1024) setIsOpen(false);
-                                      }}
-                                      className={cn(
-                                        "group/subLink flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-normal transition-all duration-200",
-                                        "hover:bg-amber-500/10 hover:text-amber-200",
-                                        isSubActive
-                                          ? "bg-amber-500/15 text-amber-200 font-medium"
-                                          : "text-slate-400"
-                                      )}
-                                    >
-                                      <SubIcon className="w-4 h-4 flex-shrink-0 transition-transform group-hover/subLink:scale-110" />
-                                      <span className="flex-1 text-left">{subItem.label}</span>
-                                    </Link>
-                                  </li>
-                                );
-                              })}
+                                })}
                             </ul>
                           </div>
                         </li>
