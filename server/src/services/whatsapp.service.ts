@@ -94,6 +94,7 @@ export async function initializeClient(
       headless: true,
       executablePath: process.env.CHROME_BIN || undefined,
       timeout: 120000,
+      pipe: true,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
