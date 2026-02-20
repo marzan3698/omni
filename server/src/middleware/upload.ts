@@ -2,11 +2,9 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const rootUploadsDir = path.join(__dirname, '../../uploads');
+// Use process.cwd() which always reliably points to the root of the executed application
+// (In this case, the `server/` directory or `~/api/` on cPanel Passenger)
+const rootUploadsDir = path.join(process.cwd(), 'uploads');
 
 // Create uploads directory if it doesn't exist
 const uploadsDir = path.join(rootUploadsDir, 'products');
@@ -289,7 +287,7 @@ export const multipleTaskAttachments = uploadTaskAttachment.array('files', 10); 
 // ============================================
 
 // Create uploads directory for hero images if it doesn't exist
-const heroImageUploadsDir = path.join(process.cwd(), 'uploads', 'theme', 'hero');
+const heroImageUploadsDir = path.join(rootUploadsDir, 'theme', 'hero');
 if (!fs.existsSync(heroImageUploadsDir)) {
   fs.mkdirSync(heroImageUploadsDir, { recursive: true });
 }
@@ -411,7 +409,7 @@ export const singleHeroAddonImage = uploadHeroAddonImage.single('addonImage');
 // Activity Screenshot Upload (JPEG, 2MB)
 // ============================================
 
-const screenshotsDir = path.join(process.cwd(), 'uploads', 'screenshots');
+const screenshotsDir = path.join(rootUploadsDir, 'screenshots');
 if (!fs.existsSync(screenshotsDir)) {
   fs.mkdirSync(screenshotsDir, { recursive: true });
 }

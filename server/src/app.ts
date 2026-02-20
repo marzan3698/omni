@@ -49,11 +49,8 @@ app.use((req, res, next) => {
 
 // Serve static files for uploads using robust absolute paths
 import path from 'path';
-import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const uploadsPath = path.join(__dirname, '../uploads');
+const uploadsPath = path.join(process.cwd(), 'uploads');
 
 // Serve locally at /uploads and /api/uploads to match VITE_API_URL locally and via Passenger
 app.use('/uploads', express.static(uploadsPath));
