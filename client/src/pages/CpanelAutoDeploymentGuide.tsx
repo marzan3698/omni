@@ -620,6 +620,23 @@ export default function CpanelAutoDeploymentGuide() {
               </div>
             </Section>
 
+            <Section icon={<AlertTriangle className="h-4 w-4" />} title="গুরুত্বপূর্ণ ফিক্স: File Uploads 500 Error এবং Image 404 Failed to Load">
+              <div className={s.warn}>
+                <strong>⚠️ cPanel Passenger Environment-এ File Uploads এবং Image Serving-এর জন্য করণীয়:</strong>
+              </div>
+              <ul className="list-disc list-inside space-y-2 mt-3 text-amber-100/90 text-sm">
+                <li>
+                  <strong className="text-red-300">500 Internal Server Error (Upload):</strong> cPanel-এ আপলোড করা ফাইল সেভ করার পাথ হিসেবে <code className={s.inline}>path.join(__dirname, '../../uploads')</code> ব্যবহার করলে তা কাজ করবে না এবং 500 Error দিবে। এর পরিবর্তে সর্বদা <code className={s.inline}>path.join(process.cwd(), 'uploads')</code> ব্যবহার করতে হবে।
+                </li>
+                <li>
+                  <strong className="text-red-300">MySQL Database Crash (Error 1366):</strong> ইমোজি বা বাংলা নামযুক্ত ফাইল আপলোড করলে Default MySQL Database ক্র্যাশ করে। এর সমাধানে <code className={s.inline}>task.controller.ts</code>-এ <code className={s.inline}>req.file.originalname.replace(/[^\x00-\x7F]/g, '').trim()</code> দিয়ে ফাইলের নাম স্যানিটাইজ (Sanitize) করতে হবে।
+                </li>
+                <li>
+                  <strong className="text-amber-300">Image 404 Failed to Load:</strong> cPanel-এ Backend <code className={s.inline}>/api</code> রুট দিয়ে চলে। তাই Frontend-এর <code className={s.inline}>lib/utils.ts</code> ফাইলে <code className={s.inline}>getStaticFileBaseUrl()</code> ফাংশনে <code className={s.inline}>VITE_API_URL</code> থেকে <code className={s.inline}>/api</code> প্রিফিক্স রিমুভ করা যাবে না। নতুবা Image url <code className={s.inline}>imoics.com/uploads/...</code> হয়ে যাবে যা 404 এরর দিবে, কারণ সঠিক url হলো <code className={s.inline}>imoics.com/api/uploads/...</code>
+                </li>
+              </ul>
+            </Section>
+
             <Section icon={<AlertTriangle className="h-4 w-4" />} title="পরবর্তীতে আবার নতুন cPanel এ deploy করলে কি করতে হবে?">
               <div className={s.tip}>
                 <strong>✅ সংক্ষিপ্ত checklist নতুন cPanel-এর জন্য:</strong>
