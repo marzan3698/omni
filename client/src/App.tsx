@@ -151,6 +151,7 @@ function App() {
                 }
               />
               <Route
+                path="/activity-monitor"
                 element={
                   <ProtectedRoute>
                     <Layout>
