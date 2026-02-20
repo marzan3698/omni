@@ -93,7 +93,7 @@ export async function initializeClient(
     puppeteer: {
       headless: true,
       executablePath: process.env.CHROME_BIN || undefined,
-      timeout: 60000,
+      timeout: 120000,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
@@ -102,7 +102,11 @@ export async function initializeClient(
         '--no-first-run',
         '--no-zygote',
         '--disable-gpu',
-        '--single-process'
+        '--single-process',
+        '--disable-software-rasterizer',
+        '--disable-features=IsolateOrigins,site-per-process,dbus',
+        '--mute-audio',
+        '--ignore-certificate-errors',
       ],
     },
   });
