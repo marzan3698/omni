@@ -524,16 +524,16 @@ export function ProjectCreate() {
               </GameCard>
 
               {/* Actions */}
-              <div className="flex gap-4 pt-2">
+              <div className="flex justify-end gap-4 pt-6 mt-2 border-t border-amber-500/10">
+                <Button type="button" variant="outline" onClick={() => navigate('/admin/projects')} className={btnOutline}>
+                  Cancel
+                </Button>
                 <Button
                   type="submit"
                   disabled={createMutation.isPending}
-                  className="bg-amber-600 hover:bg-amber-500 text-white border-amber-500/50 animate-game-glow"
+                  className="bg-amber-600 hover:bg-amber-500 text-white border-amber-500/50 animate-game-glow px-6"
                 >
                   {createMutation.isPending ? 'Creating...' : 'Create Project'}
-                </Button>
-                <Button type="button" variant="outline" onClick={() => navigate('/admin/projects')} className={btnOutline}>
-                  Cancel
                 </Button>
               </div>
             </div>
