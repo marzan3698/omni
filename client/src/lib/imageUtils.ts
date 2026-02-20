@@ -22,13 +22,13 @@ export function getImageUrl(path: string | null | undefined): string {
 
   // Get API base URL from environment variable
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
-  
-  // Remove /api suffix for static files (images are served directly, not through /api route)
-  const baseUrl = apiUrl.replace(/\/api$/, '');
-  
+
+  // Use apiUrl directly instead of removing /api suffix
+  const baseUrl = apiUrl;
+
   // Ensure path starts with /
   const imagePath = path.startsWith('/') ? path : `/${path}`;
-  
+
   // Return full URL
   return `${baseUrl}${imagePath}`;
 }
@@ -40,7 +40,8 @@ export function getImageUrl(path: string | null | undefined): string {
  */
 export function getApiBaseUrl(): string {
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
-  return apiUrl.replace(/\/api$/, '');
+  // Return apiUrl directly so static files use the backend route prefix
+  return apiUrl;
 }
 
 /**

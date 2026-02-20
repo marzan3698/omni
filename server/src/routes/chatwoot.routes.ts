@@ -8,11 +8,11 @@ const router = Router();
 router.post('/webhooks/chatwoot', chatwootController.handleWebhook);
 
 // ─── SuperAdmin-only config endpoints ────────────────────────────────────────
-router.use(authMiddleware, verifyRole(['SuperAdmin']));
+const chatwootAdminAuth = [authMiddleware, verifyRole(['SuperAdmin'])];
 
-router.get('/chatwoot/config', chatwootController.getConfig);
-router.post('/chatwoot/config', chatwootController.saveConfig);
-router.post('/chatwoot/test', chatwootController.testConnection);
-router.delete('/chatwoot/config', chatwootController.deleteConfig);
+router.get('/chatwoot/config', chatwootAdminAuth, chatwootController.getConfig);
+router.post('/chatwoot/config', chatwootAdminAuth, chatwootController.saveConfig);
+router.post('/chatwoot/test', chatwootAdminAuth, chatwootController.testConnection);
+router.delete('/chatwoot/config', chatwootAdminAuth, chatwootController.deleteConfig);
 
 export default router;
