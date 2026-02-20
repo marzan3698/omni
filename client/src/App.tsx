@@ -19,6 +19,7 @@ import { ProjectSign } from './pages/ProjectSign';
 import { Inbox } from './pages/Inbox';
 import InboxReport from './pages/InboxReport';
 import CpanelAutoDeploymentGuide from './pages/CpanelAutoDeploymentGuide';
+import AdvancedWhatsappSetup from './pages/AdvancedWhatsappSetup';
 import ChatwootSettings from './pages/ChatwootSettings';
 import ActivityMonitor from './pages/ActivityMonitor';
 import ActivityDetail from './pages/ActivityDetail';
@@ -133,6 +134,18 @@ function App() {
                     <Layout>
                       <PermissionGuard permission="can_manage_root_items">
                         <CpanelAutoDeploymentGuide />
+                      </PermissionGuard>
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/advanced-whatsapp-setup"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <PermissionGuard permission="can_manage_root_items">
+                        <AdvancedWhatsappSetup />
                       </PermissionGuard>
                     </Layout>
                   </ProtectedRoute>
