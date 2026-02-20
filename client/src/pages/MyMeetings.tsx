@@ -362,7 +362,7 @@ function MyMeetingGridCard({
               </a>
             )}
             {meeting.lead && (
-              <Button variant="ghost" size="sm" onClick={onNavigate} className="text-xs h-6 px-2 text-amber-400 hover:text-amber-300">
+              <Button variant="ghost" size="sm" onClick={onNavigate} className="text-xs h-6 px-2 text-amber-400 hover:text-amber-300 hover:bg-amber-500/20">
                 <Eye className="w-3 h-3 mr-1" />Lead
               </Button>
             )}
