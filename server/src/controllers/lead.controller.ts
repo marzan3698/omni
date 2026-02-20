@@ -65,7 +65,7 @@ export const leadController = {
       const userRole = (req as AuthRequest).user?.role?.name;
 
       const filters: any = {};
-      
+
       // Lead Manager: only unassigned leads + leads they monitor
       if (userRole === 'Lead Manager') {
         if (!userId) {
@@ -79,15 +79,25 @@ export const leadController = {
         }
         filters.createdByOrAssignedToUserId = userId;
       }
-      
+
       // Apply filters
       if (req.query.status) filters.status = req.query.status as LeadStatus;
       if (req.query.source) filters.source = req.query.source as LeadSource;
       if (req.query.assignedTo) filters.assignedTo = parseInt(req.query.assignedTo as string);
       if (req.query.categoryId) filters.categoryId = parseInt(req.query.categoryId as string);
       if (req.query.interestId) filters.interestId = parseInt(req.query.interestId as string);
+      if (req.query.campaignId) filters.campaignId = parseInt(req.query.campaignId as string);
+      if (req.query.productId) filters.productId = parseInt(req.query.productId as string);
       if (req.query.search) filters.search = req.query.search as string;
       if (req.query.createdBy) filters.createdBy = req.query.createdBy as string;
+      if (req.query.minValue) filters.minValue = parseFloat(req.query.minValue as string);
+      if (req.query.maxValue) filters.maxValue = parseFloat(req.query.maxValue as string);
+      if (req.query.dateFrom) filters.dateFrom = req.query.dateFrom as string;
+      if (req.query.dateTo) filters.dateTo = req.query.dateTo as string;
+      if (req.query.hasAssignments === 'true') filters.hasAssignments = true;
+      else if (req.query.hasAssignments === 'false') filters.hasAssignments = false;
+      if (req.query.hasProfit === 'true') filters.hasProfit = true;
+      if (req.query.platform) filters.platform = req.query.platform as string;
       // convertedOnly: 'true' = only leads converted to client (Complete tab); otherwise exclude them (All Leads tab)
       if (req.query.convertedOnly === 'true') {
         filters.convertedOnly = true;
@@ -113,7 +123,7 @@ export const leadController = {
     try {
       const id = parseInt(req.params.id);
       const companyId = parseInt(req.query.companyId as string || req.body.companyId);
-      
+
       if (isNaN(id) || isNaN(companyId)) {
         return sendError(res, 'Invalid ID', 400);
       }
@@ -136,7 +146,7 @@ export const leadController = {
     try {
       const conversationId = parseInt(req.params.conversationId);
       const userId = (req as AuthRequest).user?.id;
-      
+
       if (isNaN(conversationId)) {
         return sendError(res, 'Invalid conversation ID', 400);
       }
@@ -147,7 +157,7 @@ export const leadController = {
 
       // Convert string numbers to actual numbers, handle empty strings
       const body: any = { ...req.body };
-      
+
       // Category is now optional
       if (body.categoryId !== undefined && body.categoryId !== null && body.categoryId !== '') {
         body.categoryId = typeof body.categoryId === 'string' ? parseInt(body.categoryId, 10) : body.categoryId;
@@ -157,7 +167,7 @@ export const leadController = {
       } else {
         body.categoryId = undefined;
       }
-      
+
       // Interest is now optional
       if (body.interestId !== undefined && body.interestId !== null && body.interestId !== '') {
         body.interestId = typeof body.interestId === 'string' ? parseInt(body.interestId, 10) : body.interestId;
@@ -167,7 +177,7 @@ export const leadController = {
       } else {
         body.interestId = undefined;
       }
-      
+
       // Campaign is now optional
       if (body.campaignId !== undefined && body.campaignId !== null && body.campaignId !== '') {
         body.campaignId = typeof body.campaignId === 'string' ? parseInt(body.campaignId, 10) : body.campaignId;
@@ -177,7 +187,7 @@ export const leadController = {
       } else {
         body.campaignId = undefined;
       }
-      
+
       if (body.assignedTo !== undefined && body.assignedTo !== null && body.assignedTo !== '') {
         body.assignedTo = typeof body.assignedTo === 'string' ? parseInt(body.assignedTo, 10) : body.assignedTo;
         if (isNaN(body.assignedTo) || body.assignedTo <= 0) {
@@ -186,7 +196,7 @@ export const leadController = {
       } else {
         body.assignedTo = undefined;
       }
-      
+
       if (body.value !== undefined && body.value !== null && body.value !== '') {
         body.value = typeof body.value === 'string' ? parseFloat(body.value) : body.value;
         if (isNaN(body.value) || body.value <= 0) {
@@ -313,7 +323,7 @@ export const leadController = {
     try {
       const id = parseInt(req.params.id);
       const companyId = parseInt(req.query.companyId as string || req.body.companyId);
-      
+
       if (isNaN(id) || isNaN(companyId)) {
         return sendError(res, 'Invalid ID', 400);
       }
@@ -446,7 +456,7 @@ export const leadController = {
     try {
       const id = parseInt(req.params.id);
       const companyId = parseInt(req.query.companyId as string || req.body.companyId);
-      
+
       if (isNaN(id) || isNaN(companyId)) {
         return sendError(res, 'Invalid ID', 400);
       }

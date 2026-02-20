@@ -70,8 +70,17 @@ export const leadService = {
     assignedTo?: number;
     categoryId?: number;
     interestId?: number;
+    campaignId?: number;
+    productId?: number;
     search?: string;
     convertedOnly?: boolean;
+    minValue?: number;
+    maxValue?: number;
+    dateFrom?: string;
+    dateTo?: string;
+    hasAssignments?: boolean;
+    hasProfit?: boolean;
+    platform?: string;
   }) {
     const where: any = {};
 
@@ -86,17 +95,17 @@ export const leadService = {
     const accessOr =
       filters?.createdByOrAssignedToUserId
         ? [
-            { createdBy: filters.createdByOrAssignedToUserId },
-            { assignments: { some: { employee: { userId: filters.createdByOrAssignedToUserId } } } },
-          ]
+          { createdBy: filters.createdByOrAssignedToUserId },
+          { assignments: { some: { employee: { userId: filters.createdByOrAssignedToUserId } } } },
+        ]
         : null;
     const searchOr = filters?.search
       ? [
-          { title: { contains: filters.search } },
-          { customerName: { contains: filters.search } },
-          { phone: { contains: filters.search } },
-          { description: { contains: filters.search } },
-        ]
+        { title: { contains: filters.search } },
+        { customerName: { contains: filters.search } },
+        { phone: { contains: filters.search } },
+        { description: { contains: filters.search } },
+      ]
       : null;
 
     if (accessOr && searchOr) {
@@ -136,6 +145,37 @@ export const leadService = {
     }
     if (filters?.interestId) {
       where.interestId = filters.interestId;
+    }
+    if (filters?.campaignId) {
+      where.campaignId = filters.campaignId;
+    }
+    if (filters?.productId) {
+      where.productId = filters.productId;
+    }
+    if (filters?.minValue !== undefined || filters?.maxValue !== undefined) {
+      where.value = {};
+      if (filters.minValue !== undefined) where.value.gte = filters.minValue;
+      if (filters.maxValue !== undefined) where.value.lte = filters.maxValue;
+    }
+    if (filters?.dateFrom || filters?.dateTo) {
+      where.createdAt = {};
+      if (filters.dateFrom) where.createdAt.gte = new Date(filters.dateFrom);
+      if (filters.dateTo) {
+        const to = new Date(filters.dateTo);
+        to.setHours(23, 59, 59, 999);
+        where.createdAt.lte = to;
+      }
+    }
+    if (filters?.hasAssignments === true) {
+      where.assignments = { some: {} };
+    } else if (filters?.hasAssignments === false) {
+      where.assignments = { none: {} };
+    }
+    if (filters?.hasProfit === true) {
+      where.profit = { not: null };
+    }
+    if (filters?.platform) {
+      where.conversation = { platform: filters.platform };
     }
 
     return await prisma.lead.findMany({
@@ -409,8 +449,8 @@ export const leadService = {
 
     // Calculate profit if purchasePrice and salePrice are provided
     let calculatedProfit: Prisma.Decimal | null = null;
-    if (data.purchasePrice !== undefined && data.salePrice !== undefined && 
-        data.purchasePrice !== null && data.salePrice !== null) {
+    if (data.purchasePrice !== undefined && data.salePrice !== undefined &&
+      data.purchasePrice !== null && data.salePrice !== null) {
       calculatedProfit = new Prisma.Decimal(data.salePrice).minus(new Prisma.Decimal(data.purchasePrice));
     } else if (data.profit !== undefined && data.profit !== null) {
       // Use provided profit if calculation wasn't possible
@@ -616,8 +656,8 @@ export const leadService = {
 
     // Calculate profit if purchasePrice and salePrice are provided
     let calculatedProfit: Prisma.Decimal | null = null;
-    if (data.purchasePrice !== undefined && data.salePrice !== undefined && 
-        data.purchasePrice !== null && data.salePrice !== null) {
+    if (data.purchasePrice !== undefined && data.salePrice !== undefined &&
+      data.purchasePrice !== null && data.salePrice !== null) {
       calculatedProfit = new Prisma.Decimal(data.salePrice).minus(new Prisma.Decimal(data.purchasePrice));
     } else if (data.profit !== undefined && data.profit !== null) {
       // Use provided profit if calculation wasn't possible
@@ -872,9 +912,9 @@ export const leadService = {
       !lead.leadMonitoringUserId && lead.status !== status;
     const monitoringData = shouldAssignMonitoring
       ? {
-          leadMonitoringUserId: actorUserId,
-          leadMonitoringAssignedAt: new Date(),
-        }
+        leadMonitoringUserId: actorUserId,
+        leadMonitoringAssignedAt: new Date(),
+      }
       : {};
 
     // If status is changing to Won and lead has a product with leadPoint
@@ -1077,7 +1117,7 @@ export const leadService = {
     requestedByUserId: string,
     clientData: {
       name?: string;
-      contactInfo?: { email?: string; phone?: string; [key: string]: any };
+      contactInfo?: { email?: string; phone?: string;[key: string]: any };
       address?: string;
       password: string;
     },

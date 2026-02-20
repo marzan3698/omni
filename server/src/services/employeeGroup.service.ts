@@ -92,16 +92,14 @@ export const employeeGroupService = {
                     id: true,
                     email: true,
                     name: true,
-                  },
-                  company: {
-                    select: {
-                      id: true,
-                      name: true,
+                    company: {
+                      select: {
+                        id: true,
+                        name: true,
+                      },
                     },
                   },
                 },
-                designation: true,
-                department: true,
               },
             },
           },
@@ -329,8 +327,6 @@ export const employeeGroupService = {
                 },
               },
             },
-            designation: true,
-            department: true,
           },
         },
       },

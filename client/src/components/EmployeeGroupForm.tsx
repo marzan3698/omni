@@ -34,6 +34,17 @@ export function EmployeeGroupForm({ group, onClose, onSuccess }: EmployeeGroupFo
     employeeIds: (group?.members || []).map((m: any) => m.employee.id) as number[],
   });
 
+  // Sync form when group prop changes (e.g. loaded from URL)
+  useEffect(() => {
+    if (group) {
+      setFormData({
+        name: group.name || '',
+        description: group.description || '',
+        employeeIds: (group.members || []).map((m: any) => m.employee.id) as number[],
+      });
+    }
+  }, [group?.id]);
+
   const [errors, setErrors] = useState<{
     name?: string;
     description?: string;
