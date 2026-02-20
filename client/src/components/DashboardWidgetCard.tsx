@@ -11,7 +11,6 @@ interface DashboardWidgetCardProps {
 }
 
 const fifaCardStyle = {
-  clipPath: 'polygon(0% 6%, 4% 0%, 96% 0%, 100% 6%, 100% 94%, 96% 100%, 4% 100%, 0% 94%)',
   background: 'linear-gradient(165deg, #0f172a 0%, #1e293b 35%, #0c0a1a 70%, #1e1b4b 100%)',
   boxShadow: '0 0 0 1px rgba(0,0,0,0.5), 0 0 0 2px rgba(217,119,6,0.5), 0 0 16px -2px rgba(217,119,6,0.2), inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -1px 0 rgba(0,0,0,0.3)',
 };
@@ -46,11 +45,6 @@ export const DashboardWidgetCard = forwardRef<HTMLDivElement, DashboardWidgetCar
         />
         {/* Golden top accent - metallic feel */}
         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-amber-500/80 to-transparent" style={{ boxShadow: '0 1px 2px rgba(217,119,6,0.3)' }} />
-        {/* Corner accents - game card feel */}
-        <div className="absolute top-0 left-0 w-8 h-8 border-l-2 border-t-2 border-amber-500/50 rounded-tl-lg" />
-        <div className="absolute top-0 right-0 w-8 h-8 border-r-2 border-t-2 border-amber-500/50 rounded-tr-lg" />
-        <div className="absolute bottom-0 left-0 w-8 h-8 border-l-2 border-b-2 border-amber-500/30 rounded-bl-lg" />
-        <div className="absolute bottom-0 right-0 w-8 h-8 border-r-2 border-b-2 border-amber-500/30 rounded-br-lg" />
         <div className="relative z-10">{children}</div>
       </div>
     );
