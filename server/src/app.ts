@@ -47,8 +47,9 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve static files for uploads
-app.use('/uploads', express.static('uploads'));
+// Serve static files for uploads using absolute path to ensure robustness in different environments
+import path from 'path';
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // Raw body parser for webhooks (must be before json parser)
 app.use('/api/webhooks/facebook', express.raw({ type: 'application/json' }));

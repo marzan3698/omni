@@ -15,8 +15,8 @@ export function getImageUrl(path: string | null | undefined): string {
     return '';
   }
 
-  // If path is already an absolute URL, return as-is
-  if (path.startsWith('http://') || path.startsWith('https://')) {
+  // If path is already an absolute URL or a data URI, return as-is
+  if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:image')) {
     return path;
   }
 
