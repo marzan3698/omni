@@ -26,7 +26,7 @@ router.post('/:leadId/calls', verifyPermission('can_manage_leads'), leadCallCont
 router.put('/:leadId/calls/:id', verifyLeadAccess, leadCallController.updateLeadCall);
 router.delete('/:leadId/calls/:id', verifyPermission('can_manage_leads'), leadCallController.deleteLeadCall);
 router.post('/:leadId/calls/:id/notes', verifyLeadAccess, leadCallController.addCallNote);
-router.put('/:id', verifyPermission('can_manage_leads'), leadController.updateLead);
+router.put('/:id', verifyPermissionAny(['can_manage_leads', 'can_edit_leads']), leadController.updateLead);
 router.put('/:id/status', verifyPermission('can_manage_leads'), leadController.updateLeadStatus);
 router.put('/:id/monitoring/transfer', verifyPermission('can_manage_leads'), leadController.transferLeadMonitoring);
 router.post('/:id/assign', verifyPermission('can_manage_leads'), leadController.assignUsers);

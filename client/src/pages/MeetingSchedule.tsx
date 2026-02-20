@@ -16,6 +16,7 @@ import {
   Video,
   Users,
   Zap,
+  Eye,
   ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -313,16 +314,20 @@ function MeetingGridCard({
           >
             {meeting.status}
           </span>
-          {meeting.googleMeetUrl && meeting.status === 'Scheduled' && (
+          {meeting.meetingLink && meeting.status === 'Scheduled' && (
             <a
-              href={meeting.googleMeetUrl}
-              target="_blank"
-              rel="noreferrer"
+              href={meeting.platform.toLowerCase() === 'offline' ? undefined : meeting.meetingLink.startsWith('http') ? meeting.meetingLink : `https://${meeting.meetingLink}`}
+              target={meeting.platform.toLowerCase() === 'offline' ? undefined : "_blank"}
+              rel={meeting.platform.toLowerCase() === 'offline' ? undefined : "noopener noreferrer"}
               onClick={(e) => e.stopPropagation()}
-              className="inline-flex items-center gap-1 text-xs font-medium text-amber-400 hover:text-amber-300"
+              className={cn(
+                "inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded",
+                meeting.platform.toLowerCase() === 'offline' ? "text-amber-200/80 cursor-default" : "text-amber-400 hover:text-amber-300 hover:bg-white/10 transition-colors"
+              )}
+              title={meeting.meetingLink}
             >
-              <ExternalLink className="w-3.5 h-3.5" />
-              Join Meet
+              {meeting.platform.toLowerCase() === 'offline' ? <Eye className="w-3.5 h-3.5" /> : <ExternalLink className="w-3.5 h-3.5" />}
+              {meeting.platform.toLowerCase() === 'offline' ? 'Offline' : 'Join'}
             </a>
           )}
         </div>

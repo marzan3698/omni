@@ -27,7 +27,8 @@ interface CreateLeadMeetingData {
   description?: string;
   meetingTime: Date;
   durationMinutes: number;
-  googleMeetUrl: string;
+  platform: string;
+  meetingLink: string;
   status?: LeadMeetingStatus;
 }
 
@@ -37,7 +38,8 @@ interface UpdateLeadMeetingData {
   description?: string;
   meetingTime?: Date;
   durationMinutes?: number;
-  googleMeetUrl?: string;
+  platform?: string;
+  meetingLink?: string;
   status?: LeadMeetingStatus;
 }
 
@@ -116,7 +118,8 @@ export const leadMeetingService = {
         description: data.description,
         meetingTime: data.meetingTime,
         durationMinutes: data.durationMinutes,
-        googleMeetUrl: data.googleMeetUrl,
+        platform: data.platform,
+        meetingLink: data.meetingLink,
         status: data.status || 'Scheduled',
       },
       include: assignedEmployeeInclude,

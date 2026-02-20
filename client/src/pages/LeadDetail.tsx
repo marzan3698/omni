@@ -6,7 +6,7 @@ import { GameCard } from '@/components/GameCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { leadApi, bookingApi } from '@/lib/api';
+import { leadApi, bookingApi, leadCategoryApi, leadInterestApi, campaignApi, productApi } from '@/lib/api';
 import { getImageUrl } from '@/lib/imageUtils';
 import { useAuth } from '@/contexts/AuthContext';
 import type { LeadMeeting, LeadMeetingStatus, LeadCall, LeadCallStatus } from '@/types';
@@ -14,16 +14,16 @@ import { EmployeeSelector } from '@/components/EmployeeSelector';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { 
-  ArrowLeft, 
-  Calendar, 
-  User, 
-  Phone, 
-  Mail, 
-  Tag, 
-  Target, 
-  DollarSign, 
-  Package, 
+import {
+  ArrowLeft,
+  Calendar,
+  User,
+  Phone,
+  Mail,
+  Tag,
+  Target,
+  DollarSign,
+  Package,
   TrendingUp,
   Building2,
   MessageSquare,
@@ -60,7 +60,8 @@ export function LeadDetail() {
       .number({ invalid_type_error: 'Duration is required' })
       .int()
       .positive('Duration must be positive'),
-    googleMeetUrl: z.string().url('Valid Google Meet URL is required'),
+    platform: z.string().min(1, 'Platform is required'),
+    meetingLink: z.string().min(1, 'Meeting link / location is required'),
     status: z.enum(['Scheduled', 'Completed', 'Canceled']).optional(),
   });
 
@@ -91,6 +92,103 @@ export function LeadDetail() {
   const [leadAssignmentsSelectedIds, setLeadAssignmentsSelectedIds] = useState<number[]>([]);
   const [isTransferMonitoringModalOpen, setIsTransferMonitoringModalOpen] = useState(false);
   const [newLeadManagerUserId, setNewLeadManagerUserId] = useState<string>('');
+  const [managerSearch, setManagerSearch] = useState('');
+
+  // ─── Lead Edit Modal ─────────────────────────────────────────────────────
+  const [isEditLeadModalOpen, setIsEditLeadModalOpen] = useState(false);
+  const [editLeadForm, setEditLeadForm] = useState<any>({});
+
+  // Only fetch lookup data when the modal is open
+  const { data: editCategories = [] } = useQuery({
+    queryKey: ['lead-categories-edit'],
+    queryFn: async () => (await leadCategoryApi.getAll()).data.data || [],
+    enabled: isEditLeadModalOpen,
+  });
+  const { data: editInterests = [] } = useQuery({
+    queryKey: ['lead-interests-edit'],
+    queryFn: async () => (await leadInterestApi.getAll()).data.data || [],
+    enabled: isEditLeadModalOpen,
+  });
+  const { data: editCampaigns = [] } = useQuery({
+    queryKey: ['campaigns-edit', user?.companyId],
+    queryFn: async () => {
+      if (!user?.companyId) return [];
+      return (await campaignApi.getAll(user.companyId)).data.data || [];
+    },
+    enabled: isEditLeadModalOpen && !!user?.companyId,
+  });
+  const { data: editProducts = [] } = useQuery({
+    queryKey: ['products-edit', user?.companyId],
+    queryFn: async () => {
+      if (!user?.companyId) return [];
+      return (await productApi.list(user.companyId)).data.data || [];
+    },
+    enabled: isEditLeadModalOpen && !!user?.companyId,
+  });
+
+  const updateLeadMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const companyId = user?.companyId;
+      return leadApi.update(parseInt(id!), { ...data, companyId });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lead', id] });
+      setIsEditLeadModalOpen(false);
+    },
+    onError: (error: any) => {
+      alert(error?.response?.data?.message || 'লিড আপডেট করা সম্ভব হয়নি');
+    },
+  });
+
+  const openEditLeadModal = () => {
+    if (!lead) return;
+    setEditLeadForm({
+      title: lead.title || '',
+      description: lead.description || '',
+      source: lead.source || 'Inbox',
+      customerName: lead.customerName || '',
+      phone: lead.phone || '',
+      value: lead.value != null ? String(lead.value) : '',
+      categoryId: lead.categoryId != null ? String(lead.categoryId) : '',
+      interestId: lead.interestId != null ? String(lead.interestId) : '',
+      campaignId: lead.campaignId != null ? String(lead.campaignId) : '',
+      productId: lead.productId != null ? String(lead.productId) : '',
+      purchasePrice: lead.purchasePrice != null ? String(lead.purchasePrice) : '',
+      salePrice: lead.salePrice != null ? String(lead.salePrice) : '',
+      profit: lead.profit != null ? String(lead.profit) : '',
+    });
+    setIsEditLeadModalOpen(true);
+  };
+
+  const handleEditLeadField = (key: string, value: string) =>
+    setEditLeadForm((prev: any) => ({ ...prev, [key]: value }));
+
+  const handleAutoProfit = (form: any) => {
+    const sp = parseFloat(form.salePrice);
+    const pp = parseFloat(form.purchasePrice);
+    if (!isNaN(sp) && !isNaN(pp)) {
+      setEditLeadForm((prev: any) => ({ ...prev, profit: String(sp - pp) }));
+    }
+  };
+
+  const handleSaveEditLead = () => {
+    const payload: any = {};
+    if (editLeadForm.title) payload.title = editLeadForm.title;
+    if (editLeadForm.description !== undefined) payload.description = editLeadForm.description || null;
+    if (editLeadForm.source) payload.source = editLeadForm.source;
+    if (editLeadForm.customerName !== undefined) payload.customerName = editLeadForm.customerName;
+    if (editLeadForm.phone !== undefined) payload.phone = editLeadForm.phone;
+    payload.value = editLeadForm.value !== '' ? parseFloat(editLeadForm.value) : null;
+    payload.categoryId = editLeadForm.categoryId !== '' ? parseInt(editLeadForm.categoryId) : null;
+    payload.interestId = editLeadForm.interestId !== '' ? parseInt(editLeadForm.interestId) : null;
+    payload.campaignId = editLeadForm.campaignId !== '' ? parseInt(editLeadForm.campaignId) : null;
+    payload.productId = editLeadForm.productId !== '' ? parseInt(editLeadForm.productId) : null;
+    payload.purchasePrice = editLeadForm.purchasePrice !== '' ? parseFloat(editLeadForm.purchasePrice) : null;
+    payload.salePrice = editLeadForm.salePrice !== '' ? parseFloat(editLeadForm.salePrice) : null;
+    payload.profit = editLeadForm.profit !== '' ? parseFloat(editLeadForm.profit) : null;
+    updateLeadMutation.mutate(payload);
+  };
+  // ─────────────────────────────────────────────────────────────────────────
 
   // Lead status options with Bengali labels
   const statusOptions = [
@@ -167,7 +265,8 @@ export function LeadDetail() {
       description: '',
       meetingTime: '',
       durationMinutes: 30,
-      googleMeetUrl: '',
+      platform: 'Google meet',
+      meetingLink: '',
       status: 'Scheduled',
     },
   });
@@ -346,7 +445,8 @@ export function LeadDetail() {
       description: '',
       meetingTime: '',
       durationMinutes: 30,
-      googleMeetUrl: '',
+      platform: 'Google meet',
+      meetingLink: '',
       status: 'Scheduled',
     });
     setIsMeetingFormOpen(true);
@@ -361,8 +461,9 @@ export function LeadDetail() {
       description: meeting.description || '',
       meetingTime: new Date(meeting.meetingTime).toISOString().slice(0, 16),
       durationMinutes: meeting.durationMinutes,
-      googleMeetUrl: meeting.googleMeetUrl,
-      status: meeting.status as LeadMeetingStatus,
+      platform: meeting.platform,
+      meetingLink: meeting.meetingLink,
+      status: meeting.status as 'Scheduled' | 'Completed' | 'Canceled',
     });
     setIsMeetingFormOpen(true);
   };
@@ -639,12 +740,12 @@ export function LeadDetail() {
     if (selectedEmployeeId.length > 0 && (!values.assignedTo || values.assignedTo === 0)) {
       values.assignedTo = selectedEmployeeId[0];
     }
-    
+
     if (!values.assignedTo || values.assignedTo === 0) {
       alert('Please select an employee');
       return;
     }
-    
+
     if (editingCall) {
       return updateCallMutation.mutateAsync(values);
     }
@@ -839,10 +940,13 @@ export function LeadDetail() {
                 Transfer Monitoring
               </Button>
             )}
-            <Button className={btnOutline}>
-              <Edit className="w-4 h-4 mr-2" />
-              Edit Lead
-            </Button>
+            {/* Edit Lead – visible only to SuperAdmin or users with can_edit_leads */}
+            {(user?.roleName === 'SuperAdmin' || hasPermission?.('can_edit_leads')) && (
+              <Button onClick={openEditLeadModal} className={btnOutline}>
+                <Edit className="w-4 h-4 mr-2" />
+                লিড এডিট করুন
+              </Button>
+            )}
           </div>
         </div>
       </GamePanel>
@@ -946,8 +1050,8 @@ export function LeadDetail() {
                     <p className="mt-1 text-amber-100 font-medium">
                       {lead.clientApprovalRequest?.status === 'Approved'
                         ? (lead.clientApprovalRequest.approvedByUser?.name ||
-                            lead.clientApprovalRequest.approvedByUser?.email ||
-                            'Approved')
+                          lead.clientApprovalRequest.approvedByUser?.email ||
+                          'Approved')
                         : lead.clientApprovalRequest?.status === 'Pending'
                           ? 'Pending approval'
                           : '—'}
@@ -995,7 +1099,7 @@ export function LeadDetail() {
                     <div className="flex-1">
                       <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">Source Conversation</label>
                       <p className="mt-1 text-amber-100">
-                        {lead.conversation.platform === 'facebook' ? 'Facebook' : 'Chatwoot'} - 
+                        {lead.conversation.platform === 'facebook' ? 'Facebook' : 'Chatwoot'} -
                         {lead.conversation.externalUserName || lead.conversation.externalUserId}
                       </p>
                     </div>
@@ -1046,11 +1150,11 @@ export function LeadDetail() {
                         <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">Profit</label>
                         <p className={cn(
                           "mt-1 font-medium",
-                          lead.profit && Number(lead.profit) > 0 
-                            ? "text-emerald-400" 
+                          lead.profit && Number(lead.profit) > 0
+                            ? "text-emerald-400"
                             : lead.profit && Number(lead.profit) < 0
-                            ? "text-red-400"
-                            : "text-amber-100"
+                              ? "text-red-400"
+                              : "text-amber-100"
                         )}>
                           {formatCurrency(lead.profit)}
                         </p>
@@ -1091,11 +1195,11 @@ export function LeadDetail() {
                       <p className="mt-1">
                         <span className={cn(
                           "px-2 py-1 rounded text-xs font-medium",
-                          lead.campaign.type === 'sale' 
+                          lead.campaign.type === 'sale'
                             ? "bg-amber-500/20 text-amber-200 border-amber-500/40"
                             : lead.campaign.type === 'reach'
-                            ? "bg-blue-500/20 text-blue-300 border-blue-500/40"
-                            : "bg-purple-500/20 text-purple-300 border-purple-500/40"
+                              ? "bg-blue-500/20 text-blue-300 border-blue-500/40"
+                              : "bg-purple-500/20 text-purple-300 border-purple-500/40"
                         )}>
                           {lead.campaign.type.charAt(0).toUpperCase() + lead.campaign.type.slice(1)}
                         </span>
@@ -1210,16 +1314,20 @@ export function LeadDetail() {
                             <span className="text-amber-400/40">•</span>
                             <span>{meeting.durationMinutes} min</span>
                           </div>
-                          <div className="text-sm">
+                          {meeting.meetingLink && meeting.status === 'Scheduled' && (
                             <a
-                              href={meeting.googleMeetUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-amber-400 hover:text-amber-300 underline text-xs break-all"
+                              href={meeting.platform.toLowerCase() === 'offline' ? undefined : meeting.meetingLink.startsWith('http') ? meeting.meetingLink : `https://${meeting.meetingLink}`}
+                              target={meeting.platform.toLowerCase() === 'offline' ? undefined : "_blank"}
+                              rel={meeting.platform.toLowerCase() === 'offline' ? undefined : "noopener noreferrer"}
+                              className={cn(
+                                "flex items-center text-xs font-medium bg-white/5 px-2 py-1 rounded",
+                                meeting.platform.toLowerCase() === 'offline' ? "text-amber-200/80 cursor-default" : "text-amber-400 hover:text-amber-300 hover:bg-white/10 transition-colors"
+                              )}
                             >
-                              {meeting.googleMeetUrl}
+                              <span className="mr-1.5 opacity-70">[{meeting.platform}]</span>
+                              <span className="truncate max-w-[150px]">{meeting.meetingLink}</span>
                             </a>
-                          </div>
+                          )}
                           {meeting.description && (
                             <p className="text-sm text-amber-200/70 mt-1">{meeting.description}</p>
                           )}
@@ -1280,9 +1388,25 @@ export function LeadDetail() {
                       {errors.durationMinutes && <p className="text-xs text-red-400 mt-1">{errors.durationMinutes.message}</p>}
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">Google Meet URL</label>
-                      <Input {...register('googleMeetUrl')} className={cn('mt-1', inputDark)} placeholder="https://meet.google.com/..." />
-                      {errors.googleMeetUrl && <p className="text-xs text-red-400 mt-1">{errors.googleMeetUrl.message}</p>}
+                      <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider block">
+                        Platform
+                      </label>
+                      <select
+                        {...register('platform')}
+                        className={cn('mt-1 w-full px-3 py-2 rounded-lg border border-amber-500/20 bg-slate-800/60 text-amber-100 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50')}
+                      >
+                        {['Offline', 'WhatsApp', 'Messenger', 'Telegram', 'Viber', 'Zoom', 'Google meet', 'Teams', 'Skype'].map(p => (
+                          <option key={p} value={p}>{p}</option>
+                        ))}
+                      </select>
+                      {errors.platform && <p className="text-xs text-red-400 mt-1">{errors.platform.message}</p>}
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider block">
+                        Meeting Location / Link
+                      </label>
+                      <Input {...register('meetingLink')} className={cn('mt-1', inputDark)} placeholder="Address or URL..." />
+                      {errors.meetingLink && <p className="text-xs text-red-400 mt-1">{errors.meetingLink.message}</p>}
                     </div>
                   </div>
                   <div>
@@ -1507,82 +1631,82 @@ export function LeadDetail() {
                 <div className="space-y-3">
                   {calls.map((call, idx) => (
                     <GameCard key={call.id} index={idx} className="p-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 space-y-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {call.title && <span className="font-medium text-amber-100">{call.title}</span>}
-                          <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium border', getCallStatusColor(call.status))}>
-                            {call.status}
-                          </span>
-                        </div>
-                        <div className="text-sm text-amber-200/80 flex items-center gap-2">
-                          <Clock className="w-4 h-4 text-amber-400/80" />
-                          <span>{formatMeetingDate(call.callTime)}</span>
-                          {call.durationMinutes && <><span className="text-amber-400/40">•</span><span>{call.durationMinutes} min</span></>}
-                        </div>
-                        {call.phoneNumber && (
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 space-y-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {call.title && <span className="font-medium text-amber-100">{call.title}</span>}
+                            <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium border', getCallStatusColor(call.status))}>
+                              {call.status}
+                            </span>
+                          </div>
                           <div className="text-sm text-amber-200/80 flex items-center gap-2">
-                            <Phone className="w-4 h-4" />
-                            <span>{call.phoneNumber}</span>
+                            <Clock className="w-4 h-4 text-amber-400/80" />
+                            <span>{formatMeetingDate(call.callTime)}</span>
+                            {call.durationMinutes && <><span className="text-amber-400/40">•</span><span>{call.durationMinutes} min</span></>}
                           </div>
-                        )}
-                        {call.assignedEmployee && (
-                          <div className="text-sm text-amber-200/80 flex items-center gap-2">
-                            <User className="w-4 h-4" />
-                            <span>{call.assignedEmployee.user?.email || 'Employee'}</span>
-                          </div>
-                        )}
-                        {call.notes && (
-                          <div className="text-sm text-amber-200/90 mt-2 p-2 bg-slate-800/60 rounded border border-amber-500/20">
-                            <strong className="text-amber-200/80">Notes:</strong> {call.notes}
-                          </div>
-                        )}
-                        {editingCallNote?.callId === call.id && (
-                          <div className="mt-2 space-y-2">
-                            <Textarea
-                              value={editingCallNote.note}
-                              onChange={(e) => setEditingCallNote({ callId: call.id, note: e.target.value })}
-                              placeholder="Add call notes..."
-                              className={cn('text-sm', inputDark)}
-                            />
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                className="bg-amber-600 hover:bg-amber-500 text-white"
-                                onClick={() => {
-                                  if (editingCallNote.note.trim()) {
-                                    addCallNoteMutation.mutate({ callId: call.id, note: editingCallNote.note });
-                                  } else {
-                                    setEditingCallNote(null);
-                                  }
-                                }}
-                                disabled={addCallNoteMutation.isPending}
-                              >
-                                Save Note
-                              </Button>
-                              <Button size="sm" className={btnOutline} onClick={() => setEditingCallNote(null)}>
-                                Cancel
-                              </Button>
+                          {call.phoneNumber && (
+                            <div className="text-sm text-amber-200/80 flex items-center gap-2">
+                              <Phone className="w-4 h-4" />
+                              <span>{call.phoneNumber}</span>
                             </div>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex flex-col items-end gap-2 shrink-0">
-                        <div className="flex gap-2">
-                          {!editingCallNote || editingCallNote.callId !== call.id ? (
-                            <Button variant="ghost" size="sm" className="text-amber-200 hover:text-amber-100 hover:bg-amber-500/20" onClick={() => setEditingCallNote({ callId: call.id, note: call.notes || '' })} title="Add note">
-                              <FileText className="w-4 h-4" />
+                          )}
+                          {call.assignedEmployee && (
+                            <div className="text-sm text-amber-200/80 flex items-center gap-2">
+                              <User className="w-4 h-4" />
+                              <span>{call.assignedEmployee.user?.email || 'Employee'}</span>
+                            </div>
+                          )}
+                          {call.notes && (
+                            <div className="text-sm text-amber-200/90 mt-2 p-2 bg-slate-800/60 rounded border border-amber-500/20">
+                              <strong className="text-amber-200/80">Notes:</strong> {call.notes}
+                            </div>
+                          )}
+                          {editingCallNote?.callId === call.id && (
+                            <div className="mt-2 space-y-2">
+                              <Textarea
+                                value={editingCallNote.note}
+                                onChange={(e) => setEditingCallNote({ callId: call.id, note: e.target.value })}
+                                placeholder="Add call notes..."
+                                className={cn('text-sm', inputDark)}
+                              />
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  className="bg-amber-600 hover:bg-amber-500 text-white"
+                                  onClick={() => {
+                                    if (editingCallNote.note.trim()) {
+                                      addCallNoteMutation.mutate({ callId: call.id, note: editingCallNote.note });
+                                    } else {
+                                      setEditingCallNote(null);
+                                    }
+                                  }}
+                                  disabled={addCallNoteMutation.isPending}
+                                >
+                                  Save Note
+                                </Button>
+                                <Button size="sm" className={btnOutline} onClick={() => setEditingCallNote(null)}>
+                                  Cancel
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex flex-col items-end gap-2 shrink-0">
+                          <div className="flex gap-2">
+                            {!editingCallNote || editingCallNote.callId !== call.id ? (
+                              <Button variant="ghost" size="sm" className="text-amber-200 hover:text-amber-100 hover:bg-amber-500/20" onClick={() => setEditingCallNote({ callId: call.id, note: call.notes || '' })} title="Add note">
+                                <FileText className="w-4 h-4" />
+                              </Button>
+                            ) : null}
+                            <Button variant="ghost" size="sm" className="text-amber-200 hover:text-amber-100 hover:bg-amber-500/20" onClick={() => openEditCallForm(call)}>
+                              <Edit className="w-4 h-4" />
                             </Button>
-                          ) : null}
-                          <Button variant="ghost" size="sm" className="text-amber-200 hover:text-amber-100 hover:bg-amber-500/20" onClick={() => openEditCallForm(call)}>
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm" className="text-red-400 hover:text-red-300 hover:bg-red-500/20" onClick={() => deleteCallMutation.mutate(call.id)}>
-                            <XCircle className="w-4 h-4" />
-                          </Button>
+                            <Button variant="ghost" size="sm" className="text-red-400 hover:text-red-300 hover:bg-red-500/20" onClick={() => deleteCallMutation.mutate(call.id)}>
+                              <XCircle className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
-                    </div>
                     </GameCard>
                   ))}
                 </div>
@@ -1790,24 +1914,61 @@ export function LeadDetail() {
                   Transfer Monitoring
                 </h3>
                 <button
-                  onClick={() => { setIsTransferMonitoringModalOpen(false); setNewLeadManagerUserId(''); }}
+                  onClick={() => { setIsTransferMonitoringModalOpen(false); setNewLeadManagerUserId(''); setManagerSearch(''); }}
                   className="p-2 rounded-lg text-amber-200 hover:bg-amber-500/20 hover:text-amber-100"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
               <div>
-                <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">Select new Lead Manager</label>
-                <select
-                  className={cn('mt-2 w-full rounded-md p-2 text-sm', inputDark)}
-                  value={newLeadManagerUserId}
-                  onChange={(e) => setNewLeadManagerUserId(e.target.value)}
-                >
-                  <option value="">-- Select --</option>
-                  {leadManagers.filter((m) => m.id !== user?.id).map((m) => (
-                    <option key={m.id} value={m.id}>{m.name ? `${m.name} (${m.email})` : m.email}</option>
-                  ))}
-                </select>
+                <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">নতুন Lead Manager বেছে নিন</label>
+                {/* Searchable manager picker */}
+                <div className="mt-2 relative">
+                  <div className="relative">
+                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-500/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" strokeWidth="2" /><path d="m21 21-4.35-4.35" strokeWidth="2" strokeLinecap="round" /></svg>
+                    <input
+                      type="text"
+                      value={managerSearch}
+                      onChange={(e) => setManagerSearch(e.target.value)}
+                      placeholder="নাম বা ইমেইল দিয়ে খুঁজুন..."
+                      className="w-full pl-9 pr-3 py-2 rounded-lg border border-amber-500/20 bg-slate-800/80 text-amber-100 placeholder-amber-500/50 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                    />
+                  </div>
+                  <div className="mt-2 max-h-52 overflow-y-auto rounded-lg border border-amber-500/20 bg-slate-900/90">
+                    {leadManagers
+                      .filter((m) => m.id !== user?.id)
+                      .filter((m) => {
+                        const q = managerSearch.toLowerCase();
+                        return !q || (m.name || '').toLowerCase().includes(q) || (m.email || '').toLowerCase().includes(q);
+                      })
+                      .map((m) => (
+                        <button
+                          key={m.id}
+                          type="button"
+                          onClick={() => setNewLeadManagerUserId(m.id)}
+                          className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-amber-500/10 ${newLeadManagerUserId === m.id ? 'bg-amber-500/20 border-l-2 border-amber-400' : 'border-l-2 border-transparent'
+                            }`}
+                        >
+                          <div className="w-8 h-8 rounded-full bg-amber-500/30 border border-amber-500/40 flex items-center justify-center text-amber-200 font-bold text-sm shrink-0">
+                            {(m.name || m.email || '?').charAt(0).toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-amber-100 truncate">{m.name || m.email}</p>
+                            {m.name && <p className="text-xs text-amber-200/60 truncate">{m.email}</p>}
+                          </div>
+                          {newLeadManagerUserId === m.id && (
+                            <svg className="ml-auto w-4 h-4 text-amber-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                          )}
+                        </button>
+                      ))}
+                    {leadManagers.filter((m) => m.id !== user?.id).filter((m) => {
+                      const q = managerSearch.toLowerCase();
+                      return !q || (m.name || '').toLowerCase().includes(q) || (m.email || '').toLowerCase().includes(q);
+                    }).length === 0 && (
+                        <p className="text-center py-4 text-amber-200/50 text-sm">কোনো লিড ম্যানেজার পাওয়া যায়নি</p>
+                      )}
+                  </div>
+                </div>
                 <p className="text-xs text-amber-200/60 mt-2">
                   Only the current monitoring incharge can transfer this responsibility to another Lead Manager.
                 </p>
@@ -1823,7 +1984,7 @@ export function LeadDetail() {
                 </Button>
                 <Button
                   className={btnOutline}
-                  onClick={() => { setIsTransferMonitoringModalOpen(false); setNewLeadManagerUserId(''); }}
+                  onClick={() => { setIsTransferMonitoringModalOpen(false); setNewLeadManagerUserId(''); setManagerSearch(''); }}
                   disabled={transferMonitoringMutation.isPending}
                 >
                   Cancel
@@ -1833,6 +1994,213 @@ export function LeadDetail() {
           </GamePanel>
         </div>
       )}
+      {/* ─── Lead Edit Modal ───────────────────────────────────────────────── */}
+      {isEditLeadModalOpen && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-start justify-center z-50 p-4 overflow-y-auto">
+          <div className="w-full max-w-2xl my-8 rounded-xl" style={{ background: 'linear-gradient(180deg,#1e293b 0%,#0f172a 100%)', boxShadow: '0 0 0 1px rgba(217,119,6,0.3),0 25px 50px -12px rgba(0,0,0,0.7)' }}>
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-amber-500/20">
+              <h3 className="flex items-center gap-2 text-lg font-semibold text-amber-100">
+                <Edit className="w-5 h-5 text-amber-400" />
+                লিড এডিট করুন
+              </h3>
+              <button onClick={() => setIsEditLeadModalOpen(false)} className="p-2 rounded-lg text-amber-200 hover:bg-amber-500/20">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5">
+              {/* Row: Title + Source */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider block mb-1">শিরোনাম (Title) *</label>
+                  <Input
+                    value={editLeadForm.title || ''}
+                    onChange={(e) => handleEditLeadField('title', e.target.value)}
+                    className={inputDark}
+                    placeholder="Lead title"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider block mb-1">সোর্স (Source)</label>
+                  <select
+                    value={editLeadForm.source || ''}
+                    onChange={(e) => handleEditLeadField('source', e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-amber-500/20 bg-slate-800/60 text-amber-100 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                  >
+                    {['Website', 'Referral', 'SocialMedia', 'Email', 'Phone', 'Inbox', 'Other'].map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider block mb-1">বিবরণ (Description)</label>
+                <Textarea
+                  value={editLeadForm.description || ''}
+                  onChange={(e) => handleEditLeadField('description', e.target.value)}
+                  className={inputDark}
+                  rows={3}
+                  placeholder="Lead description..."
+                />
+              </div>
+
+              {/* Row: Customer Name + Phone */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider block mb-1">কাস্টমার নাম</label>
+                  <Input
+                    value={editLeadForm.customerName || ''}
+                    onChange={(e) => handleEditLeadField('customerName', e.target.value)}
+                    className={inputDark}
+                    placeholder="Customer name"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider block mb-1">ফোন নম্বর</label>
+                  <Input
+                    value={editLeadForm.phone || ''}
+                    onChange={(e) => handleEditLeadField('phone', e.target.value)}
+                    className={inputDark}
+                    placeholder="01XXXXXXXXX"
+                  />
+                </div>
+              </div>
+
+              {/* Row: Category + Interest */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider block mb-1">ক্যাটাগরি</label>
+                  <select
+                    value={editLeadForm.categoryId || ''}
+                    onChange={(e) => handleEditLeadField('categoryId', e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-amber-500/20 bg-slate-800/60 text-amber-100 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                  >
+                    <option value="">-- কোনো ক্যাটাগরি নেই --</option>
+                    {editCategories.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider block mb-1">ইন্টারেস্ট</label>
+                  <select
+                    value={editLeadForm.interestId || ''}
+                    onChange={(e) => handleEditLeadField('interestId', e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-amber-500/20 bg-slate-800/60 text-amber-100 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                  >
+                    <option value="">-- কোনো ইন্টারেস্ট নেই --</option>
+                    {editInterests.map((i: any) => <option key={i.id} value={i.id}>{i.name}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {/* Row: Campaign + Product */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider block mb-1">ক্যাম্পেইন</label>
+                  <select
+                    value={editLeadForm.campaignId || ''}
+                    onChange={(e) => handleEditLeadField('campaignId', e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-amber-500/20 bg-slate-800/60 text-amber-100 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                  >
+                    <option value="">-- কোনো ক্যাম্পেইন নেই --</option>
+                    {editCampaigns.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider block mb-1">প্রোডাক্ট</label>
+                  <select
+                    value={editLeadForm.productId || ''}
+                    onChange={(e) => handleEditLeadField('productId', e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-amber-500/20 bg-slate-800/60 text-amber-100 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                  >
+                    <option value="">-- কোনো প্রোডাক্ট নেই --</option>
+                    {editProducts.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div className="border-t border-amber-500/10 pt-4">
+                <p className="text-sm font-semibold text-amber-200/80 mb-3">মূল্য তথ্য (Pricing)</p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div>
+                    <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider block mb-1">ভ্যালু (৳)</label>
+                    <Input
+                      type="number"
+                      value={editLeadForm.value || ''}
+                      onChange={(e) => handleEditLeadField('value', e.target.value)}
+                      className={inputDark}
+                      placeholder="0"
+                      min={0}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider block mb-1">ক্রয় মূল্য (৳)</label>
+                    <Input
+                      type="number"
+                      value={editLeadForm.purchasePrice || ''}
+                      onChange={(e) => {
+                        handleEditLeadField('purchasePrice', e.target.value);
+                        handleAutoProfit({ ...editLeadForm, purchasePrice: e.target.value });
+                      }}
+                      className={inputDark}
+                      placeholder="0"
+                      min={0}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider block mb-1">বিক্রয় মূল্য (৳)</label>
+                    <Input
+                      type="number"
+                      value={editLeadForm.salePrice || ''}
+                      onChange={(e) => {
+                        handleEditLeadField('salePrice', e.target.value);
+                        handleAutoProfit({ ...editLeadForm, salePrice: e.target.value });
+                      }}
+                      className={inputDark}
+                      placeholder="0"
+                      min={0}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider block mb-1">মুনাফা (৳)</label>
+                    <Input
+                      type="number"
+                      value={editLeadForm.profit || ''}
+                      onChange={(e) => handleEditLeadField('profit', e.target.value)}
+                      className={cn(inputDark, Number(editLeadForm.profit) < 0 ? 'border-red-500/50' : '')}
+                      placeholder="স্বয়ংক্রিয়"
+                    />
+                    <p className="text-[10px] text-amber-200/50 mt-0.5">ক্রয়-বিক্রয় দিলে স্বয়ংক্রিয়</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex gap-3 justify-end p-6 border-t border-amber-500/20">
+              <Button
+                variant="outline"
+                onClick={() => setIsEditLeadModalOpen(false)}
+                className="border-amber-500/50 text-amber-100 hover:bg-amber-500/20 bg-transparent"
+                disabled={updateLeadMutation.isPending}
+              >
+                বাতিল
+              </Button>
+              <Button
+                onClick={handleSaveEditLead}
+                disabled={updateLeadMutation.isPending || !editLeadForm.title}
+                className="bg-amber-600 hover:bg-amber-500 text-white"
+              >
+                {updateLeadMutation.isPending && <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />}
+                সেভ করুন
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ─────────────────────────────────────────────────────────────────── */}
     </div>
   );
 }

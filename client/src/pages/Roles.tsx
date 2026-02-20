@@ -40,6 +40,7 @@ const allPermissions = [
   { key: 'can_view_leads', label: 'View Leads' },
   { key: 'can_view_finance', label: 'View Finance' },
   { key: 'can_create_leads', label: 'Create Leads' },
+  { key: 'can_edit_leads', label: 'Edit Leads (লিড এডিট করা)' },
   { key: 'can_manage_users', label: 'Manage Users' },
   { key: 'can_view_all_users', label: 'View All Users' },
   { key: 'can_manage_integrations', label: 'Manage Integrations' },
@@ -418,8 +419,8 @@ export default function Roles() {
                           isProtectedRole(role.name)
                             ? `Cannot delete ${role.name} role`
                             : role._count.users > 0
-                            ? `Cannot delete: ${role._count.users} user(s) assigned`
-                            : 'Delete role'
+                              ? `Cannot delete: ${role._count.users} user(s) assigned`
+                              : 'Delete role'
                         }
                       >
                         <Trash2 className="h-4 w-4" />

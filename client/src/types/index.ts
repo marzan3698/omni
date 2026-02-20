@@ -214,7 +214,8 @@ export interface LeadMeeting {
   description?: string | null;
   meetingTime: string;
   durationMinutes: number;
-  googleMeetUrl: string;
+  platform: string;
+  meetingLink: string;
   status: LeadMeetingStatus;
   createdAt: string;
   updatedAt: string;

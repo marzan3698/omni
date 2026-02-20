@@ -346,14 +346,19 @@ function MyMeetingGridCard({
             </button>
           )}
           <div className="flex gap-1">
-            {meeting.googleMeetUrl && meeting.status === 'Scheduled' && (
+            {meeting.meetingLink && meeting.status === 'Scheduled' && (
               <a
-                href={meeting.googleMeetUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1 text-xs text-amber-400 hover:text-amber-300"
+                href={meeting.platform.toLowerCase() === 'offline' ? undefined : meeting.meetingLink.startsWith('http') ? meeting.meetingLink : `https://${meeting.meetingLink}`}
+                target={meeting.platform.toLowerCase() === 'offline' ? undefined : "_blank"}
+                rel={meeting.platform.toLowerCase() === 'offline' ? undefined : "noopener noreferrer"}
+                className={cn(
+                  "inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded",
+                  meeting.platform.toLowerCase() === 'offline' ? "text-amber-200/80 cursor-default" : "text-amber-400 hover:text-amber-300 hover:bg-white/10 transition-colors"
+                )}
+                title={meeting.meetingLink}
               >
-                <ExternalLink className="w-3.5 h-3.5" />Join
+                {meeting.platform.toLowerCase() === 'offline' ? <Eye className="w-3.5 h-3.5" /> : <ExternalLink className="w-3.5 h-3.5" />}
+                {meeting.platform.toLowerCase() === 'offline' ? 'Offline' : 'Join'}
               </a>
             )}
             {meeting.lead && (

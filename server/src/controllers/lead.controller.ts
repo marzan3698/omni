@@ -22,9 +22,21 @@ const createLeadSchema = z.object({
 // IMPORTANT:
 // - Lead status can only be changed via PUT /:id/status by Lead Manager.
 // - Prevent status changes via the generic PUT /:id endpoint.
-const updateLeadSchema = createLeadSchema.partial().omit({
-  status: true,
-  companyId: true,
+const updateLeadSchema = z.object({
+  title: z.string().min(1, 'Lead title is required').optional(),
+  description: z.string().optional().nullable(),
+  source: z.enum(['Website', 'Referral', 'SocialMedia', 'Email', 'Phone', 'Inbox', 'Other']).optional(),
+  assignedTo: z.array(z.number().int().positive()).optional(),
+  value: z.number().positive().optional().nullable(),
+  customerName: z.string().optional(),
+  phone: z.string().optional(),
+  categoryId: z.number().int().positive().optional().nullable(),
+  interestId: z.number().int().positive().optional().nullable(),
+  campaignId: z.number().int().positive().optional().nullable(),
+  productId: z.number().int().positive().optional().nullable(),
+  purchasePrice: z.number().nonnegative().optional().nullable(),
+  salePrice: z.number().nonnegative().optional().nullable(),
+  profit: z.number().optional().nullable(),
 });
 
 const createLeadFromInboxSchema = z.object({

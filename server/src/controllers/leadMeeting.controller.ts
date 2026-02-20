@@ -15,7 +15,8 @@ const createLeadMeetingSchema = z.object({
     z.date({ required_error: 'Meeting time is required' })
   ),
   durationMinutes: z.number().int().positive('Duration must be positive'),
-  googleMeetUrl: z.string().url('Valid Google Meet URL is required'),
+  platform: z.string().min(1, 'Platform is required'),
+  meetingLink: z.string().min(1, 'Meeting connection info is required'),
   status: z
     .enum(['Scheduled', 'Completed', 'Canceled'])
     .optional(),
@@ -85,7 +86,8 @@ export const leadMeetingController = {
         description: validatedData.description,
         meetingTime: validatedData.meetingTime,
         durationMinutes: validatedData.durationMinutes,
-        googleMeetUrl: validatedData.googleMeetUrl,
+        platform: validatedData.platform,
+        meetingLink: validatedData.meetingLink,
         status: (validatedData.status as LeadMeetingStatus) || 'Scheduled',
       });
 
@@ -196,7 +198,7 @@ export const leadMeetingController = {
       }
 
       const filters: any = {};
-      
+
       // Parse optional filters
       if (req.query.status) {
         filters.status = req.query.status as LeadMeetingStatus;

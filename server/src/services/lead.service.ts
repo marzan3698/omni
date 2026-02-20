@@ -29,12 +29,16 @@ interface UpdateLeadData {
   description?: string;
   source?: LeadSource;
   assignedTo?: number[];
-  value?: number;
+  value?: number | null;
   customerName?: string;
   phone?: string;
-  categoryId?: number;
-  interestId?: number;
-  campaignId?: number;
+  categoryId?: number | null;
+  interestId?: number | null;
+  campaignId?: number | null;
+  productId?: number | null;
+  purchasePrice?: number | null;
+  salePrice?: number | null;
+  profit?: number | null;
 }
 
 const leadAssignmentsInclude = {

@@ -490,7 +490,8 @@ model LeadMeeting {
   description     String?           @db.Text
   meetingTime     DateTime          @map("meeting_time") @db.DateTime
   durationMinutes Int               @map("duration_minutes")
-  googleMeetUrl   String            @map("google_meet_url") @db.VarChar(500)
+  platform        String            @db.VarChar(50) @default("Google meet")
+  meetingLink     String            @map("google_meet_url") @db.VarChar(500)
   status          LeadMeetingStatus @default(Scheduled)
   createdAt       DateTime          @default(now()) @map("created_at")
   updatedAt       DateTime          @updatedAt @map("updated_at")
