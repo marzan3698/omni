@@ -129,7 +129,7 @@ export const taskController = {
     try {
       const id = parseInt(req.params.id);
       const companyId = parseInt(req.query.companyId as string || req.body.companyId);
-      
+
       if (isNaN(id)) {
         return sendError(res, 'Invalid task ID', 400);
       }
@@ -194,7 +194,7 @@ export const taskController = {
     try {
       const id = parseInt(req.params.id);
       const companyId = parseInt(req.query.companyId as string || req.body.companyId);
-      
+
       if (isNaN(id)) {
         return sendError(res, 'Invalid task ID', 400);
       }
@@ -207,7 +207,7 @@ export const taskController = {
         ...validatedData,
         dueDate: validatedData.dueDate ? (validatedData.dueDate instanceof Date ? validatedData.dueDate : new Date(validatedData.dueDate)) : undefined,
       };
-      
+
       // Handle nullable fields - convert null to undefined to maintain existing behavior
       if (validatedData.projectId !== undefined) {
         updateData.projectId = validatedData.projectId === null ? undefined : validatedData.projectId;
@@ -253,7 +253,7 @@ export const taskController = {
     try {
       const id = parseInt(req.params.id);
       const companyId = parseInt(req.query.companyId as string || req.body.companyId);
-      
+
       if (isNaN(id)) {
         return sendError(res, 'Invalid task ID', 400);
       }
@@ -280,7 +280,7 @@ export const taskController = {
       const id = parseInt(req.params.id);
       const companyId = parseInt(req.query.companyId as string || req.body.companyId);
       const status = req.body.status as TaskStatus;
-      
+
       if (isNaN(id)) {
         return sendError(res, 'Invalid task ID', 400);
       }
@@ -309,7 +309,7 @@ export const taskController = {
     try {
       const taskId = parseInt(req.params.id);
       const authReq = req as AuthRequest;
-      
+
       if (isNaN(taskId)) {
         return sendError(res, 'Invalid task ID', 400);
       }
@@ -342,7 +342,7 @@ export const taskController = {
   getTaskComments: async (req: Request, res: Response) => {
     try {
       const taskId = parseInt(req.params.id);
-      
+
       if (isNaN(taskId)) {
         return sendError(res, 'Invalid task ID', 400);
       }
@@ -367,7 +367,7 @@ export const taskController = {
       const user = authReq.user;
       const requestedUserId = req.params.userId;
       const companyId = parseInt(req.query.companyId as string);
-      
+
       if (!requestedUserId) {
         return sendError(res, 'User ID is required', 400);
       }
@@ -588,12 +588,12 @@ export const taskController = {
     try {
       const authReq = req as AuthRequest;
       const user = authReq.user;
-      
+
       // Get taskId from params (route is /tasks/:id/attachments)
       const taskIdParam = req.params.id ? parseInt(req.params.id) : NaN;
       const taskIdBody = req.body.taskId ? parseInt(req.body.taskId) : NaN;
       const taskId = !isNaN(taskIdParam) ? taskIdParam : !isNaN(taskIdBody) ? taskIdBody : NaN;
-      
+
       const subTaskId = req.body.subTaskId ? parseInt(req.body.subTaskId) : undefined;
       const companyId = user?.companyId || (req.body.companyId ? parseInt(req.body.companyId) : NaN);
 
@@ -632,13 +632,16 @@ export const taskController = {
         : `tasks/task-${taskId}/attachments/${req.file.filename}`;
       const fileUrl = `/uploads/${relativePath}`;
 
+      // Sanitize the original filename to remove non-ASCII bytes/emojis that crash MySQL utf8 charsets
+      const sanitizedOriginalName = req.file.originalname.replace(/[^\x00-\x7F]/g, '').trim() || 'attachment';
+
       const attachment = await taskAttachmentService.createAttachment({
         taskId: subTaskId ? undefined : taskId,
         subTaskId,
         companyId,
         fileType,
         fileUrl,
-        fileName: req.file.originalname,
+        fileName: sanitizedOriginalName,
         fileSize: req.file.size,
         mimeType: req.file.mimetype,
         createdBy: user.id,
