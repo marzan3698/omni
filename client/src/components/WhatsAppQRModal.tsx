@@ -45,8 +45,10 @@ export default function WhatsAppQRModal({
       setError(null);
       onConnected?.();
     };
-    const onDisconnected = () => {
-      setError(null);
+    const onDisconnected = (reason?: string) => {
+      setError(reason || 'Disconnected from WhatsApp server');
+      setLoadingMessage('Connection failed');
+      setQrCode(null);
     };
     const onAuthFailure = (msg: string) => {
       setError(msg || 'Authentication failed');

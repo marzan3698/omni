@@ -11,10 +11,10 @@ import { useAuth } from '@/contexts/AuthContext';
 // ─── API helpers ──────────────────────────────────────────────────────────────
 
 const chatwootApi = {
-    getConfig: () => apiClient.get('/api/chatwoot/config'),
-    saveConfig: (data: any) => apiClient.post('/api/chatwoot/config', data),
-    testConnection: (data: any) => apiClient.post('/api/chatwoot/test', data),
-    deleteConfig: () => apiClient.delete('/api/chatwoot/config'),
+    getConfig: () => apiClient.get('/chatwoot/config'),
+    saveConfig: (data: any) => apiClient.post('/chatwoot/config', data),
+    testConnection: (data: any) => apiClient.post('/chatwoot/test', data),
+    deleteConfig: () => apiClient.delete('/chatwoot/config'),
 };
 
 // ─── Copy helper ──────────────────────────────────────────────────────────────
