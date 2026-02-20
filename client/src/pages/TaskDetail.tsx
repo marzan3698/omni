@@ -100,6 +100,10 @@ export function TaskDetail() {
       queryClient.invalidateQueries({ queryKey: ['task-detail', taskId, companyId] });
       setShowAttachmentUploader(false);
     },
+    onError: (error: any) => {
+      const errorMsg = error.response?.data?.message || error.message || 'Unknown error occurred';
+      alert(`Upload failed: ${errorMsg}`);
+    },
   });
 
   const deleteAttachmentMutation = useMutation({

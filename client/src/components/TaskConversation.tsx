@@ -126,7 +126,7 @@ export function TaskConversation({
       formData.append('file', file);
       formData.append('taskId', taskId.toString());
       formData.append('companyId', companyId.toString());
-      
+
       const response = await taskApi.uploadAttachment(taskId, file, companyId);
       return response.data.data;
     },
@@ -137,6 +137,10 @@ export function TaskConversation({
         messageType: attachment.fileType === 'image' ? 'image' : 'file',
         attachmentId: attachment.id,
       });
+    },
+    onError: (error: any) => {
+      const errorMsg = error.response?.data?.message || error.message || 'Unknown error occurred';
+      alert(`Upload failed: ${errorMsg}`);
     },
   });
 
