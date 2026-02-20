@@ -11,6 +11,7 @@ import type { TaskAttachment } from '@/types';
 import { TaskConversation } from '@/components/TaskConversation';
 import { GameProgressBar } from '@/components/GameProgressBar';
 import { SubTaskFormModal } from '@/components/SubTaskFormModal';
+import { TaskFormModal } from '@/components/TaskFormModal';
 import { AttachmentUploader } from '@/components/AttachmentUploader';
 import type { TaskStatus, TaskPriority } from '@/types';
 import { formatBangladeshiDateTime } from '@/lib/utils';
@@ -36,6 +37,7 @@ export function TaskDetail() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [showSubTaskModal, setShowSubTaskModal] = useState(false);
+  const [showTaskFormModal, setShowTaskFormModal] = useState(false);
   const [showAttachmentUploader, setShowAttachmentUploader] = useState(false);
 
   const taskId = parseInt(id || '0');
@@ -88,6 +90,20 @@ export function TaskDetail() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['task-detail', taskId, companyId] });
+    },
+  });
+
+  const deleteTaskMutation = useMutation({
+    mutationFn: async () => {
+      return await taskApi.delete(taskId, companyId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      navigate('/tasks');
+    },
+    onError: (error: any) => {
+      const errorMsg = error.response?.data?.message || error.message || 'Unknown error occurred';
+      alert(`Failed to delete task: ${errorMsg}`);
     },
   });
 
@@ -189,11 +205,21 @@ export function TaskDetail() {
         </Button>
         {canEdit && (
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" className={btnOutline}>
+            <Button variant="outline" size="sm" className={btnOutline} onClick={() => setShowTaskFormModal(true)}>
               <Edit className="w-4 h-4 mr-2" />
               Edit
             </Button>
-            <Button variant="outline" size="sm" className="bg-slate-800/60 border-red-500/50 text-red-300 hover:bg-red-500/20">
+            <Button
+              variant="outline"
+              size="sm"
+              className="bg-slate-800/60 border-red-500/50 text-red-300 hover:bg-red-500/20"
+              onClick={() => {
+                if (window.confirm('Are you sure you want to delete this task? This cannot be undone.')) {
+                  deleteTaskMutation.mutate();
+                }
+              }}
+              disabled={deleteTaskMutation.isPending}
+            >
               <Trash2 className="w-4 h-4 mr-2" />
               Delete
             </Button>
@@ -365,6 +391,14 @@ export function TaskDetail() {
           onClose={() => setShowSubTaskModal(false)}
           onSubmit={(data) => createSubTaskMutation.mutate(data)}
           isLoading={createSubTaskMutation.isPending}
+        />
+      )}
+
+      {showTaskFormModal && (
+        <TaskFormModal
+          isOpen={showTaskFormModal}
+          onClose={() => setShowTaskFormModal(false)}
+          task={task}
         />
       )}
     </div>
