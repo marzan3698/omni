@@ -21,15 +21,15 @@ export function formatCurrency(
   if (amount === null || amount === undefined) return '-';
   const num = typeof amount === 'string' ? parseFloat(amount) : amount;
   if (isNaN(num)) return '-';
-  
+
   const {
     minimumFractionDigits = 2,
     maximumFractionDigits = 2,
   } = options || {};
-  
-  return `৳${num.toLocaleString(undefined, { 
-    minimumFractionDigits, 
-    maximumFractionDigits 
+
+  return `৳${num.toLocaleString(undefined, {
+    minimumFractionDigits,
+    maximumFractionDigits
   })}`;
 }
 
@@ -80,7 +80,7 @@ export function formatDaysToMonthsDays(days: number, useBengali = true): string 
  */
 export function formatBangladeshiDateTime(date: Date | string | null | undefined): string {
   if (!date) return '-';
-  
+
   const dateObj = typeof date === 'string' ? new Date(date) : date;
   if (isNaN(dateObj.getTime())) return '-';
 
@@ -105,12 +105,12 @@ export function formatBangladeshiDateTime(date: Date | string | null | undefined
 
 /**
  * Get the base URL for static files (uploads, images, etc.)
- * Removes '/api' suffix from VITE_API_URL if present
+ * Uses VITE_API_URL exactly as defined so that Passenger routes the request to the backend.
  */
 export function getStaticFileBaseUrl(): string {
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
-  // Remove '/api' suffix if present
-  return apiUrl.replace(/\/api$/, '') || 'http://localhost:5001';
+  // Return the API URL directly so requests go to /api/uploads and hit the backend
+  return apiUrl;
 }
 
 /**
