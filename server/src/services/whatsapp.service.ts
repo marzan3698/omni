@@ -92,23 +92,27 @@ export async function initializeClient(
     }),
     puppeteer: {
       headless: true,
-      executablePath: process.env.CHROME_BIN || undefined,
-      timeout: 120000,
-      pipe: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--no-zygote',
-        '--disable-gpu',
-        '--single-process',
-        '--disable-software-rasterizer',
-        '--disable-features=IsolateOrigins,site-per-process,dbus',
-        '--mute-audio',
-        '--ignore-certificate-errors',
-      ],
+      ...(process.env.BROWSERLESS_API_KEY
+        ? { browserWSEndpoint: `wss://chrome.browserless.io?token=${process.env.BROWSERLESS_API_KEY}` }
+        : {
+          executablePath: process.env.CHROME_BIN || undefined,
+          timeout: 120000,
+          pipe: true,
+          args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--no-first-run',
+            '--no-zygote',
+            '--disable-gpu',
+            '--single-process',
+            '--disable-software-rasterizer',
+            '--disable-features=IsolateOrigins,site-per-process,dbus',
+            '--mute-audio',
+            '--ignore-certificate-errors',
+          ],
+        }),
     },
   });
 
