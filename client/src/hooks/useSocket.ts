@@ -44,12 +44,10 @@ export function useSocket(): UseSocketReturn {
     // Connect to the origin (no path in URL)
     const socketUrl = parsedUrl.origin;
 
-    // In production on cPanel, Passenger proxies /api/* to Node.js.
-    // So WebSocket must connect to /api/socket.io (not root /socket.io).
-    // Locally, server runs standalone so use default /socket.io.
-    const socketPath = isLocalhost
-      ? '/socket.io'
-      : `${parsedUrl.pathname.replace(/\/$/, '')}/socket.io`; // e.g. /api/socket.io
+    // Always use the API path prefix for Socket.IO connections. 
+    // In production (cPanel), Passenger proxies /api/* to Node.js, so requests arrive as /api/socket.io.
+    // Locally, we will align the server to also listen on /api/socket.io.
+    const socketPath = `${parsedUrl.pathname.replace(/\/$/, '')}/socket.io`; // e.g. /api/socket.io
 
     // Create Socket.IO connection
     const newSocket = io(socketUrl, {

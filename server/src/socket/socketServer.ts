@@ -12,8 +12,8 @@ export const initializeSocketIO = (httpServer: HTTPServer): SocketIOServer => {
 
   // In production on cPanel, Passenger proxies /api/* to Node.js.
   // Socket.IO requests arrive as /api/socket.io, so the path must match.
-  // Set SOCKET_IO_PATH=/api/socket.io in Node.js Selector env vars for production.
-  const socketPath = process.env.SOCKET_IO_PATH || '/socket.io';
+  // We use /api/socket.io uniformly so it works identically on localhost and production.
+  const socketPath = process.env.SOCKET_IO_PATH || '/api/socket.io';
 
   const io = new SocketIOServer(httpServer, {
     path: socketPath,
