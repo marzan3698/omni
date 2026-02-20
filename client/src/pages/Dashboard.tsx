@@ -371,7 +371,7 @@ export function Dashboard() {
                       <span className="text-xs text-slate-400">({tasks.length} total)</span>
                     </div>
                     <Link to="/tasks">
-                      <Button variant="outline" size="sm" className="border-amber-500/50 bg-transparent text-amber-100 hover:bg-amber-500/25 hover:text-white hover:border-amber-400/60 font-semibold">
+                      <Button variant="outline" size="sm" className="border-amber-500/50 bg-transparent text-amber-100 hover:bg-amber-500/25 hover:text-white hover:bg-amber-500/20 hover:border-amber-400/60 font-semibold">
                         View All
                       </Button>
                     </Link>
@@ -560,7 +560,7 @@ export function Dashboard() {
                     </div>
                     <span className="text-xs text-slate-400">{unpaidInvoices.length} unpaid</span>
                     <Link to="/finance">
-                      <Button variant="outline" size="sm" className="border-amber-500/50 bg-transparent text-amber-100 hover:bg-amber-500/25 hover:text-white hover:border-amber-400/60 font-semibold">
+                      <Button variant="outline" size="sm" className="border-amber-500/50 bg-transparent text-amber-100 hover:bg-amber-500/25 hover:text-white hover:bg-amber-500/20 hover:border-amber-400/60 font-semibold">
                         View All
                       </Button>
                     </Link>
@@ -589,7 +589,7 @@ export function Dashboard() {
                           </div>
                         </div>
                         <Link to={`/finance/invoices/${invoice.id}`}>
-                          <Button size="sm" variant="ghost" className="text-amber-100 hover:bg-amber-500/25 hover:text-white">View</Button>
+                          <Button size="sm" variant="ghost" className="text-amber-100 hover:bg-amber-500/25 hover:text-white hover:bg-amber-500/20">View</Button>
                         </Link>
                       </div>
                     ))}
@@ -643,7 +643,7 @@ export function Dashboard() {
             </div>
             <span className="text-xs text-slate-400">{tasks.length} total task{tasks.length !== 1 ? 's' : ''}</span>
             <Link to="/tasks">
-              <Button variant="outline" size="sm" className="border-amber-500/50 bg-transparent text-amber-100 hover:bg-amber-500/25 hover:text-white hover:border-amber-400/60 font-semibold">
+              <Button variant="outline" size="sm" className="border-amber-500/50 bg-transparent text-amber-100 hover:bg-amber-500/25 hover:text-white hover:bg-amber-500/20 hover:border-amber-400/60 font-semibold">
                 View All
               </Button>
             </Link>
@@ -792,7 +792,7 @@ export function Dashboard() {
             </div>
             <p className="text-xs text-slate-400">Track your active marketing campaigns</p>
             <Link to="/campaigns">
-              <Button variant="outline" size="sm" className="border-amber-500/50 bg-transparent text-amber-100 hover:bg-amber-500/25 hover:text-white hover:border-amber-400/60 font-semibold">
+              <Button variant="outline" size="sm" className="border-amber-500/50 bg-transparent text-amber-100 hover:bg-amber-500/25 hover:text-white hover:bg-amber-500/20 hover:border-amber-400/60 font-semibold">
                 View All
               </Button>
             </Link>
@@ -851,7 +851,7 @@ export function Dashboard() {
             </div>
             <span className="text-xs text-slate-400">{pendingTasks.length} pending, {startedWorkingTasks.length} in progress</span>
             <Link to="/tasks">
-              <Button variant="outline" size="sm" className="border-amber-500/50 bg-transparent text-amber-100 hover:bg-amber-500/25 hover:text-white hover:border-amber-400/60 font-semibold">
+              <Button variant="outline" size="sm" className="border-amber-500/50 bg-transparent text-amber-100 hover:bg-amber-500/25 hover:text-white hover:bg-amber-500/20 hover:border-amber-400/60 font-semibold">
                 View All
               </Button>
             </Link>
@@ -911,7 +911,7 @@ export function Dashboard() {
             </div>
             <span className="text-xs text-slate-400">{clientInvoices.filter((inv: any) => inv.status === 'Unpaid').length} unpaid</span>
             <Link to="/client/invoices">
-              <Button variant="outline" size="sm" className="border-amber-500/50 bg-transparent text-amber-100 hover:bg-amber-500/25 hover:text-white hover:border-amber-400/60 font-semibold">
+              <Button variant="outline" size="sm" className="border-amber-500/50 bg-transparent text-amber-100 hover:bg-amber-500/25 hover:text-white hover:bg-amber-500/20 hover:border-amber-400/60 font-semibold">
                 View All
               </Button>
             </Link>
@@ -943,7 +943,7 @@ export function Dashboard() {
                   </div>
                 </div>
                 <Link to={`/client/invoices/${invoice.id}`}>
-                  <Button size="sm" variant="ghost" className="text-amber-100 hover:bg-amber-500/25 hover:text-white">View</Button>
+                  <Button size="sm" variant="ghost" className="text-amber-100 hover:bg-amber-500/25 hover:text-white hover:bg-amber-500/20">View</Button>
                 </Link>
               </div>
             ))}

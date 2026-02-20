@@ -577,7 +577,7 @@ export function Leads() {
                         >
                           <Eye className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" title="Edit lead" className="text-amber-200 hover:bg-amber-500/20 hover:text-white p-1.5">
+                        <Button variant="ghost" size="sm" title="Edit lead" className="text-amber-200 hover:bg-amber-500/20 hover:text-white hover:bg-amber-500/20 p-1.5">
                           <Edit className="w-4 h-4" />
                         </Button>
                       </div>
