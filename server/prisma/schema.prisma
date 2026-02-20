@@ -1086,6 +1086,9 @@ model SocialConversation {
   whatsappSlotId    String?            @map("whatsapp_slot_id") @db.VarChar(10) // Slot 1-5 for multi-WhatsApp
   facebookPageId    String?            @map("facebook_page_id") @db.VarChar(255) // Source Page ID for Facebook
   facebookPageName  String?            @map("facebook_page_name") @db.VarChar(255) // Page display name
+  // Chatwoot integration fields
+  chatwootConversationId Int?           @map("chatwoot_conversation_id") // Chatwoot conversation ID for reply forwarding
+  chatwootInboxName      String?        @map("chatwoot_inbox_name") @db.VarChar(255) // Chatwoot inbox name (page/WA number)
   createdAt         DateTime           @default(now()) @map("created_at")
   updatedAt         DateTime           @updatedAt @map("updated_at")
 
@@ -1115,16 +1118,17 @@ enum SenderType {
 }
 
 model SocialMessage {
-  id             Int        @id @default(autoincrement())
-  conversationId Int        @map("conversation_id")
-  senderType     SenderType @map("sender_type")
-  content        String     @db.Text
-  imageUrl       String?    @map("image_url") @db.VarChar(500)
-  isRead         Boolean    @default(false) @map("is_read")
-  readAt         DateTime?  @map("read_at") @db.DateTime
-  isSeen         Boolean    @default(false) @map("is_seen")
-  seenAt         DateTime?  @map("seen_at") @db.DateTime
-  createdAt      DateTime   @default(now()) @map("created_at")
+  id                Int        @id @default(autoincrement())
+  conversationId    Int        @map("conversation_id")
+  senderType        SenderType @map("sender_type")
+  content           String     @db.Text
+  imageUrl          String?    @map("image_url") @db.VarChar(500)
+  isRead            Boolean    @default(false) @map("is_read")
+  readAt            DateTime?  @map("read_at") @db.DateTime
+  isSeen            Boolean    @default(false) @map("is_seen")
+  seenAt            DateTime?  @map("seen_at") @db.DateTime
+  externalMessageId String?    @map("external_message_id") @db.VarChar(255) // Chatwoot/Facebook message ID for deduplication
+  createdAt         DateTime   @default(now()) @map("created_at")
 
   conversation SocialConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
@@ -1133,8 +1137,10 @@ model SocialMessage {
   @@index([imageUrl])
   @@index([isRead])
   @@index([isSeen])
+  @@index([externalMessageId])
   @@map("social_messages")
 }
+
 
 model ConversationRelease {
   id             Int      @id @default(autoincrement())

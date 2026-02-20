@@ -63,18 +63,18 @@ export function Inbox() {
   const [labelFormData, setLabelFormData] = useState({ name: '', source: '' });
   const [quickReplyTab, setQuickReplyTab] = useState<'default' | 'campaign' | 'all'>('default');
   const [selectedCampaignId, setSelectedCampaignId] = useState<number | ''>('');
-  
+
   // Filter state
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'All' | 'Open' | 'Closed'>('All');
   const [labelFilter, setLabelFilter] = useState<string | null>(null);
-  
+
   // Multi-step lead form state
   const [leadType, setLeadType] = useState<'sales' | 'connection' | 'research' | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
   const [selectedLeadEmployeeIds, setSelectedLeadEmployeeIds] = useState<number[]>([]);
-  
+
   const [leadFormData, setLeadFormData] = useState({
     title: '',
     description: '',
@@ -124,19 +124,19 @@ export function Inbox() {
   // Filter conversations based on status and label
   const filteredConversations = useMemo(() => {
     let filtered = conversations;
-    
+
     // Filter by status
     if (statusFilter !== 'All') {
       filtered = filtered.filter(conv => conv.status === statusFilter);
     }
-    
+
     // Filter by label
     if (labelFilter) {
-      filtered = filtered.filter(conv => 
+      filtered = filtered.filter(conv =>
         conv.labels?.some(label => label.name === labelFilter)
       );
     }
-    
+
     return filtered;
   }, [conversations, statusFilter, labelFilter]);
 
@@ -483,7 +483,7 @@ export function Inbox() {
 
   const handleSubmitLead = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Only Name and Phone are required
     if (!leadFormData.customerName?.trim()) {
       alert('গ্রাহকের নাম আবশ্যক');
@@ -502,9 +502,9 @@ export function Inbox() {
 
     // Get selected product
     const selectedProduct = products.find((p: any) => p.id === selectedProductId);
-    
+
     // Auto-generate title
-    const finalTitle = selectedProduct 
+    const finalTitle = selectedProduct
       ? `${selectedProduct.name} - ${leadFormData.customerName}`
       : `Lead from ${leadFormData.customerName}`;
 
@@ -536,7 +536,7 @@ export function Inbox() {
       const purchasePrice = parseFloat(selectedProduct.purchasePrice) || 0;
       const salePrice = parseFloat(selectedProduct.salePrice) || 0;
       const profit = salePrice - purchasePrice;
-      
+
       leadData.productId = selectedProductId;
       leadData.purchasePrice = purchasePrice;
       leadData.salePrice = salePrice;
@@ -788,7 +788,7 @@ export function Inbox() {
                 {(statusFilter !== 'All' || labelFilter) && (
                   <span className="absolute -top-1 -right-1 w-2 h-2 bg-amber-500 rounded-full animate-game-badge-pulse"></span>
                 )}
-                
+
                 {/* Filter Panel */}
                 {showFilterPanel && (
                   <div className="absolute right-0 top-full mt-2 w-64 rounded-lg shadow-xl z-50 p-4 game-panel border-amber-500/30">
@@ -913,7 +913,7 @@ export function Inbox() {
                     )}
                   </>
                 ) : (
-                    <>
+                  <>
                     <Filter className="w-12 h-12 mx-auto mb-2 text-amber-500/50" />
                     <p>No conversations match your filters</p>
                     <Button
@@ -952,24 +952,28 @@ export function Inbox() {
                       <button
                         onClick={() => handleConversationSelect(conversation.id)}
                         className="w-full p-4 text-left"
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 border-2 border-amber-500/50 bg-gradient-to-br from-amber-600 to-amber-800">
-                          {conversation.externalUserName ? (
-                            <span className="text-white text-sm font-medium">
-                              {conversation.externalUserName.charAt(0).toUpperCase()}
-                            </span>
-                          ) : (
-                            <User className="w-5 h-5 text-white" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-1">
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 border-2 border-amber-500/50 bg-gradient-to-br from-amber-600 to-amber-800">
+                            {conversation.externalUserName ? (
+                              <span className="text-white text-sm font-medium">
+                                {conversation.externalUserName.charAt(0).toUpperCase()}
+                              </span>
+                            ) : (
+                              <User className="w-5 h-5 text-white" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between mb-1">
                               <div className="flex items-center gap-2 flex-1 min-w-0">
                                 {conversation.platform === 'facebook' && (
                                   <>
                                     <FacebookIcon className="w-4 h-4 text-blue-400 flex-shrink-0" />
-                                    {(conversation.facebookPageName || conversation.facebookPageId) && (
+                                    {conversation.chatwootInboxName ? (
+                                      <span className="text-[10px] font-medium text-blue-300 bg-blue-500/20 px-1 rounded" title={conversation.chatwootInboxName}>
+                                        {conversation.chatwootInboxName.length > 15 ? conversation.chatwootInboxName.slice(0, 15) + '…' : conversation.chatwootInboxName}
+                                      </span>
+                                    ) : (conversation.facebookPageName || conversation.facebookPageId) && (
                                       <span className="text-[10px] font-medium text-blue-300 bg-blue-500/20 px-1 rounded" title={conversation.facebookPageName || conversation.facebookPageId || undefined}>
                                         FB: {conversation.facebookPageName || conversation.facebookPageId || 'Page'}
                                       </span>
@@ -979,21 +983,25 @@ export function Inbox() {
                                 {conversation.platform === 'whatsapp' && (
                                   <>
                                     <WhatsAppIcon className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                                    {conversation.whatsappSlotId && (
+                                    {conversation.chatwootInboxName ? (
+                                      <span className="text-[10px] font-medium text-emerald-300 bg-emerald-500/20 px-1 rounded" title={conversation.chatwootInboxName}>
+                                        {conversation.chatwootInboxName.length > 15 ? conversation.chatwootInboxName.slice(0, 15) + '…' : conversation.chatwootInboxName}
+                                      </span>
+                                    ) : conversation.whatsappSlotId && (
                                       <span className="text-[10px] font-medium text-emerald-300 bg-emerald-500/20 px-1 rounded" title={`Slot ${conversation.whatsappSlotId}`}>
                                         S{conversation.whatsappSlotId}
                                       </span>
                                     )}
                                   </>
                                 )}
-                            <p className="text-sm font-medium text-amber-50 truncate">
-                              {conversation.externalUserName || `User ${conversation.externalUserId.slice(0, 8)}`}
-                            </p>
+                                <p className="text-sm font-medium text-amber-50 truncate">
+                                  {conversation.externalUserName || `User ${conversation.externalUserId.slice(0, 8)}`}
+                                </p>
                               </div>
-                            <div className="flex items-center gap-2 flex-shrink-0">
-                              {conversation.status === 'Open' && (
-                                <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                              )}
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                {conversation.status === 'Open' && (
+                                  <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                                )}
                                 {(() => {
                                   const releaseCount = conversation._count?.releases || 0;
                                   return releaseCount > 0 ? (
@@ -1009,48 +1017,48 @@ export function Inbox() {
                                     </span>
                                   ) : null;
                                 })()}
-                              {(() => {
-                                const unreadCount = getUnreadCount(conversation);
-                                return unreadCount > 0 ? (
-                                  <span className="bg-amber-500 text-amber-950 text-xs font-bold rounded-full px-2 py-0.5 min-w-[20px] text-center animate-game-badge-pulse">
-                                    {unreadCount > 99 ? '99+' : unreadCount}
+                                {(() => {
+                                  const unreadCount = getUnreadCount(conversation);
+                                  return unreadCount > 0 ? (
+                                    <span className="bg-amber-500 text-amber-950 text-xs font-bold rounded-full px-2 py-0.5 min-w-[20px] text-center animate-game-badge-pulse">
+                                      {unreadCount > 99 ? '99+' : unreadCount}
+                                    </span>
+                                  ) : null;
+                                })()}
+                              </div>
+                            </div>
+                            {lastMessage && (
+                              <p className="text-xs text-slate-300 truncate mb-1">
+                                {lastMessage.content}
+                              </p>
+                            )}
+                            {conversation.labels && conversation.labels.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mb-1">
+                                {conversation.labels.slice(0, 2).map((label) => (
+                                  <span
+                                    key={label.id}
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-amber-500/20 text-amber-200 border border-amber-500/30"
+                                    title={label.source ? `${label.name} (${label.source})` : label.name}
+                                  >
+                                    <Tag className="w-3 h-3" />
+                                    {label.name}
                                   </span>
-                                ) : null;
-                              })()}
-                            </div>
+                                ))}
+                                {conversation.labels.length > 2 && (
+                                  <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-slate-600/50 text-slate-300 border border-slate-500/50">
+                                    +{conversation.labels.length - 2} more
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                            {conversation.lastMessageAt && (
+                              <p className="text-xs text-amber-500/80">
+                                {formatTime(conversation.lastMessageAt)}
+                              </p>
+                            )}
                           </div>
-                          {lastMessage && (
-                            <p className="text-xs text-slate-300 truncate mb-1">
-                              {lastMessage.content}
-                            </p>
-                          )}
-                          {conversation.labels && conversation.labels.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mb-1">
-                              {conversation.labels.slice(0, 2).map((label) => (
-                                <span
-                                  key={label.id}
-                                  className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-amber-500/20 text-amber-200 border border-amber-500/30"
-                                  title={label.source ? `${label.name} (${label.source})` : label.name}
-                                >
-                                  <Tag className="w-3 h-3" />
-                                  {label.name}
-                                </span>
-                              ))}
-                              {conversation.labels.length > 2 && (
-                                <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-slate-600/50 text-slate-300 border border-slate-500/50">
-                                  +{conversation.labels.length - 2} more
-                                </span>
-                              )}
-                            </div>
-                          )}
-                          {conversation.lastMessageAt && (
-                            <p className="text-xs text-amber-500/80">
-                              {formatTime(conversation.lastMessageAt)}
-                            </p>
-                          )}
                         </div>
-                      </div>
-                    </button>
+                      </button>
                       {/* Action buttons */}
                       <div className="px-4 pb-3">
                         {activeTab === 'taken' && isAssigned && (
@@ -1163,15 +1171,15 @@ export function Inbox() {
                       {selectedConversation.labels && selectedConversation.labels.length > 0 ? 'Manage Labels' : 'Add Label'}
                     </Button>
                     {(hasPermission('can_manage_leads') || hasPermission('can_view_leads')) && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleCreateLead}
-                      className="ml-4"
-                    >
-                      <Target className="w-4 h-4 mr-2" />
-                      Create Lead
-                    </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleCreateLead}
+                        className="ml-4"
+                      >
+                        <Target className="w-4 h-4 mr-2" />
+                        Create Lead
+                      </Button>
                     )}
                     {selectedConversation.status === 'Open' && (
                       <Button
@@ -1633,7 +1641,7 @@ export function Inbox() {
                   <X className="w-4 h-4" />
                 </Button>
               </div>
-              
+
               {/* Progress Bar */}
               {leadType && (
                 <div className="mt-4">
@@ -1642,7 +1650,7 @@ export function Inbox() {
                       const stepNum = step;
                       const isCompleted = stepNum < currentStep;
                       const isCurrent = stepNum === currentStep;
-                      
+
                       return (
                         <div key={stepNum} className="flex items-center flex-1">
                           <div className="flex items-center justify-center flex-1">
@@ -1652,8 +1660,8 @@ export function Inbox() {
                                 isCompleted
                                   ? "bg-green-500 text-white"
                                   : isCurrent
-                                  ? "bg-indigo-600 text-white ring-4 ring-indigo-200"
-                                  : "bg-gray-200 text-gray-600"
+                                    ? "bg-indigo-600 text-white ring-4 ring-indigo-200"
+                                    : "bg-gray-200 text-gray-600"
                               )}
                             >
                               {isCompleted ? (
@@ -1689,7 +1697,7 @@ export function Inbox() {
               {currentStep === 1 && (
                 <div className="space-y-4">
                   <p className="text-sm text-slate-600 mb-4">Select a product for this sales lead:</p>
-                  
+
                   {/* Loading State */}
                   {productsLoading && (
                     <div className="text-center py-8">
@@ -1697,7 +1705,7 @@ export function Inbox() {
                       <p className="text-sm text-slate-500">প্রোডাক্ট লোড হচ্ছে...</p>
                     </div>
                   )}
-                  
+
                   {/* Error State */}
                   {productsError && (
                     <div className="text-center py-8 text-red-500">
@@ -1705,49 +1713,49 @@ export function Inbox() {
                       <p className="text-xs">{(productsError as Error).message}</p>
                     </div>
                   )}
-                  
+
                   {/* Products Grid */}
                   {!productsLoading && !productsError && (
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
-                    {products.map((product: any) => (
-                      <button
-                        key={product.id}
-                        type="button"
-                        onClick={() => setSelectedProductId(product.id)}
-                        className={cn(
-                          "p-4 border-2 rounded-lg text-left transition-all duration-200 hover:shadow-md",
-                          selectedProductId === product.id
-                            ? "border-indigo-500 bg-indigo-50 ring-2 ring-indigo-200"
-                            : "border-gray-200 hover:border-indigo-300 bg-white"
-                        )}
-                      >
-                        {product.imageUrl && (
-                          <img
-                            src={product.imageUrl}
-                            alt={product.name}
-                            className="w-full h-24 object-cover rounded-md mb-2"
-                          />
-                        )}
-                        {!product.imageUrl && (
-                          <div className="w-full h-24 bg-gray-100 rounded-md mb-2 flex items-center justify-center">
-                            <Package className="w-8 h-8 text-gray-400" />
-                          </div>
-                        )}
-                        <h4 className="font-medium text-slate-900 text-sm mb-1 truncate">{product.name}</h4>
-                        {product.salePrice && (
-                          <p className="text-xs text-slate-600">৳{parseFloat(product.salePrice).toFixed(2)}</p>
-                        )}
-                        {selectedProductId === product.id && (
-                          <div className="mt-2 flex items-center text-indigo-600 text-xs">
-                            <Check className="w-4 h-4 mr-1" />
-                            Selected
-                          </div>
-                        )}
-                      </button>
-                    ))}
-                  </div>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
+                      {products.map((product: any) => (
+                        <button
+                          key={product.id}
+                          type="button"
+                          onClick={() => setSelectedProductId(product.id)}
+                          className={cn(
+                            "p-4 border-2 rounded-lg text-left transition-all duration-200 hover:shadow-md",
+                            selectedProductId === product.id
+                              ? "border-indigo-500 bg-indigo-50 ring-2 ring-indigo-200"
+                              : "border-gray-200 hover:border-indigo-300 bg-white"
+                          )}
+                        >
+                          {product.imageUrl && (
+                            <img
+                              src={product.imageUrl}
+                              alt={product.name}
+                              className="w-full h-24 object-cover rounded-md mb-2"
+                            />
+                          )}
+                          {!product.imageUrl && (
+                            <div className="w-full h-24 bg-gray-100 rounded-md mb-2 flex items-center justify-center">
+                              <Package className="w-8 h-8 text-gray-400" />
+                            </div>
+                          )}
+                          <h4 className="font-medium text-slate-900 text-sm mb-1 truncate">{product.name}</h4>
+                          {product.salePrice && (
+                            <p className="text-xs text-slate-600">৳{parseFloat(product.salePrice).toFixed(2)}</p>
+                          )}
+                          {selectedProductId === product.id && (
+                            <div className="mt-2 flex items-center text-indigo-600 text-xs">
+                              <Check className="w-4 h-4 mr-1" />
+                              Selected
+                            </div>
+                          )}
+                        </button>
+                      ))}
+                    </div>
                   )}
-                  
+
                   {/* Empty State - only show when not loading and no products */}
                   {!productsLoading && !productsError && products.length === 0 && (
                     <div className="text-center py-8 text-slate-500">
@@ -1987,7 +1995,7 @@ export function Inbox() {
                       hour: '2-digit',
                       minute: '2-digit',
                     });
-                    
+
                     return (
                       <div
                         key={release.id}

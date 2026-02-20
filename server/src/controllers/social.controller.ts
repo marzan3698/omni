@@ -8,6 +8,7 @@ import {
 import { sendSuccess, sendError } from '../utils/response.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { prisma } from '../lib/prisma.js';
+import { getChatwootConfig, sendReplyToChatwoot } from '../services/chatwoot.service.js';
 
 export const socialController = {
   /**
@@ -328,6 +329,24 @@ export const socialController = {
         agentId,
         imageUrl
       );
+
+      // If conversation is from Chatwoot, forward reply there too
+      try {
+        const conv = await prisma.socialConversation.findUnique({
+          where: { id: conversationId },
+          select: { chatwootConversationId: true, companyId: true },
+        });
+        if (conv?.chatwootConversationId && content.trim()) {
+          const cfg = await getChatwootConfig(conv.companyId);
+          if (cfg) {
+            await sendReplyToChatwoot(conv.chatwootConversationId, content.trim(), cfg);
+          }
+        }
+      } catch (chatwootErr) {
+        // Non-fatal: log but don't fail the reply
+        console.warn('⚠️ Could not forward reply to Chatwoot:', chatwootErr);
+      }
+
 
       console.log('✅ Message sent successfully:', message.id);
       sendSuccess(res, message, 'Message sent successfully', 201);

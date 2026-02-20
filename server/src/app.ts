@@ -103,12 +103,14 @@ import facebookIntegrationRoutes from './routes/facebookIntegration.routes.js';
 import environmentRoutes from './routes/environment.routes.js';
 import inboxReportRoutes from './routes/inbox-report.routes.js';
 import whatsappRoutes from './routes/whatsapp.routes.js';
+import chatwootRoutes from './routes/chatwoot.routes.js';
 import workSessionRoutes from './routes/workSession.routes.js';
 import activityRoutes from './routes/activity.routes.js';
 app.use('/api/auth', authRoutes);
 app.use('/api/work-session', workSessionRoutes);
 app.use('/api/activity', activityRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
+app.use('/api', chatwootRoutes); // Chatwoot webhook + config
 app.use('/api', socialRoutes);
 app.use('/api/integrations/facebook', facebookIntegrationRoutes);
 app.use('/api/integrations', integrationRoutes);

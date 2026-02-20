@@ -23,6 +23,9 @@ export interface SocialConversation {
   whatsappSlotId?: string | null;
   facebookPageId?: string | null;
   facebookPageName?: string | null;
+  // Chatwoot integration fields
+  chatwootConversationId?: number | null;
+  chatwootInboxName?: string | null;
   assignedEmployee?: {
     id: number;
     user: {
@@ -40,6 +43,7 @@ export interface SocialConversation {
   };
   unreadCount?: number;
 }
+
 
 export interface SocialMessage {
   id: number;

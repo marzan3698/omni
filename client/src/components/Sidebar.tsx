@@ -32,7 +32,8 @@ import {
   Menu,
   FileCode,
   Monitor,
-  Receipt
+  Receipt,
+  Link2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -271,6 +272,12 @@ const menuSections: MenuSection[] = [
         label: 'New cPanel Setup',
         icon: FileCode,
         path: '/admin/cpanel-auto-deployment-guide',
+        permission: 'can_manage_root_items',
+      },
+      {
+        label: 'Chatwoot Integration',
+        icon: Link2,
+        path: '/admin/chatwoot-settings',
         permission: 'can_manage_root_items',
       },
     ]
