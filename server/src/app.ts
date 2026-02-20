@@ -47,9 +47,17 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve static files for uploads using absolute path to ensure robustness in different environments
+// Serve static files for uploads using robust absolute paths
 import path from 'path';
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const uploadsPath = path.join(__dirname, '../uploads');
+
+// Serve locally at /uploads and /api/uploads to match VITE_API_URL locally and via Passenger
+app.use('/uploads', express.static(uploadsPath));
+app.use('/api/uploads', express.static(uploadsPath));
 
 // Raw body parser for webhooks (must be before json parser)
 app.use('/api/webhooks/facebook', express.raw({ type: 'application/json' }));

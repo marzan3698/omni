@@ -2,8 +2,14 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const rootUploadsDir = path.join(__dirname, '../../uploads');
+
 // Create uploads directory if it doesn't exist
-const uploadsDir = path.join(process.cwd(), 'uploads', 'products');
+const uploadsDir = path.join(rootUploadsDir, 'products');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
@@ -49,7 +55,7 @@ export const singleProductImage = uploadProductImage.single('image');
 // ============================================
 
 // Create uploads directory for social messages if it doesn't exist
-const socialUploadsDir = path.join(process.cwd(), 'uploads', 'social');
+const socialUploadsDir = path.join(rootUploadsDir, 'social');
 if (!fs.existsSync(socialUploadsDir)) {
   fs.mkdirSync(socialUploadsDir, { recursive: true });
 }
@@ -104,7 +110,7 @@ export const singleSocialImage = uploadSocialImage.single('image');
 // ============================================
 
 // Create uploads directory for theme logo if it doesn't exist
-const themeUploadsDir = path.join(process.cwd(), 'uploads', 'theme');
+const themeUploadsDir = path.join(rootUploadsDir, 'theme');
 if (!fs.existsSync(themeUploadsDir)) {
   fs.mkdirSync(themeUploadsDir, { recursive: true });
 }
@@ -148,7 +154,7 @@ export const singleThemeLogo = uploadThemeLogo.single('logo');
 // Service Category Icon Upload
 // ============================================
 
-const serviceCategoryIconDir = path.join(process.cwd(), 'uploads', 'service-categories');
+const serviceCategoryIconDir = path.join(rootUploadsDir, 'service-categories');
 if (!fs.existsSync(serviceCategoryIconDir)) {
   fs.mkdirSync(serviceCategoryIconDir, { recursive: true });
 }
@@ -181,7 +187,7 @@ export const singleServiceCategoryIcon = uploadServiceCategoryIcon.single('icon'
 // ============================================
 
 // Create uploads directory for task attachments if it doesn't exist
-const taskUploadsBaseDir = path.join(process.cwd(), 'uploads', 'tasks');
+const taskUploadsBaseDir = path.join(rootUploadsDir, 'tasks');
 if (!fs.existsSync(taskUploadsBaseDir)) {
   fs.mkdirSync(taskUploadsBaseDir, { recursive: true });
 }
@@ -194,9 +200,9 @@ const taskStorage = multer.diskStorage({
     // Note: route uses :id, so check req.params.id first, then req.params.taskId
     const taskId = (req.params?.id || req.body?.taskId || req.params?.taskId || req.query?.taskId) as string | undefined;
     const subTaskId = (req.body?.subTaskId || req.params?.subTaskId || req.query?.subTaskId) as string | undefined;
-    
+
     let uploadDir: string;
-    
+
     if (taskId) {
       uploadDir = path.join(taskUploadsBaseDir, `task-${taskId}`, 'attachments');
     } else if (subTaskId) {
@@ -205,12 +211,12 @@ const taskStorage = multer.diskStorage({
       // Fallback to a temporary directory if no task/subtask ID provided
       uploadDir = path.join(taskUploadsBaseDir, 'temp');
     }
-    
+
     // Create directory if it doesn't exist
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
-    
+
     cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
