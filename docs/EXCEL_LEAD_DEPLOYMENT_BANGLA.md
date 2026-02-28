@@ -14,22 +14,37 @@ Excel Lead Import এবং Bulk Assign ফিচারের জন্য ন�
 
 ---
 
+## ⚠️ গুরুত্বপূর্ণ: পুরো `npm run migrate` চালাবেন না
+
+লাইভ সার্ভারে যদি **প্রায় সব টেবিলই আগে থেকেই থাকে** (Prisma db push অথবা অন্য উপায়ে), তাহলে `npm run migrate` চালালে "Table already exists" জাতীয় error আসবে। **শুধু Excel Lead-এর জন্য প্রয়োজনীয় migration** চালান।
+
+---
+
 ## cPanel-এ Migration চালানোর পদ্ধতি
 
-আপনার সিস্টেম **দুই ধরনের** migration সমর্থন করে:
-
-### পদ্ধতি ১: `migrate-simple.cjs` (SQL ফাইল দিয়ে – এই প্রজেক্টের মূল পদ্ধতি)
-
-যদি আপনার সেটআপে `server/scripts/migrate-simple.cjs` এবং `server/prisma/migrations/*.sql` ফাইলগুলো থাকে:
+### পদ্ধতি ১: শুধু Excel Lead-এর safe migration (সুপারিশকৃত)
 
 **cPanel Terminal বা SSH এ:**
 
 ```bash
-cd ~/omni-repo/server   # অথবা আপনার API ফোল্ডার পাথ
-npm run migrate
+cd ~/omni-repo/server
+source ~/nodevenv/omni-repo/server/20/bin/activate
+node scripts/migrate-simple.cjs cpanel_excel_leads_safe.sql
 ```
 
-অথবা নির্দিষ্ট migration চালাতে:
+এরপর **phpMyAdmin** এ গিয়ে নিচের SQL গুলো চালান (যদি `lead_import_id` কলাম না থাকে):
+
+```sql
+ALTER TABLE `leads` ADD COLUMN `lead_import_id` INT NULL;
+ALTER TABLE `leads` ADD INDEX `idx_lead_import_id` (`lead_import_id`);
+ALTER TABLE `leads` ADD CONSTRAINT `fk_leads_lead_import` FOREIGN KEY (`lead_import_id`) REFERENCES `lead_imports`(`id`) ON DELETE SET NULL;
+```
+
+যদি "Duplicate column name" বা "Duplicate key" error আসে তাহলে বুঝবেন ওগুলো ইতিমধ্যে আছে, সেক্ষেত্রে কিছু করতে হবে না।
+
+### পদ্ধতি ২: সম্পূর্ণ add_excel_lead_import (যদি DB একদম fresh হয়)
+
+যদি আপনার লাইভ DB-তে পুরনো migration গুলো চলেনি এবং লিড সম্পর্কিত কোনো স্ট্রাকচার নেই, তাহলে:
 
 ```bash
 node scripts/migrate-simple.cjs add_excel_lead_import.sql
@@ -37,8 +52,8 @@ node scripts/migrate-simple.cjs add_excel_lead_import.sql
 
 **Excel Lead Import এর জন্য প্রয়োজনীয় migration ফাইলগুলো (অগ্রাধিকার অনুযায়ী):**
 
-1. `add_excel_lead_import.sql` – Excel enum, lead_imports টেবিল, lead_import_id কলাম
-2. (যদি কলাম থাকে কিন্তু FK না থাকে) `fix_lead_import_fk.sql`
+1. `cpanel_excel_leads_safe.sql` – শুধু Excel enum + lead_imports টেবিল (নিরাপদ, idempotent)
+2. `add_excel_lead_import.sql` – সম্পূর্ণ (enum + lead_imports + lead_import_id + FK)
 
 ---
 
