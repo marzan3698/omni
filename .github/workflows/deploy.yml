@@ -50,8 +50,8 @@ jobs:
           source: "client/dist/*"
           target: "~/public_html/"
           strip_components: 2
-          timeout: 60
-          command_timeout: 120
+          timeout: 60s
+          command_timeout: 120s
           overwrite: true
 
       - name: Deploy Backend dist/ to server via SCP
@@ -64,8 +64,8 @@ jobs:
           source: "server/dist/*"
           target: "~/omni-repo/server/dist/"
           strip_components: 2
-          timeout: 60
-          command_timeout: 120
+          timeout: 60s
+          command_timeout: 120s
           overwrite: true
 
       - name: Setup .htaccess & Restart Backend
@@ -75,7 +75,7 @@ jobs:
           username: ${{ secrets.CPANEL_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
-          timeout: 60
+          timeout: 60s
           script: |
             echo "🚀 Post-deploy setup..."
 
