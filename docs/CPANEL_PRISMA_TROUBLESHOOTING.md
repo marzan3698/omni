@@ -113,3 +113,39 @@ Your cPanel hosting has hit process/resource limits (PMEM, number of processes, 
 4. **Manual deployment when GitHub Actions SCP fails** – If SCP fails due to resource limits:
    - Wait for off-peak hours and re-run the workflow
    - Or deploy manually: build locally, then upload `client/dist/*` to `~/public_html/` and `server/dist/*` to `~/omni-repo/server/dist/` via FTP/cPanel File Manager
+
+---
+
+## Related: GitHub Actions SCP "unexpected packet in response to channel open"
+
+### Symptoms
+
+- GitHub Actions fails at "Deploy Frontend to public_html via SCP"
+- Error: `ssh: unexpected packet in response to channel open: <nil>`
+
+### Possible causes
+
+1. **SSH cipher mismatch** – cPanel shared hosting often uses older OpenSSH with CBC ciphers; the SCP client may not offer them by default
+2. **Resource limits** – Same "Unable to fork" issue; server can't spawn the SCP subsystem (see above)
+3. **SSH key/auth** – Wrong key format, key not in `authorized_keys`, or wrong user
+
+### Solutions (in order)
+
+1. **Enable insecure cipher** (already in workflow):
+   ```yaml
+   use_insecure_cipher: true
+   ```
+   This allows older ciphers (aes128-cbc, aes256-cbc) that cPanel may require.
+
+2. **Verify SSH access:**
+   - cPanel → Security → SSH Access → Ensure SSH is enabled
+   - Add your deploy key to **authorized_keys** (cPanel can import from GitHub)
+   - Confirm `SSH_PORT` secret – cPanel often uses 21098 or similar, not 22
+
+3. **Use RSA key if ed25519 fails:**
+   ```bash
+   ssh-keygen -t rsa -b 4096 -f deploy_key -N ""
+   ```
+   Add `deploy_key.pub` to cPanel, use `deploy_key` content as `SSH_PRIVATE_KEY` secret.
+
+4. **Manual deploy fallback** – Build locally, then upload via cPanel File Manager or FTP.

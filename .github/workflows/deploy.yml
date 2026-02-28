@@ -53,6 +53,7 @@ jobs:
           timeout: 60s
           command_timeout: 120s
           overwrite: true
+          use_insecure_cipher: true
 
       - name: Deploy Backend dist/ to server via SCP
         uses: appleboy/scp-action@v1
@@ -67,6 +68,7 @@ jobs:
           timeout: 60s
           command_timeout: 120s
           overwrite: true
+          use_insecure_cipher: true
 
       - name: Setup .htaccess & Restart Backend
         uses: appleboy/ssh-action@v1.0.3
@@ -76,6 +78,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
           timeout: 60s
+          use_insecure_cipher: true
           script: |
             echo "🚀 Post-deploy setup..."
 
