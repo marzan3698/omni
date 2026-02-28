@@ -76,3 +76,40 @@ touch ~/omni-repo/server/tmp/restart.txt
 | 4 | Restart app via `touch tmp/restart.txt` |
 
 The codebase now uses a Prisma singleton in production to avoid multiple instances, which helps with this error.
+
+---
+
+## Related: Resource Limits (Unable to fork / SCP failure)
+
+### Symptoms
+
+- **cPanel Terminal:** `cagefs_enter: Unable to fork` – cannot run commands
+- **Node.js Setup UI:** "Can't save this" when saving environment variables
+- **GitHub Actions SCP:** `ssh: unexpected packet in response to channel open`
+
+### Cause
+
+Your cPanel hosting has hit process/resource limits (PMEM, number of processes, or package limits). When the server tries to fork a new process (Terminal, Node.js app config, SCP), it fails.
+
+### Solutions
+
+1. **Contact your hosting provider** – Ask them to:
+   - Increase PMEM or process limits
+   - Upgrade your hosting plan
+   - Check Web Interface Resource Limiting Modes
+
+2. **Reduce usage (temporary):**
+   - Set Node.js app processes to 1 (Setup Node.js App → Application processes)
+   - Add `connection_limit=3` to `DATABASE_URL` in `.env`
+   - Close unused cPanel tabs and apps
+
+3. **Edit `.env` via SSH** – If the Node.js UI fails to save, edit `.env` directly:
+   ```bash
+   # Via SSH (if Terminal works elsewhere) or File Manager
+   nano ~/omni-repo/server/.env
+   ```
+   Save, then restart: `touch ~/omni-repo/server/tmp/restart.txt`
+
+4. **Manual deployment when GitHub Actions SCP fails** – If SCP fails due to resource limits:
+   - Wait for off-peak hours and re-run the workflow
+   - Or deploy manually: build locally, then upload `client/dist/*` to `~/public_html/` and `server/dist/*` to `~/omni-repo/server/dist/` via FTP/cPanel File Manager

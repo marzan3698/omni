@@ -41,7 +41,7 @@ jobs:
           echo "✅ Backend build completed"
 
       - name: Deploy Frontend to public_html via SCP
-        uses: appleboy/scp-action@v0.1.7
+        uses: appleboy/scp-action@v1
         with:
           host: ${{ secrets.CPANEL_HOST }}
           username: ${{ secrets.CPANEL_USER }}
@@ -50,9 +50,12 @@ jobs:
           source: "client/dist/*"
           target: "~/public_html/"
           strip_components: 2
+          timeout: 60
+          command_timeout: 120
+          overwrite: true
 
       - name: Deploy Backend dist/ to server via SCP
-        uses: appleboy/scp-action@v0.1.7
+        uses: appleboy/scp-action@v1
         with:
           host: ${{ secrets.CPANEL_HOST }}
           username: ${{ secrets.CPANEL_USER }}
@@ -61,6 +64,9 @@ jobs:
           source: "server/dist/*"
           target: "~/omni-repo/server/dist/"
           strip_components: 2
+          timeout: 60
+          command_timeout: 120
+          overwrite: true
 
       - name: Setup .htaccess & Restart Backend
         uses: appleboy/ssh-action@v1.0.3
@@ -69,6 +75,7 @@ jobs:
           username: ${{ secrets.CPANEL_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
+          timeout: 60
           script: |
             echo "🚀 Post-deploy setup..."
 

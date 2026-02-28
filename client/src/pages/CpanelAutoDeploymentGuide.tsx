@@ -178,7 +178,7 @@ jobs:
           npm run build
 
       - name: Deploy Frontend to cPanel
-        uses: appleboy/scp-action@v0.1.7
+        uses: appleboy/scp-action@v1
         with:
           host: \${{ secrets.CPANEL_HOST }}
           username: \${{ secrets.CPANEL_USER }}
@@ -189,7 +189,7 @@ jobs:
           strip_components: 2
 
       - name: Deploy Backend dist/ to cPanel
-        uses: appleboy/scp-action@v0.1.7
+        uses: appleboy/scp-action@v1
         with:
           host: \${{ secrets.CPANEL_HOST }}
           username: \${{ secrets.CPANEL_USER }}
@@ -588,6 +588,21 @@ export default function CpanelAutoDeploymentGuide() {
             <Section icon={<AlertTriangle className="h-4 w-4" />} title='সমস্যা: whatsapp-web.js crash করছে'>
               <div className={s.warn}>cPanel-এ puppeteer চলে না তাই whatsapp-web.js install হয় না। Hard import করলে server startup-এই crash।</div>
               <p className="mt-2"><strong className={s.strong}>সমাধান:</strong> Step 8 এর lazy load pattern ব্যবহার করুন, তারপর rebuild করুন (Step 9)।</p>
+            </Section>
+
+            <Section icon={<AlertTriangle className="h-4 w-4" />} title='সমস্যা: "Unable to fork" / "Can\'t save this" / GitHub SCP failure' badge="Resource Limit">
+              <div className={s.warn}>
+                <strong>cagefs_enter: Unable to fork</strong> (Terminal), <strong>Can't save this</strong> (Node.js env vars), বা <strong>ssh: unexpected packet in response to channel open</strong> (GitHub Actions SCP) — সবই hosting-এর process/resource limit-এর কারণে।
+              </div>
+              <p className="mt-2"><strong className={s.strong}>সমাধান:</strong></p>
+              <ul className="list-disc list-inside space-y-1 mt-2 text-amber-200/80 text-sm">
+                <li><strong>Hosting provider-কে contact করুন:</strong> PMEM বা process limit বাড়ানোর জন্য</li>
+                <li><strong>DATABASE_URL-এ</strong> <code className={s.inline}>?connection_limit=3</code> যোগ করুন</li>
+                <li><strong>Node.js processes:</strong> Application processes = 1 সেট করুন</li>
+                <li>Env save করতে না পারলে <strong>SSH/File Manager দিয়ে</strong> সরাসরি <code className={s.inline}>~/omni-repo/server/.env</code> edit করুন</li>
+                <li>SCP fail করলে off-peak time-এ re-run করুন অথবা manual deploy করুন (FTP/File Manager)</li>
+              </ul>
+              <p className="mt-2 text-xs text-amber-300/80">বিস্তারিত: <code className={s.inline}>docs/CPANEL_PRISMA_TROUBLESHOOTING.md</code></p>
             </Section>
 
             <Section icon={<Database className="h-4 w-4" />} title="Local Database থেকে Server Database-এ Data Import করুন" badge="Optional">
