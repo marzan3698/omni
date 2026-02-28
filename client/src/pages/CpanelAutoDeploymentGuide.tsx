@@ -590,7 +590,7 @@ export default function CpanelAutoDeploymentGuide() {
               <p className="mt-2"><strong className={s.strong}>সমাধান:</strong> Step 8 এর lazy load pattern ব্যবহার করুন, তারপর rebuild করুন (Step 9)।</p>
             </Section>
 
-            <Section icon={<AlertTriangle className="h-4 w-4" />} title='সমস্যা: "Unable to fork" / "Can\'t save this" / GitHub SCP failure' badge="Resource Limit">
+            <Section icon={<AlertTriangle className="h-4 w-4" />} title="সমস্যা: Unable to fork / Can't save this / GitHub SCP failure" badge="Resource Limit">
               <div className={s.warn}>
                 <strong>cagefs_enter: Unable to fork</strong> (Terminal), <strong>Can't save this</strong> (Node.js env vars), বা <strong>ssh: unexpected packet in response to channel open</strong> (GitHub Actions SCP) — সবই hosting-এর process/resource limit-এর কারণে।
               </div>
