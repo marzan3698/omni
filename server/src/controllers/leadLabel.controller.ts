@@ -16,10 +16,16 @@ const updateSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
+function getCompanyId(req: AuthRequest): number {
+  const id = req.user?.companyId;
+  if (id) return id;
+  return parseInt(process.env.DEFAULT_COMPANY_ID || '1', 10);
+}
+
 export const leadLabelController = {
   create: async (req: AuthRequest, res: Response) => {
     try {
-      const companyId = req.user!.companyId;
+      const companyId = getCompanyId(req);
       const validatedData = createSchema.parse(req.body);
       const label = await leadLabelService.create(companyId, validatedData);
       return sendSuccess(res, label, 'Lead label created successfully', 201);
@@ -30,7 +36,7 @@ export const leadLabelController = {
 
   getAll: async (req: AuthRequest, res: Response) => {
     try {
-      const companyId = req.user!.companyId;
+      const companyId = getCompanyId(req);
       const labels = await leadLabelService.getAll(companyId);
       return sendSuccess(res, labels, 'Lead labels retrieved successfully');
     } catch (error: any) {
@@ -40,7 +46,7 @@ export const leadLabelController = {
 
   getById: async (req: AuthRequest, res: Response) => {
     try {
-      const companyId = req.user!.companyId;
+      const companyId = getCompanyId(req);
       const id = parseInt(req.params.id);
       const label = await leadLabelService.getById(id, companyId);
       return sendSuccess(res, label, 'Lead label retrieved successfully');
@@ -51,7 +57,7 @@ export const leadLabelController = {
 
   update: async (req: AuthRequest, res: Response) => {
     try {
-      const companyId = req.user!.companyId;
+      const companyId = getCompanyId(req);
       const id = parseInt(req.params.id);
       const validatedData = updateSchema.parse(req.body);
       const label = await leadLabelService.update(id, companyId, validatedData);
@@ -63,7 +69,7 @@ export const leadLabelController = {
 
   delete: async (req: AuthRequest, res: Response) => {
     try {
-      const companyId = req.user!.companyId;
+      const companyId = getCompanyId(req);
       const id = parseInt(req.params.id);
       await leadLabelService.delete(id, companyId);
       return sendSuccess(res, null, 'Lead label deleted successfully');

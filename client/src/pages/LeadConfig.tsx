@@ -71,7 +71,7 @@ export default function LeadConfig() {
       const response = await leadPriorityApi.getAll();
       return response.data.data as LeadPriority[];
     },
-    enabled: !!user?.companyId,
+    enabled: true,
   });
 
   const { data: labelsResponse, isLoading: labelsLoading } = useQuery({
@@ -80,7 +80,7 @@ export default function LeadConfig() {
       const response = await leadLabelApi.getAll();
       return response.data.data as LeadLabel[];
     },
-    enabled: !!user?.companyId,
+    enabled: true,
   });
 
   const { data: statusesResponse, isLoading: statusesLoading } = useQuery({
@@ -89,7 +89,7 @@ export default function LeadConfig() {
       const response = await leadStatusConfigApi.getAll();
       return response.data.data as LeadStatusConfig[];
     },
-    enabled: !!user?.companyId,
+    enabled: true,
   });
 
   const categories = categoriesResponse || [];
