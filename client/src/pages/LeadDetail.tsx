@@ -36,6 +36,7 @@ import {
   Users,
   BarChart3,
   Facebook,
+  FileSpreadsheet,
   CreditCard,
   Briefcase,
   Edit,
@@ -829,6 +830,7 @@ export function LeadDetail() {
       case 'Referral': return <Users className="w-4 h-4" />;
       case 'Email': return <Mail className="w-4 h-4" />;
       case 'Phone': return <Phone className="w-4 h-4" />;
+      case 'Excel': return <FileSpreadsheet className="w-4 h-4" />;
       default: return <Target className="w-4 h-4" />;
     }
   };
@@ -2028,7 +2030,7 @@ export function LeadDetail() {
                     onChange={(e) => handleEditLeadField('source', e.target.value)}
                     className="w-full px-3 py-2 rounded-lg border border-amber-500/20 bg-slate-800/60 text-amber-100 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50"
                   >
-                    {['Website', 'Referral', 'SocialMedia', 'Email', 'Phone', 'Inbox', 'Other'].map(s => (
+                    {['Website', 'Referral', 'SocialMedia', 'Email', 'Phone', 'Inbox', 'Excel', 'FacebookPixel', 'Other'].map(s => (
                       <option key={s} value={s}>{s}</option>
                     ))}
                   </select>

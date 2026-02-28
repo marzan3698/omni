@@ -22,6 +22,7 @@ interface CreateLeadData {
   purchasePrice?: number;
   salePrice?: number;
   profit?: number;
+  leadImportId?: number;
 }
 
 interface UpdateLeadData {
@@ -189,6 +190,7 @@ export const leadService = {
         createdByUser: {
           select: {
             id: true,
+            name: true,
             email: true,
             profileImage: true,
           },
@@ -687,6 +689,7 @@ export const leadService = {
         purchasePrice: data.purchasePrice !== undefined && data.purchasePrice !== null ? new Prisma.Decimal(data.purchasePrice) : null,
         salePrice: data.salePrice !== undefined && data.salePrice !== null ? new Prisma.Decimal(data.salePrice) : null,
         profit: calculatedProfit,
+        leadImportId: data.leadImportId ?? null,
       },
       include: {
         ...leadAssignmentsInclude,
@@ -1046,6 +1049,45 @@ export const leadService = {
         },
       },
     });
+  },
+
+  /**
+   * Bulk assign employees to multiple leads
+   */
+  async bulkAssignUsers(
+    leadIds: number[],
+    companyId: number,
+    employeeIds: number[]
+  ): Promise<{ assigned: number; leadCount: number; employeeCount: number }> {
+    if (leadIds.length === 0 || employeeIds.length === 0) {
+      throw new AppError('leadIds and employeeIds are required', 400);
+    }
+    const leads = await prisma.lead.findMany({
+      where: { id: { in: leadIds }, companyId },
+      select: { id: true },
+    });
+    if (leads.length !== leadIds.length) {
+      throw new AppError('One or more leads not found or access denied', 404);
+    }
+    const employees = await prisma.employee.findMany({
+      where: { id: { in: employeeIds }, companyId },
+      select: { id: true },
+    });
+    if (employees.length !== employeeIds.length) {
+      throw new AppError('One or more employees not found', 404);
+    }
+    const pairs = leadIds.flatMap((leadId) =>
+      employeeIds.map((employeeId) => ({ leadId, employeeId }))
+    );
+    const result = await prisma.leadAssignment.createMany({
+      data: pairs,
+      skipDuplicates: true,
+    });
+    return {
+      assigned: result.count,
+      leadCount: leadIds.length,
+      employeeCount: employeeIds.length,
+    };
   },
 
   /**

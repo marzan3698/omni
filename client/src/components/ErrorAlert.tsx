@@ -9,6 +9,7 @@ interface ErrorAlertProps {
 
 export function ErrorAlert({ error, onClose }: ErrorAlertProps) {
   const [copied, setCopied] = useState(false);
+  const [copiedMessage, setCopiedMessage] = useState(false);
 
   // Extract detailed error information
   const getErrorDetails = () => {
@@ -60,6 +61,18 @@ export function ErrorAlert({ error, onClose }: ErrorAlertProps) {
     return 'An error occurred';
   };
 
+  const serverErrorDetails = errorDetails.responseData?.error;
+
+  const copyMessageOnly = async () => {
+    try {
+      await navigator.clipboard.writeText(getErrorMessage());
+      setCopiedMessage(true);
+      setTimeout(() => setCopiedMessage(false), 2000);
+    } catch {
+      /* ignore */
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] flex flex-col">
@@ -81,13 +94,28 @@ export function ErrorAlert({ error, onClose }: ErrorAlertProps) {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {/* Error Message */}
+          {/* Error Message - selectable and copyable */}
           <div>
-            <h4 className="text-sm font-medium text-slate-700 mb-2">Error Message:</h4>
-            <div className="bg-red-50 border border-red-200 rounded-md p-3">
-              <p className="text-sm text-red-800">{getErrorMessage()}</p>
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-sm font-medium text-slate-700">Error Message:</h4>
+              <Button variant="outline" size="sm" onClick={copyMessageOnly} className="h-7 text-xs">
+                {copiedMessage ? <><Check className="w-3 h-3 mr-1" />Copied!</> : <><Copy className="w-3 h-3 mr-1" />Copy message</>}
+              </Button>
+            </div>
+            <div className="bg-red-50 border border-red-200 rounded-md p-3 select-text cursor-text">
+              <pre className="text-sm text-red-800 whitespace-pre-wrap break-words font-sans">{getErrorMessage()}</pre>
             </div>
           </div>
+
+          {/* Server stack/details when available */}
+          {serverErrorDetails && (
+            <div>
+              <h4 className="text-sm font-medium text-slate-700 mb-2">Technical Details (select to copy):</h4>
+              <pre className="bg-slate-100 border border-slate-200 rounded-md p-3 text-xs overflow-x-auto max-h-40 overflow-y-auto select-text cursor-text whitespace-pre-wrap break-words">
+                {serverErrorDetails}
+              </pre>
+            </div>
+          )}
 
           {/* Error Details */}
           <div>
@@ -145,7 +173,7 @@ export function ErrorAlert({ error, onClose }: ErrorAlertProps) {
                 )}
               </Button>
             </div>
-            <pre className="bg-slate-900 text-slate-100 rounded-md p-3 text-xs overflow-x-auto max-h-64 overflow-y-auto">
+            <pre className="bg-slate-900 text-slate-100 rounded-md p-3 text-xs overflow-x-auto max-h-64 overflow-y-auto select-text cursor-text">
               {errorJson}
             </pre>
           </div>

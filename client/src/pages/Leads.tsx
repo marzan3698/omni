@@ -1,11 +1,13 @@
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useState, useRef } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { leadApi, leadCategoryApi, leadInterestApi, campaignApi } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { Target, Search, Filter, X, Eye, Edit, ChevronDown, ChevronUp } from 'lucide-react';
+import { Target, Search, Filter, X, Eye, Edit, ChevronDown, ChevronUp, Download, Upload, Users } from 'lucide-react';
+import { ErrorAlert } from '@/components/ErrorAlert';
+import { EmployeeSelector } from '@/components/EmployeeSelector';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 
@@ -28,11 +30,18 @@ const defaultFilters = {
 
 export function Leads() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const { user, hasPermission } = useAuth();
   const [leadListView, setLeadListView] = useState<LeadListView>('all');
-  const [activeTab, setActiveTab] = useState<'Inbox' | 'Website' | 'FacebookPixel'>('Inbox');
+  const [selectedLeadIds, setSelectedLeadIds] = useState<Set<number>>(new Set());
+  const [bulkAssignModalOpen, setBulkAssignModalOpen] = useState(false);
+  const [bulkAssignEmployeeIds, setBulkAssignEmployeeIds] = useState<number[]>([]);
+  const [activeTab, setActiveTab] = useState<'Inbox' | 'Website' | 'FacebookPixel' | 'Excel'>('Inbox');
   const [filters, setFilters] = useState(defaultFilters);
   const [showFilters, setShowFilters] = useState(false);
+  const [importResult, setImportResult] = useState<{ successCount: number; errorCount: number; errors?: { row: number; message: string }[] } | null>(null);
+  const [errorDialog, setErrorDialog] = useState<any>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch leads with filters
   const { data: leadsResponse, isLoading } = useQuery({
@@ -40,7 +49,7 @@ export function Leads() {
     queryFn: async () => {
       const params: any = {};
       params.convertedOnly = leadListView === 'complete' ? 'true' : 'false';
-      params.source = activeTab === 'Inbox' ? 'Inbox' : activeTab === 'Website' ? 'Website' : 'FacebookPixel';
+      params.source = activeTab === 'Inbox' ? 'Inbox' : activeTab === 'Website' ? 'Website' : activeTab === 'FacebookPixel' ? 'FacebookPixel' : 'Excel';
       if (filters.search) params.search = filters.search;
       if (filters.status) params.status = filters.status;
       if (filters.categoryId) params.categoryId = parseInt(filters.categoryId);
@@ -92,12 +101,98 @@ export function Leads() {
 
   const leads = leadsResponse || [];
 
+  // Download template
+  const handleDownloadTemplate = async () => {
+    try {
+      const res = await leadApi.downloadTemplate();
+      const blob = new Blob([res.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'omni-lead-import-template.xlsx';
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (err: any) {
+      setErrorDialog(err);
+    }
+  };
+
+  // Import Excel mutation
+  const importMutation = useMutation({
+    mutationFn: (file: File) => leadApi.importFromExcel(file),
+    onSuccess: (res) => {
+      const data = res.data.data;
+      setImportResult({
+        successCount: data.successCount ?? 0,
+        errorCount: data.errorCount ?? 0,
+        errors: data.errors,
+      });
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+    },
+    onError: (err: any) => {
+      setImportResult(null);
+      setErrorDialog(err);
+    },
+  });
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImportResult(null);
+      importMutation.mutate(file);
+    }
+    e.target.value = '';
+  };
+
   const handleFilterChange = (key: string, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }));
   };
 
   const clearFilters = () => {
     setFilters(defaultFilters);
+  };
+
+  const toggleLeadSelection = (leadId: number) => {
+    setSelectedLeadIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(leadId)) next.delete(leadId);
+      else next.add(leadId);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedLeadIds.size === leads.length) {
+      setSelectedLeadIds(new Set());
+    } else {
+      setSelectedLeadIds(new Set(leads.map((l: any) => l.id)));
+    }
+  };
+
+  const canBulkAssign = (user?.roleName === 'SuperAdmin' || hasPermission?.('can_manage_leads')) && !!user?.companyId;
+
+  const bulkAssignMutation = useMutation({
+    mutationFn: ({ leadIds, employeeIds }: { leadIds: number[]; employeeIds: number[] }) =>
+      leadApi.bulkAssign(leadIds, employeeIds, user!.companyId!),
+    onSuccess: (res) => {
+      const data = res.data.data;
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      setBulkAssignModalOpen(false);
+      setSelectedLeadIds(new Set());
+      setBulkAssignEmployeeIds([]);
+      setImportResult(null);
+    },
+    onError: (err: any) => {
+      setErrorDialog(err);
+    },
+  });
+
+  const handleBulkAssignConfirm = () => {
+    if (bulkAssignEmployeeIds.length === 0 || selectedLeadIds.size === 0 || !user?.companyId) return;
+    bulkAssignMutation.mutate({
+      leadIds: Array.from(selectedLeadIds),
+      employeeIds: bulkAssignEmployeeIds,
+    });
   };
 
   const hasActiveFilters = Object.values(filters).some(v => v !== '');
@@ -122,6 +217,7 @@ export function Leads() {
       case 'Website': return 'bg-blue-500/30 text-blue-300';
       case 'SocialMedia': return 'bg-pink-500/30 text-pink-300';
       case 'FacebookPixel': return 'bg-sky-500/30 text-sky-300';
+      case 'Excel': return 'bg-emerald-500/30 text-emerald-300';
       default: return 'bg-slate-600/50 text-slate-300';
     }
   };
@@ -176,6 +272,7 @@ export function Leads() {
           { key: 'Inbox' as const, label: 'Omni Inbox' },
           { key: 'Website' as const, label: 'Website' },
           { key: 'FacebookPixel' as const, label: 'Facebook Pixel' },
+          { key: 'Excel' as const, label: 'Excel' },
         ] as const).map((tab) => (
           <button
             key={tab.key}
@@ -195,6 +292,55 @@ export function Leads() {
           </button>
         ))}
       </div>
+
+      {/* Excel tab: Download template + Upload */}
+      {activeTab === 'Excel' && (
+        <div className="rounded-xl border border-amber-500/20 bg-slate-800/40 p-4 space-y-4">
+          <div className="flex flex-wrap gap-3 items-center">
+            <Button
+              onClick={handleDownloadTemplate}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-500/50 flex items-center gap-2"
+            >
+              <Download className="w-4 h-4" />
+              টেমপ্লেট ডাউনলোড করুন
+            </Button>
+            <div className="flex items-center gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+              <Button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={importMutation.isPending}
+                variant="outline"
+                className="border-emerald-500/50 text-emerald-200 hover:bg-emerald-500/20 bg-transparent flex items-center gap-2"
+              >
+                <Upload className="w-4 h-4" />
+                {importMutation.isPending ? 'আপলোড হচ্ছে...' : 'Excel ফাইল আপলোড করুন'}
+              </Button>
+            </div>
+          </div>
+          {importResult && (
+            <div className={cn(
+              'p-3 rounded-lg border text-sm',
+              importResult.errorCount > 0 ? 'bg-amber-500/10 border-amber-500/30 text-amber-200' : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-200'
+            )}>
+              <p><strong>সফল:</strong> {importResult.successCount} | <strong>ত্রুটি:</strong> {importResult.errorCount}</p>
+              {importResult.errors && importResult.errors.length > 0 && (
+                <ul className="mt-2 space-y-1 text-xs">
+                  {importResult.errors.slice(0, 5).map((e, i) => (
+                    <li key={i}>Row {e.row}: {e.message}</li>
+                  ))}
+                  {importResult.errors.length > 5 && <li>... আরো {importResult.errors.length - 5} টি ত্রুটি</li>}
+                </ul>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Search & Filters panel */}
       <div className="rounded-xl overflow-hidden game-panel">
@@ -451,6 +597,33 @@ export function Leads() {
         )}
       </div>
 
+      {/* Bulk action bar */}
+      {canBulkAssign && selectedLeadIds.size > 0 && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 flex items-center justify-between">
+          <span className="text-amber-100 text-sm font-medium">
+            {selectedLeadIds.size} লিড সিলেক্ট করা হয়েছে
+          </span>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectedLeadIds(new Set())}
+              className="border-amber-500/50 text-amber-100 hover:bg-amber-500/20 bg-transparent"
+            >
+              সিলেকশন ক্লিয়ার করুন
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => setBulkAssignModalOpen(true)}
+              className="bg-amber-600 hover:bg-amber-500 text-white flex gap-2"
+            >
+              <Users className="w-4 h-4" />
+              বাল্ক অ্যাসাইন করুন
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Leads Table */}
       <div className="rounded-xl overflow-hidden game-panel">
         <div className="p-4 border-b border-amber-500/20 flex items-center justify-between">
@@ -474,6 +647,16 @@ export function Leads() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-amber-500/20 bg-slate-800/60">
+                  {canBulkAssign && (
+                    <th className="w-10 py-3 px-2 text-center">
+                      <input
+                        type="checkbox"
+                        checked={leads.length > 0 && selectedLeadIds.size === leads.length}
+                        onChange={toggleSelectAll}
+                        className="rounded border-amber-500/50 bg-slate-800 text-amber-500 focus:ring-amber-500"
+                      />
+                    </th>
+                  )}
                   <th className="text-left py-3 px-4 font-semibold text-amber-200/90 text-sm">Title</th>
                   <th className="text-left py-3 px-4 font-semibold text-amber-200/90 text-sm">Customer</th>
                   <th className="text-left py-3 px-4 font-semibold text-amber-200/90 text-sm">Phone</th>
@@ -484,7 +667,7 @@ export function Leads() {
                   <th className="text-left py-3 px-4 font-semibold text-amber-200/90 text-sm">Value</th>
                   <th className="text-left py-3 px-4 font-semibold text-amber-200/90 text-sm">Profit</th>
                   <th className="text-left py-3 px-4 font-semibold text-amber-200/90 text-sm">Assigned</th>
-                  <th className="text-left py-3 px-4 font-semibold text-amber-200/90 text-sm">Created By</th>
+                  <th className="text-left py-3 px-4 font-semibold text-amber-200/90 text-sm">{activeTab === 'Excel' ? 'আপলোড করেছেন' : 'Created By'}</th>
                   <th className="text-left py-3 px-4 font-semibold text-amber-200/90 text-sm">Created At</th>
                   <th className="text-left py-3 px-4 font-semibold text-amber-200/90 text-sm">Actions</th>
                 </tr>
@@ -495,6 +678,16 @@ export function Leads() {
                     key={lead.id}
                     className="border-b border-amber-500/10 hover:bg-amber-500/5 transition-colors"
                   >
+                    {canBulkAssign && (
+                      <td className="w-10 py-3 px-2 text-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedLeadIds.has(lead.id)}
+                          onChange={() => toggleLeadSelection(lead.id)}
+                          className="rounded border-amber-500/50 bg-slate-800 text-amber-500 focus:ring-amber-500"
+                        />
+                      </td>
+                    )}
                     <td className="py-3 px-4">
                       <div className="font-medium text-amber-50 text-sm">{lead.title}</div>
                       {lead.description && (
@@ -559,7 +752,7 @@ export function Leads() {
                       </div>
                     </td>
                     <td className="py-3 px-4">
-                      <div className="text-xs text-amber-100">{lead.createdByUser?.email || '-'}</div>
+                      <div className="text-xs text-amber-100">{lead.createdByUser?.name || lead.createdByUser?.email || '-'}</div>
                     </td>
                     <td className="py-3 px-4">
                       <div className="text-xs text-amber-200/80">
@@ -589,6 +782,50 @@ export function Leads() {
           )}
         </div>
       </div>
+      {/* Bulk Assign Modal */}
+      {bulkAssignModalOpen && user?.companyId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-slate-800 rounded-xl border border-amber-500/20 shadow-xl max-w-lg w-full mx-4 max-h-[90vh] flex flex-col">
+            <div className="p-4 border-b border-amber-500/20 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-amber-100">বাল্ক অ্যাসাইন করুন</h3>
+              <Button variant="ghost" size="icon" onClick={() => setBulkAssignModalOpen(false)} className="text-amber-200 hover:bg-amber-500/20">
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+            <div className="p-4 overflow-y-auto flex-1">
+              <p className="text-amber-200/80 text-sm mb-4">
+                {selectedLeadIds.size} টি লিডে অ্যাসাইন করা হবে। এমপ্লয়ী নির্বাচন করুন:
+              </p>
+              <EmployeeSelector
+                companyId={user.companyId}
+                selectedEmployeeIds={bulkAssignEmployeeIds}
+                onSelectionChange={setBulkAssignEmployeeIds}
+                variant="default"
+              />
+            </div>
+            <div className="p-4 border-t border-amber-500/20 flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setBulkAssignModalOpen(false)}
+                className="border-amber-500/50 text-amber-100 hover:bg-amber-500/20 bg-transparent"
+              >
+                বাতিল
+              </Button>
+              <Button
+                onClick={handleBulkAssignConfirm}
+                disabled={bulkAssignEmployeeIds.length === 0 || bulkAssignMutation.isPending}
+                className="bg-amber-600 hover:bg-amber-500 text-white"
+              >
+                {bulkAssignMutation.isPending ? 'অ্যাসাইন হচ্ছে...' : 'অ্যাসাইন করুন'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {errorDialog && (
+        <ErrorAlert error={errorDialog} onClose={() => setErrorDialog(null)} />
+      )}
     </div>
   );
 }

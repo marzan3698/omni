@@ -442,3 +442,48 @@ export const uploadScreenshot = multer({
 });
 
 export const singleScreenshot = uploadScreenshot.single('screenshot');
+
+// ============================================
+// Lead Import Excel Upload
+// ============================================
+
+const leadImportsDir = path.join(rootUploadsDir, 'lead-imports');
+if (!fs.existsSync(leadImportsDir)) {
+  fs.mkdirSync(leadImportsDir, { recursive: true });
+}
+
+const excelStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, leadImportsDir),
+  filename: (_req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    const ext = path.extname(file.originalname) || '.xlsx';
+    const name = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9-_]/g, '_');
+    cb(null, `lead-import-${name}-${uniqueSuffix}${ext}`);
+  },
+});
+
+const excelFileFilter = (
+  _req: any,
+  file: Express.Multer.File,
+  cb: multer.FileFilterCallback
+) => {
+  const allowed = [
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-excel',
+  ];
+  const allowedExts = ['.xlsx', '.xls'];
+  const ext = path.extname(file.originalname || '').toLowerCase();
+  if (allowed.includes(file.mimetype) || allowedExts.includes(ext)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Invalid file type. Only Excel files (.xlsx, .xls) are allowed.'));
+  }
+};
+
+export const uploadExcelFile = multer({
+  storage: excelStorage,
+  fileFilter: excelFileFilter,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+});
+
+export const singleExcelFile = uploadExcelFile.single('file');

@@ -11,7 +11,7 @@ const createLeadSchema = z.object({
   companyId: z.number().int().positive(),
   title: z.string().min(1, 'Lead title is required'),
   description: z.string().optional(),
-  source: z.enum(['Website', 'Referral', 'SocialMedia', 'Email', 'Phone', 'Inbox', 'Other']),
+  source: z.enum(['Website', 'Referral', 'SocialMedia', 'Email', 'Phone', 'Inbox', 'Excel', 'FacebookPixel', 'Other']),
   status: z.enum(['New', 'Contacted', 'Qualified', 'Negotiation', 'Won', 'Lost']).optional(),
   assignedTo: z.array(z.number().int().positive()).optional(),
   value: z.number().positive().optional(),
@@ -25,7 +25,7 @@ const createLeadSchema = z.object({
 const updateLeadSchema = z.object({
   title: z.string().min(1, 'Lead title is required').optional(),
   description: z.string().optional().nullable(),
-  source: z.enum(['Website', 'Referral', 'SocialMedia', 'Email', 'Phone', 'Inbox', 'Other']).optional(),
+  source: z.enum(['Website', 'Referral', 'SocialMedia', 'Email', 'Phone', 'Inbox', 'Excel', 'FacebookPixel', 'Other']).optional(),
   assignedTo: z.array(z.number().int().positive()).optional(),
   value: z.number().positive().optional().nullable(),
   customerName: z.string().optional(),
@@ -587,6 +587,36 @@ export const leadController = {
         return sendError(res, error.message, error.statusCode);
       }
       return sendError(res, 'Failed to retrieve leads', 500);
+    }
+  },
+
+  /**
+   * Bulk assign employees to multiple leads
+   * POST /api/leads/bulk-assign
+   */
+  bulkAssign: async (req: Request, res: Response) => {
+    try {
+      const authReq = req as AuthRequest;
+      const companyId = authReq.user?.companyId;
+      if (!companyId) return sendError(res, 'User not authenticated', 401);
+
+      const bulkSchema = z.object({
+        leadIds: z.array(z.number().int().positive()).min(1, 'At least one lead is required'),
+        employeeIds: z.array(z.number().int().positive()).min(1, 'At least one employee is required'),
+      });
+      const parsed = bulkSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return sendError(res, parsed.error.errors.map((e) => e.message).join('; ') || 'Invalid input', 400);
+      }
+      const { leadIds, employeeIds } = parsed.data;
+
+      const result = await leadService.bulkAssignUsers(leadIds, companyId, employeeIds);
+      return sendSuccess(res, result, 'Bulk assign completed');
+    } catch (error) {
+      if (error instanceof AppError) {
+        return sendError(res, error.message, error.statusCode);
+      }
+      return sendError(res, 'Failed to bulk assign', 500);
     }
   },
 

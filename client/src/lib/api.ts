@@ -171,6 +171,8 @@ export const leadApi = {
     apiClientInstance.post<ApiResponse>(`/leads/${id}/assign`, { employeeIds }, { params: { companyId } }),
   removeAssignment: (id: number, employeeId: number, companyId: number) =>
     apiClientInstance.delete<ApiResponse>(`/leads/${id}/assign/${employeeId}`, { params: { companyId } }),
+  bulkAssign: (leadIds: number[], employeeIds: number[], companyId: number) =>
+    apiClientInstance.post<ApiResponse>('/leads/bulk-assign', { leadIds, employeeIds }, { params: { companyId } }),
   convert: (id: number, companyId: number, data?: any) => 
     apiClientInstance.post<ApiResponse>(`/leads/${id}/convert`, data, { params: { companyId } }),
   getPipeline: (companyId: number) => 
@@ -193,6 +195,15 @@ export const leadApi = {
     apiClientInstance.delete<ApiResponse>(`/leads/${leadId}/calls/${callId}`, { params: { companyId } }),
   addCallNote: (leadId: number, callId: number, note: string, companyId: number) =>
     apiClientInstance.post<ApiResponse>(`/leads/${leadId}/calls/${callId}/notes`, { note }, { params: { companyId } }),
+  downloadTemplate: () =>
+    apiClientInstance.get('/leads/excel/template', { responseType: 'blob' }),
+  importFromExcel: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiClientInstance.post<ApiResponse>('/leads/excel/import', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
 };
 
 // Meeting API

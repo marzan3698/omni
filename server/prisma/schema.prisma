@@ -49,6 +49,7 @@ model Company {
   leadCalls            LeadCall[]
   leadCategories       LeadCategory[]
   leadInterests        LeadInterest[]
+  leadImports          LeadImport[]
   systemSettings       SystemSetting[]
   campaigns            Campaign[]
   products             Product[]
@@ -125,6 +126,7 @@ model User {
   clientApprovalRequestsApproved  ClientApprovalRequest[]  @relation("ClientApprovalApprovedBy")
   activityLogs                    ActivityLog[]
   screenCaptures                  ScreenCapture[]
+  leadImports                     LeadImport[]
 
   @@unique([email, companyId])
   @@index([email])
@@ -372,6 +374,7 @@ enum LeadSource {
   Phone
   Inbox
   FacebookPixel
+  Excel
   Other
 
   @@map("lead_source")
@@ -426,10 +429,12 @@ model Lead {
   leadMonitoringUserId          String?   @map("lead_monitoring_user_id") @db.VarChar(36)
   leadMonitoringAssignedAt      DateTime? @map("lead_monitoring_assigned_at") @db.DateTime
   leadMonitoringTransferredAt   DateTime? @map("lead_monitoring_transferred_at") @db.DateTime
+  leadImportId                 Int?      @map("lead_import_id") // Link to LeadImport when created from Excel
   createdAt            DateTime   @default(now()) @map("created_at")
   updatedAt            DateTime   @updatedAt @map("updated_at")
 
   company            Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  leadImport         LeadImport?         @relation(fields: [leadImportId], references: [id], onDelete: SetNull)
   createdByUser      User                @relation("LeadCreator", fields: [createdBy], references: [id], onDelete: Cascade)
   leadMonitoringUser User?               @relation("LeadMonitoringManager", fields: [leadMonitoringUserId], references: [id], onDelete: SetNull)
   assignments        LeadAssignment[]
@@ -453,7 +458,28 @@ model Lead {
   @@index([productId])
   @@index([convertedToClientId])
   @@index([leadMonitoringUserId])
+  @@index([leadImportId])
   @@map("leads")
+}
+
+model LeadImport {
+  id           Int       @id @default(autoincrement())
+  companyId    Int       @map("company_id")
+  uploadedBy   String    @map("uploaded_by") @db.VarChar(36)
+  fileName     String    @map("file_name") @db.VarChar(255)
+  uploadedAt   DateTime  @default(now()) @map("uploaded_at") @db.DateTime
+  totalRows    Int       @map("total_rows")
+  successCount Int       @default(0) @map("success_count")
+  errorCount   Int       @default(0) @map("error_count")
+  errorDetails Json?     @map("error_details") // Row-wise errors: [{ row: number, message: string }]
+
+  company    Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  uploadedByUser User @relation(fields: [uploadedBy], references: [id], onDelete: Cascade)
+  leads      Lead[]
+
+  @@index([companyId])
+  @@index([uploadedBy])
+  @@map("lead_imports")
 }
 
 model LeadAssignment {

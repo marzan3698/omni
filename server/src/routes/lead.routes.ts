@@ -2,12 +2,21 @@ import { Router } from 'express';
 import { leadController } from '../controllers/lead.controller.js';
 import { leadMeetingController } from '../controllers/leadMeeting.controller.js';
 import { leadCallController } from '../controllers/leadCall.controller.js';
+import { leadImportController } from '../controllers/leadImport.controller.js';
 import { authMiddleware, verifyPermission, verifyPermissionAny, verifyLeadAccess, verifyMeetingAccess } from '../middleware/authMiddleware.js';
+import { singleExcelFile } from '../middleware/upload.js';
 
 const router = Router();
 
 // All routes require authentication
 router.use(authMiddleware);
+
+// Excel lead import - must be before /:id
+router.get('/excel/template', verifyPermissionAny(['can_manage_leads', 'can_view_leads']), leadImportController.downloadTemplate);
+router.post('/excel/import', verifyPermission('can_manage_leads'), singleExcelFile, leadImportController.importFromExcel);
+
+// Bulk assign - must be before /:id
+router.post('/bulk-assign', verifyPermission('can_manage_leads'), leadController.bulkAssign);
 
 // Lead routes - allow can_view_leads so assigned users can see their leads list
 router.get('/', verifyPermissionAny(['can_manage_leads', 'can_view_leads']), leadController.getAllLeads);
