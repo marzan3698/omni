@@ -8,6 +8,7 @@ import { socialApi } from '@/lib/social';
 import { contentApi } from '@/lib/content';
 import { themeApi, heroApi, headerApi, colorApi } from '@/lib/api';
 import { PublicHeader } from '@/components/PublicHeader';
+import { LeadFormSection } from '@/components/LeadFormSection';
 import { getImageUrl } from '@/lib/imageUtils';
 
 export function Landing() {
@@ -1179,6 +1180,9 @@ export function Landing() {
           </div>
         </div>
       </section>
+
+      {/* Lead Form / Contact Section */}
+      <LeadFormSection primaryColor={primaryColor} secondaryColor={secondaryColor} />
 
       {/* Enhanced CTA Section */}
       <section 

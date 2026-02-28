@@ -163,8 +163,8 @@ export const leadApi = {
   createFromInbox: (conversationId: number, data: any) => 
     apiClientInstance.post<ApiResponse>(`/leads/from-inbox/${conversationId}`, data),
   update: (id: number, data: any) => apiClientInstance.put<ApiResponse>(`/leads/${id}`, data),
-  updateStatus: (id: number, status: string, companyId: number) => 
-    apiClientInstance.put<ApiResponse>(`/leads/${id}/status`, { status }, { params: { companyId } }),
+  updateStatus: (id: number, statusId: number, companyId: number) => 
+    apiClientInstance.put<ApiResponse>(`/leads/${id}/status`, { statusId }, { params: { companyId } }),
   transferMonitoring: (id: number, newLeadManagerUserId: string) =>
     apiClientInstance.put<ApiResponse>(`/leads/${id}/monitoring/transfer`, { newLeadManagerUserId }),
   assignUsers: (id: number, employeeIds: number[], companyId: number) =>
@@ -257,6 +257,60 @@ export const leadInterestApi = {
   update: (id: number, data: any) => apiClientInstance.put<ApiResponse>(`/lead-interests/${id}`, data),
   delete: (id: number, companyId: number) => 
     apiClientInstance.delete<ApiResponse>(`/lead-interests/${id}`, { params: { companyId } }),
+};
+
+// Lead Priority API
+export const leadPriorityApi = {
+  getAll: () => apiClientInstance.get<ApiResponse>('/lead-priorities'),
+  getById: (id: number, companyId: number) =>
+    apiClientInstance.get<ApiResponse>(`/lead-priorities/${id}`, { params: { companyId } }),
+  create: (data: { name: string; sortOrder?: number; isActive?: boolean }) =>
+    apiClientInstance.post<ApiResponse>('/lead-priorities', data),
+  update: (id: number, data: { name?: string; sortOrder?: number; isActive?: boolean }) =>
+    apiClientInstance.put<ApiResponse>(`/lead-priorities/${id}`, data),
+  delete: (id: number, companyId: number) =>
+    apiClientInstance.delete<ApiResponse>(`/lead-priorities/${id}`, { params: { companyId } }),
+};
+
+// Lead Label API
+export const leadLabelApi = {
+  getAll: () => apiClientInstance.get<ApiResponse>('/lead-labels'),
+  getById: (id: number, companyId: number) =>
+    apiClientInstance.get<ApiResponse>(`/lead-labels/${id}`, { params: { companyId } }),
+  create: (data: { name: string; color?: string; isActive?: boolean }) =>
+    apiClientInstance.post<ApiResponse>('/lead-labels', data),
+  update: (id: number, data: { name?: string; color?: string; isActive?: boolean }) =>
+    apiClientInstance.put<ApiResponse>(`/lead-labels/${id}`, data),
+  delete: (id: number, companyId: number) =>
+    apiClientInstance.delete<ApiResponse>(`/lead-labels/${id}`, { params: { companyId } }),
+};
+
+// Lead Form Config API
+export const leadFormConfigApi = {
+  getConfig: () => apiClientInstance.get<ApiResponse>('/lead-form-config'),
+  updateConfig: (data: { name?: string; fieldConfig?: any; designConfig?: any; attributionUserId?: string | null; isActive?: boolean }) =>
+    apiClientInstance.put<ApiResponse>('/lead-form-config', data),
+  getEmbedCode: () => apiClientInstance.get<ApiResponse>('/lead-form-config/embed-code'),
+};
+
+// Lead Form Public API (no auth required - for embed and landing page)
+export const leadFormPublicApi = {
+  getDefaultConfig: () => apiClientInstance.get<ApiResponse>('/lead-form/default'),
+  getConfig: (slug: string) => apiClientInstance.get<ApiResponse>(`/lead-form/public/${slug}`),
+  submit: (slug: string, data: { customerName: string; phone?: string; description?: string; categoryId?: number; interestId?: number; value?: number }) =>
+    apiClientInstance.post<ApiResponse>(`/lead-form/public/${slug}/submit`, data),
+};
+
+export const leadStatusConfigApi = {
+  getAll: () => apiClientInstance.get<ApiResponse>('/lead-statuses'),
+  getById: (id: number, companyId: number) =>
+    apiClientInstance.get<ApiResponse>(`/lead-statuses/${id}`, { params: { companyId } }),
+  create: (data: { name: string; code: string; sortOrder?: number; isActive?: boolean }) =>
+    apiClientInstance.post<ApiResponse>('/lead-statuses', data),
+  update: (id: number, data: { name?: string; code?: string; sortOrder?: number; isActive?: boolean }) =>
+    apiClientInstance.put<ApiResponse>(`/lead-statuses/${id}`, data),
+  delete: (id: number, companyId: number) =>
+    apiClientInstance.delete<ApiResponse>(`/lead-statuses/${id}`, { params: { companyId } }),
 };
 
 // User API (SuperAdmin only)

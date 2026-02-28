@@ -1,6 +1,7 @@
 import { prisma } from '../lib/prisma.js';
 import { AppError } from '../middleware/errorHandler.js';
-import { LeadSource, LeadStatus, Prisma } from '@prisma/client';
+import { LeadSource, Prisma } from '@prisma/client';
+import { leadStatusConfigService } from './leadStatusConfig.service.js';
 import bcrypt from 'bcryptjs';
 
 interface CreateLeadData {
@@ -9,7 +10,9 @@ interface CreateLeadData {
   title: string;
   description?: string;
   source: LeadSource;
-  status?: LeadStatus;
+  statusId?: number;
+  priorityId?: number;
+  labelIds?: number[];
   assignedTo?: number[];
   value?: number;
   conversationId?: number;
@@ -29,6 +32,9 @@ interface UpdateLeadData {
   title?: string;
   description?: string;
   source?: LeadSource;
+  statusId?: number;
+  priorityId?: number | null;
+  labelIds?: number[];
   assignedTo?: number[];
   value?: number | null;
   customerName?: string;
@@ -70,7 +76,9 @@ export const leadService = {
     createdBy?: string;
     createdByOrAssignedToUserId?: string;
     leadManagerUserId?: string;
-    status?: LeadStatus;
+    statusId?: number;
+    priorityId?: number;
+    labelIds?: number[];
     source?: LeadSource;
     assignedTo?: number;
     categoryId?: number;
@@ -136,8 +144,16 @@ export const leadService = {
       where.AND.push(monitoringOr);
     }
 
-    if (filters?.status) {
-      where.status = filters.status;
+    if (filters?.statusId) {
+      where.statusId = filters.statusId;
+    }
+    if (filters?.priorityId) {
+      where.priorityId = filters.priorityId;
+    }
+    if (filters?.labelIds && filters.labelIds.length > 0) {
+      where.labelAssignments = {
+        some: { labelId: { in: filters.labelIds } },
+      };
     }
     if (filters?.source) {
       where.source = filters.source;
@@ -216,6 +232,31 @@ export const leadService = {
             name: true,
           },
         },
+        priority: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        status: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            isSystem: true,
+          },
+        },
+        labelAssignments: {
+          include: {
+            label: {
+              select: {
+                id: true,
+                name: true,
+                color: true,
+              },
+            },
+          },
+        },
         campaign: {
           select: {
             id: true,
@@ -273,6 +314,31 @@ export const leadService = {
           select: {
             id: true,
             name: true,
+          },
+        },
+        priority: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        status: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            isSystem: true,
+          },
+        },
+        labelAssignments: {
+          include: {
+            label: {
+              select: {
+                id: true,
+                name: true,
+                color: true,
+              },
+            },
           },
         },
         campaign: {
@@ -463,9 +529,9 @@ export const leadService = {
       calculatedProfit = new Prisma.Decimal(data.profit);
     }
 
-    // Create lead and update reserve points in a transaction
+    const defaultStatusId = await leadStatusConfigService.getDefaultStatusId(conversation.companyId);
+
     return await prisma.$transaction(async (tx) => {
-      // Create the lead
       const lead = await tx.lead.create({
         data: {
           companyId: conversation.companyId,
@@ -473,7 +539,7 @@ export const leadService = {
           title: data.title,
           description: data.description || null,
           source: 'Inbox',
-          status: 'New',
+          statusId: defaultStatusId,
           value: data.value !== undefined && data.value !== null ? new Prisma.Decimal(data.value) : null,
           conversationId,
           customerName: data.customerName || null,
@@ -564,6 +630,11 @@ export const leadService = {
           conversation: { select: { id: true, externalUserName: true, platform: true } },
           category: { select: { id: true, name: true } },
           interest: { select: { id: true, name: true } },
+          priority: { select: { id: true, name: true } },
+          status: { select: { id: true, name: true, code: true } },
+          labelAssignments: {
+            include: { label: { select: { id: true, name: true, color: true } } },
+          },
           campaign: { select: { id: true, name: true, type: true } },
         },
       });
@@ -660,13 +731,14 @@ export const leadService = {
       }
     }
 
-    // Calculate profit if purchasePrice and salePrice are provided
+    const statusId =
+      data.statusId ?? (await leadStatusConfigService.getDefaultStatusId(data.companyId));
+
     let calculatedProfit: Prisma.Decimal | null = null;
     if (data.purchasePrice !== undefined && data.salePrice !== undefined &&
       data.purchasePrice !== null && data.salePrice !== null) {
       calculatedProfit = new Prisma.Decimal(data.salePrice).minus(new Prisma.Decimal(data.purchasePrice));
     } else if (data.profit !== undefined && data.profit !== null) {
-      // Use provided profit if calculation wasn't possible
       calculatedProfit = new Prisma.Decimal(data.profit);
     }
 
@@ -677,7 +749,8 @@ export const leadService = {
         title: data.title,
         description: data.description,
         source: data.source,
-        status: data.status || 'New',
+        statusId,
+        priorityId: data.priorityId ?? null,
         value: data.value,
         conversationId: data.conversationId,
         customerName: data.customerName,
@@ -712,6 +785,30 @@ export const leadService = {
             name: true,
           },
         },
+        priority: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        status: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+          },
+        },
+        labelAssignments: {
+          include: {
+            label: {
+              select: {
+                id: true,
+                name: true,
+                color: true,
+              },
+            },
+          },
+        },
         campaign: {
           select: {
             id: true,
@@ -730,6 +827,13 @@ export const leadService = {
       },
     });
 
+    if (data.labelIds && data.labelIds.length > 0) {
+      await prisma.leadLabelAssignment.createMany({
+        data: data.labelIds.map((labelId) => ({ leadId: lead.id, labelId })),
+        skipDuplicates: true,
+      });
+    }
+
     if (data.assignedTo && data.assignedTo.length > 0) {
       await prisma.leadAssignment.createMany({
         data: data.assignedTo.map((employeeId) => ({
@@ -746,6 +850,11 @@ export const leadService = {
           conversation: { select: { id: true, externalUserName: true, platform: true } },
           category: { select: { id: true, name: true } },
           interest: { select: { id: true, name: true } },
+          priority: { select: { id: true, name: true } },
+          status: { select: { id: true, name: true, code: true } },
+          labelAssignments: {
+            include: { label: { select: { id: true, name: true, color: true } } },
+          },
           campaign: { select: { id: true, name: true, type: true } },
           product: { select: { id: true, name: true, purchasePrice: true, salePrice: true } },
         },
@@ -826,7 +935,18 @@ export const leadService = {
       }
     }
 
-    const { assignedTo: assignedToIds, ...updateData } = data;
+    const { assignedTo: assignedToIds, labelIds, ...updateData } = data;
+
+    if (labelIds !== undefined) {
+      await prisma.leadLabelAssignment.deleteMany({ where: { leadId: id } });
+      if (labelIds.length > 0) {
+        await prisma.leadLabelAssignment.createMany({
+          data: labelIds.map((labelId) => ({ leadId: id, labelId })),
+          skipDuplicates: true,
+        });
+      }
+    }
+
     const updatedLead = await prisma.lead.update({
       where: { id },
       data: updateData,
@@ -849,6 +969,30 @@ export const leadService = {
           select: {
             id: true,
             name: true,
+          },
+        },
+        priority: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        status: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+          },
+        },
+        labelAssignments: {
+          include: {
+            label: {
+              select: {
+                id: true,
+                name: true,
+                color: true,
+              },
+            },
           },
         },
         campaign: {
@@ -876,6 +1020,11 @@ export const leadService = {
           conversation: { select: { id: true, externalUserName: true, platform: true } },
           category: { select: { id: true, name: true } },
           interest: { select: { id: true, name: true } },
+          priority: { select: { id: true, name: true } },
+          status: { select: { id: true, name: true, code: true } },
+          labelAssignments: {
+            include: { label: { select: { id: true, name: true, color: true } } },
+          },
           campaign: { select: { id: true, name: true, type: true } },
         },
       });
@@ -890,7 +1039,7 @@ export const leadService = {
   async updateLeadStatus(
     id: number,
     companyId: number,
-    status: LeadStatus,
+    statusId: number,
     actorUserId: string,
     bypassMonitoringLock = false
   ) {
@@ -901,6 +1050,7 @@ export const leadService = {
       },
       include: {
         product: true,
+        status: true,
       },
     });
 
@@ -908,15 +1058,19 @@ export const leadService = {
       throw new AppError('Lead not found', 404);
     }
 
-    // Enforce "lead monitoring incharge" lock:
-    // - First Lead Manager who changes status becomes the monitoring incharge.
-    // - Another Lead Manager cannot change status unless monitoring is transferred.
+    const newStatus = await prisma.leadStatusConfig.findFirst({
+      where: { id: statusId, companyId },
+    });
+    if (!newStatus) {
+      throw new AppError('Lead status not found', 404);
+    }
+
     if (lead.leadMonitoringUserId && lead.leadMonitoringUserId !== actorUserId && !bypassMonitoringLock) {
       throw new AppError('This lead is being monitored by another Lead Manager. Ask them to transfer monitoring responsibility.', 403);
     }
 
     const shouldAssignMonitoring =
-      !lead.leadMonitoringUserId && lead.status !== status;
+      !lead.leadMonitoringUserId && lead.statusId !== statusId;
     const monitoringData = shouldAssignMonitoring
       ? {
         leadMonitoringUserId: actorUserId,
@@ -924,14 +1078,12 @@ export const leadService = {
       }
       : {};
 
-    // If status is changing to Won and lead has a product with leadPoint
-    // Transfer points from reservePoints to mainPoints
-    if (status === 'Won' && lead.status !== 'Won' && lead.productId) {
+    const isChangingToWon = newStatus.code === 'Won' && lead.status?.code !== 'Won';
+    if (isChangingToWon && lead.productId) {
       return await prisma.$transaction(async (tx) => {
-        // Update lead status
         const updatedLead = await tx.lead.update({
           where: { id },
-          data: { status, ...monitoringData },
+          data: { statusId, ...monitoringData },
           include: {
             leadMonitoringUser: {
               select: {
@@ -960,6 +1112,30 @@ export const leadService = {
               select: {
                 id: true,
                 name: true,
+              },
+            },
+            priority: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+            status: {
+              select: {
+                id: true,
+                name: true,
+                code: true,
+              },
+            },
+            labelAssignments: {
+              include: {
+                label: {
+                  select: {
+                    id: true,
+                    name: true,
+                    color: true,
+                  },
+                },
               },
             },
             campaign: {
@@ -1006,10 +1182,9 @@ export const leadService = {
       });
     }
 
-    // Normal status update without points transfer
     return await prisma.lead.update({
       where: { id },
-      data: { status, ...monitoringData },
+      data: { statusId, ...monitoringData },
       include: {
         leadMonitoringUser: {
           select: {
@@ -1038,6 +1213,30 @@ export const leadService = {
           select: {
             id: true,
             name: true,
+          },
+        },
+        priority: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        status: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+          },
+        },
+        labelAssignments: {
+          include: {
+            label: {
+              select: {
+                id: true,
+                name: true,
+                color: true,
+              },
+            },
           },
         },
         campaign: {
@@ -1171,19 +1370,18 @@ export const leadService = {
   ) {
     const lead = await prisma.lead.findFirst({
       where: { id, companyId },
-      include: { conversation: true, product: true },
+      include: { conversation: true, product: true, status: true },
     });
 
     if (!lead) {
       throw new AppError('Lead not found', 404);
     }
 
-    // Only the current monitoring incharge can convert (unless monitoring not assigned yet).
     if (lead.leadMonitoringUserId && lead.leadMonitoringUserId !== requestedByUserId && !options?.bypassMonitoringLock) {
       throw new AppError('This lead is being monitored by another Lead Manager. Ask them to transfer monitoring responsibility before converting.', 403);
     }
 
-    if (lead.status !== 'Won') {
+    if (lead.status?.code !== 'Won') {
       throw new AppError('Only leads with status Won can be converted to clients', 400);
     }
 
@@ -1359,7 +1557,7 @@ export const leadService = {
    */
   async getLeadPipeline(companyId: number) {
     const leads = await prisma.lead.groupBy({
-      by: ['status'],
+      by: ['statusId'],
       where: { companyId },
       _count: true,
       _sum: {
@@ -1367,11 +1565,23 @@ export const leadService = {
       },
     });
 
-    return leads.map(lead => ({
-      status: lead.status,
-      count: lead._count,
-      totalValue: Number(lead._sum.value) || 0,
-    }));
+    const statusIds = leads.map((l) => l.statusId);
+    const statuses = await prisma.leadStatusConfig.findMany({
+      where: { id: { in: statusIds } },
+      select: { id: true, name: true, code: true },
+    });
+    const statusMap = Object.fromEntries(statuses.map((s) => [s.id, s]));
+
+    return leads.map((lead) => {
+      const s = statusMap[lead.statusId];
+      return {
+        statusId: lead.statusId,
+        status: s ? s.name : 'Unknown',
+        code: s?.code,
+        count: lead._count,
+        totalValue: Number(lead._sum.value) || 0,
+      };
+    });
   },
 
   /**

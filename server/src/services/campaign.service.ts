@@ -658,7 +658,12 @@ export const campaignService = {
           select: {
             id: true,
             value: true,
-            status: true,
+            status: {
+              select: {
+                name: true,
+                code: true,
+              },
+            },
           },
         },
       },
@@ -679,7 +684,7 @@ export const campaignService = {
         : 0;
 
     const leadsByStatus = campaign.leads.reduce((acc, lead) => {
-      const status = lead.status || 'Unknown';
+      const status = lead.status?.name ?? lead.status?.code ?? 'Unknown';
       acc[status] = (acc[status] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);

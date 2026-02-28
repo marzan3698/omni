@@ -3,7 +3,7 @@ import { leadService } from '../services/lead.service.js';
 import { sendSuccess, sendError } from '../utils/response.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { z } from 'zod';
-import { LeadSource, LeadStatus } from '@prisma/client';
+import { LeadSource } from '@prisma/client';
 import { AuthRequest } from '../types/index.js';
 
 // Validation schemas
@@ -12,7 +12,9 @@ const createLeadSchema = z.object({
   title: z.string().min(1, 'Lead title is required'),
   description: z.string().optional(),
   source: z.enum(['Website', 'Referral', 'SocialMedia', 'Email', 'Phone', 'Inbox', 'Excel', 'FacebookPixel', 'Other']),
-  status: z.enum(['New', 'Contacted', 'Qualified', 'Negotiation', 'Won', 'Lost']).optional(),
+  statusId: z.number().int().positive().optional(),
+  priorityId: z.number().int().positive().optional(),
+  labelIds: z.array(z.number().int().positive()).optional(),
   assignedTo: z.array(z.number().int().positive()).optional(),
   value: z.number().positive().optional(),
   conversationId: z.number().int().positive().optional(),
@@ -26,6 +28,9 @@ const updateLeadSchema = z.object({
   title: z.string().min(1, 'Lead title is required').optional(),
   description: z.string().optional().nullable(),
   source: z.enum(['Website', 'Referral', 'SocialMedia', 'Email', 'Phone', 'Inbox', 'Excel', 'FacebookPixel', 'Other']).optional(),
+  statusId: z.number().int().positive().optional(),
+  priorityId: z.number().int().positive().optional().nullable(),
+  labelIds: z.array(z.number().int().positive()).optional(),
   assignedTo: z.array(z.number().int().positive()).optional(),
   value: z.number().positive().optional().nullable(),
   customerName: z.string().optional(),
@@ -93,7 +98,15 @@ export const leadController = {
       }
 
       // Apply filters
-      if (req.query.status) filters.status = req.query.status as LeadStatus;
+      if (req.query.statusId) filters.statusId = parseInt(req.query.statusId as string);
+      if (req.query.priorityId) filters.priorityId = parseInt(req.query.priorityId as string);
+      const labelIdsParam = req.query.labelIds;
+      if (labelIdsParam) {
+        const arr = Array.isArray(labelIdsParam)
+          ? labelIdsParam.map((v) => parseInt(String(v), 10))
+          : [parseInt(String(labelIdsParam), 10)];
+        filters.labelIds = arr.filter((n) => !isNaN(n) && n > 0);
+      }
       if (req.query.source) filters.source = req.query.source as LeadSource;
       if (req.query.assignedTo) filters.assignedTo = parseInt(req.query.assignedTo as string);
       if (req.query.categoryId) filters.categoryId = parseInt(req.query.categoryId as string);
@@ -309,7 +322,9 @@ export const leadController = {
         title: validatedData.title,
         description: validatedData.description,
         source: validatedData.source,
-        status: validatedData.status,
+        statusId: validatedData.statusId,
+        priorityId: validatedData.priorityId,
+        labelIds: validatedData.labelIds,
         assignedTo: validatedData.assignedTo,
         value: validatedData.value,
         conversationId: validatedData.conversationId,
@@ -362,26 +377,25 @@ export const leadController = {
     try {
       const id = parseInt(req.params.id);
       const companyId = parseInt(req.query.companyId as string || req.body.companyId);
-      const status = req.body.status as LeadStatus;
+      const statusId = req.body.statusId != null ? parseInt(String(req.body.statusId), 10) : undefined;
       const userRole = (req as AuthRequest).user?.role?.name;
       const userId = (req as AuthRequest).user?.id;
 
       if (isNaN(id) || isNaN(companyId)) {
         return sendError(res, 'Invalid ID', 400);
       }
-      if (!status || !['New', 'Contacted', 'Qualified', 'Negotiation', 'Won', 'Lost'].includes(status)) {
-        return sendError(res, 'Invalid status', 400);
+      if (statusId == null || isNaN(statusId) || statusId <= 0) {
+        return sendError(res, 'Valid statusId is required', 400);
       }
       if (!userId) {
         return sendError(res, 'Unauthorized', 401);
       }
 
-      // Only Lead Manager and SuperAdmin can change lead status
       if (userRole !== 'Lead Manager' && userRole !== 'SuperAdmin') {
         return sendError(res, 'Only Lead Manager can change lead status', 403);
       }
 
-      const lead = await leadService.updateLeadStatus(id, companyId, status, userId, userRole === 'SuperAdmin');
+      const lead = await leadService.updateLeadStatus(id, companyId, statusId, userId, userRole === 'SuperAdmin');
       return sendSuccess(res, lead, 'Lead status updated successfully');
     } catch (error) {
       if (error instanceof AppError) {

@@ -31,6 +31,7 @@ import {
   Layout,
   Menu,
   FileCode,
+  FileEdit,
   Monitor,
   Receipt,
   Link2,
@@ -94,6 +95,7 @@ const menuSections: MenuSection[] = [
         submenu: [
           { label: 'All Leads', path: '/leads', icon: Eye },
           { label: 'Lead Configuration', path: '/lead-config', icon: ListChecks },
+          { label: 'Lead Form Configuration', path: '/lead-form-config', icon: FileEdit, permission: 'can_manage_lead_config' },
         ]
       },
       { label: 'Companies', icon: Building2, path: '/companies', permission: 'can_view_companies' },

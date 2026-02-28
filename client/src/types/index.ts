@@ -158,6 +158,32 @@ export interface LeadAssignment {
   };
 }
 
+export interface LeadPriority {
+  id: number;
+  companyId: number;
+  name: string;
+  sortOrder: number;
+  isActive: boolean;
+}
+
+export interface LeadLabel {
+  id: number;
+  companyId: number;
+  name: string;
+  color?: string | null;
+  isActive: boolean;
+}
+
+export interface LeadStatusConfig {
+  id: number;
+  companyId: number;
+  name: string;
+  code: string;
+  sortOrder: number;
+  isSystem: boolean;
+  isActive: boolean;
+}
+
 export interface Lead {
   id: number;
   companyId: number;
@@ -165,7 +191,10 @@ export interface Lead {
   title: string;
   description?: string | null;
   source: string;
-  status: string;
+  statusId: number;
+  status?: { id: number; name: string; code: string; isSystem?: boolean };
+  priorityId?: number | null;
+  priority?: { id: number; name: string } | null;
   value?: number | string | null;
   conversationId?: number | null;
   customerName?: string | null;
@@ -193,6 +222,7 @@ export interface Lead {
     approvedByUser?: { id: string; name?: string | null; email: string } | null;
   } | null;
   assignments?: LeadAssignment[];
+  labelAssignments?: { id: number; label: { id: number; name: string; color?: string | null } }[];
   conversation?: unknown;
   category?: { id: number; name: string } | null;
   interest?: { id: number; name: string } | null;

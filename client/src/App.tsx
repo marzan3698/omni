@@ -40,6 +40,8 @@ import { MyCalls } from './pages/MyCalls';
 import { MyMeetings } from './pages/MyMeetings';
 import Users from './pages/Users';
 import LeadConfig from './pages/LeadConfig';
+import LeadFormConfig from './pages/LeadFormConfig';
+import LeadFormEmbed from './pages/LeadFormEmbed';
 import SystemSettings from './pages/SystemSettings';
 import ThemeDesign from './pages/ThemeDesign';
 import ManageHomepage from './pages/ManageHomepage';
@@ -440,6 +442,16 @@ function App() {
                 }
               />
               <Route
+                path="/lead-form-config"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <LeadFormConfig />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/system-settings"
                 element={
                   <ProtectedRoute>
@@ -761,6 +773,7 @@ function App() {
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/services" element={<ServicesPage />} />
               <Route path="/sitemap" element={<Sitemap />} />
+              <Route path="/embed/lead-form/:slug" element={<LeadFormEmbed />} />
 
               {/* Client routes */}
               <Route

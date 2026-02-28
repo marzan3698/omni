@@ -6,7 +6,7 @@ import { GameCard } from '@/components/GameCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { leadApi, bookingApi, leadCategoryApi, leadInterestApi, campaignApi, productApi } from '@/lib/api';
+import { leadApi, bookingApi, leadCategoryApi, leadInterestApi, leadPriorityApi, leadLabelApi, leadStatusConfigApi, campaignApi, productApi } from '@/lib/api';
 import { getImageUrl } from '@/lib/imageUtils';
 import { useAuth } from '@/contexts/AuthContext';
 import type { LeadMeeting, LeadMeetingStatus, LeadCall, LeadCallStatus } from '@/types';
@@ -89,7 +89,7 @@ export function LeadDetail() {
   const [editingCallNote, setEditingCallNote] = useState<{ callId: number; note: string } | null>(null);
   const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
-  const [selectedStatus, setSelectedStatus] = useState<string>('');
+  const [selectedStatusId, setSelectedStatusId] = useState<number | null>(null);
   const [leadAssignmentsSelectedIds, setLeadAssignmentsSelectedIds] = useState<number[]>([]);
   const [isTransferMonitoringModalOpen, setIsTransferMonitoringModalOpen] = useState(false);
   const [newLeadManagerUserId, setNewLeadManagerUserId] = useState<string>('');
@@ -108,6 +108,21 @@ export function LeadDetail() {
   const { data: editInterests = [] } = useQuery({
     queryKey: ['lead-interests-edit'],
     queryFn: async () => (await leadInterestApi.getAll()).data.data || [],
+    enabled: isEditLeadModalOpen,
+  });
+  const { data: editPriorities = [] } = useQuery({
+    queryKey: ['lead-priorities-edit'],
+    queryFn: async () => (await leadPriorityApi.getAll()).data.data || [],
+    enabled: isEditLeadModalOpen,
+  });
+  const { data: editLabels = [] } = useQuery({
+    queryKey: ['lead-labels-edit'],
+    queryFn: async () => (await leadLabelApi.getAll()).data.data || [],
+    enabled: isEditLeadModalOpen,
+  });
+  const { data: editStatuses = [] } = useQuery({
+    queryKey: ['lead-statuses-edit'],
+    queryFn: async () => (await leadStatusConfigApi.getAll()).data.data || [],
     enabled: isEditLeadModalOpen,
   });
   const { data: editCampaigns = [] } = useQuery({
@@ -143,6 +158,7 @@ export function LeadDetail() {
 
   const openEditLeadModal = () => {
     if (!lead) return;
+    const labelIds = lead.labelAssignments?.map((a: { label: { id: number } }) => a.label.id) ?? [];
     setEditLeadForm({
       title: lead.title || '',
       description: lead.description || '',
@@ -152,6 +168,9 @@ export function LeadDetail() {
       value: lead.value != null ? String(lead.value) : '',
       categoryId: lead.categoryId != null ? String(lead.categoryId) : '',
       interestId: lead.interestId != null ? String(lead.interestId) : '',
+      priorityId: lead.priorityId != null ? String(lead.priorityId) : '',
+      statusId: lead.statusId != null ? String(lead.statusId) : '',
+      labelIds: labelIds as number[],
       campaignId: lead.campaignId != null ? String(lead.campaignId) : '',
       productId: lead.productId != null ? String(lead.productId) : '',
       purchasePrice: lead.purchasePrice != null ? String(lead.purchasePrice) : '',
@@ -182,6 +201,9 @@ export function LeadDetail() {
     payload.value = editLeadForm.value !== '' ? parseFloat(editLeadForm.value) : null;
     payload.categoryId = editLeadForm.categoryId !== '' ? parseInt(editLeadForm.categoryId) : null;
     payload.interestId = editLeadForm.interestId !== '' ? parseInt(editLeadForm.interestId) : null;
+    payload.priorityId = editLeadForm.priorityId !== '' ? parseInt(editLeadForm.priorityId) : null;
+    payload.statusId = editLeadForm.statusId !== '' ? parseInt(editLeadForm.statusId) : null;
+    payload.labelIds = Array.isArray(editLeadForm.labelIds) ? editLeadForm.labelIds : [];
     payload.campaignId = editLeadForm.campaignId !== '' ? parseInt(editLeadForm.campaignId) : null;
     payload.productId = editLeadForm.productId !== '' ? parseInt(editLeadForm.productId) : null;
     payload.purchasePrice = editLeadForm.purchasePrice !== '' ? parseFloat(editLeadForm.purchasePrice) : null;
@@ -190,16 +212,6 @@ export function LeadDetail() {
     updateLeadMutation.mutate(payload);
   };
   // ─────────────────────────────────────────────────────────────────────────
-
-  // Lead status options with Bengali labels
-  const statusOptions = [
-    { value: 'New', label: 'নতুন (New)', color: 'bg-blue-100 text-blue-700' },
-    { value: 'Contacted', label: 'যোগাযোগ করা হয়েছে (Contacted)', color: 'bg-yellow-100 text-yellow-700' },
-    { value: 'Qualified', label: 'যোগ্য (Qualified)', color: 'bg-purple-100 text-purple-700' },
-    { value: 'Negotiation', label: 'আলোচনা চলছে (Negotiation)', color: 'bg-orange-100 text-orange-700' },
-    { value: 'Won', label: 'সম্পন্ন (Complete)', color: 'bg-green-100 text-green-700' },
-    { value: 'Lost', label: 'ব্যর্থ (Failed)', color: 'bg-red-100 text-red-700' },
-  ];
 
   const convertSchema = z.object({
     name: z.string().min(1, 'Client name is required').optional(),
@@ -630,20 +642,23 @@ export function LeadDetail() {
     },
   });
 
-  // Update lead status mutation
+  const { data: statusModalStatuses = [] } = useQuery({
+    queryKey: ['lead-statuses'],
+    queryFn: async () => (await leadStatusConfigApi.getAll()).data.data || [],
+    enabled: isStatusModalOpen,
+  });
+
   const updateStatusMutation = useMutation({
-    mutationFn: async (newStatus: string) => {
-      if (!id || !user?.companyId) {
-        throw new Error('Invalid parameters');
-      }
-      const response = await leadApi.updateStatus(parseInt(id), newStatus, user.companyId);
+    mutationFn: async (statusId: number) => {
+      if (!id || !user?.companyId) throw new Error('Invalid parameters');
+      const response = await leadApi.updateStatus(parseInt(id), statusId, user.companyId);
       return response.data.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lead', id, user?.companyId] });
-      queryClient.invalidateQueries({ queryKey: ['my-balance-points'] }); // Refresh balance/points
+      queryClient.invalidateQueries({ queryKey: ['my-balance-points'] });
       setIsStatusModalOpen(false);
-      setSelectedStatus('');
+      setSelectedStatusId(null);
     },
     onError: (error: any) => {
       alert(error?.response?.data?.message || 'স্ট্যাটাস আপডেট করতে ব্যর্থ হয়েছে');
@@ -680,13 +695,14 @@ export function LeadDetail() {
   });
 
   const openStatusModal = () => {
-    setSelectedStatus(lead?.status || 'New');
+    const current = lead?.statusId ?? (lead?.status as { id?: number } | undefined)?.id ?? null;
+    setSelectedStatusId(current);
     setIsStatusModalOpen(true);
   };
 
   const handleStatusUpdate = () => {
-    if (selectedStatus && selectedStatus !== lead?.status) {
-      updateStatusMutation.mutate(selectedStatus);
+    if (selectedStatusId != null && selectedStatusId !== lead?.statusId) {
+      updateStatusMutation.mutate(selectedStatusId);
     } else {
       setIsStatusModalOpen(false);
     }
@@ -802,8 +818,12 @@ export function LeadDetail() {
     );
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
+  const statusCode = (s: string | { code?: string } | undefined) =>
+    typeof s === 'object' && s?.code ? s.code : typeof s === 'string' ? s : '';
+
+  const getStatusColor = (status: string | { code?: string } | undefined) => {
+    const code = statusCode(status);
+    switch (code) {
       case 'Won': return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
       case 'Lost': return 'bg-red-500/20 text-red-300 border-red-500/40';
       case 'New': return 'bg-blue-500/20 text-blue-300 border-blue-500/40';
@@ -814,13 +834,17 @@ export function LeadDetail() {
     }
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
+  const getStatusIcon = (status: string | { code?: string } | undefined) => {
+    const code = statusCode(status);
+    switch (code) {
       case 'Won': return <CheckCircle className="w-4 h-4" />;
       case 'Lost': return <XCircle className="w-4 h-4" />;
       default: return <Clock className="w-4 h-4" />;
     }
   };
+
+  const leadStatusDisplay = lead?.status?.name ?? (lead as any)?.status ?? '';
+  const leadStatusCode = statusCode(lead?.status);
 
   const getSourceIcon = (source: string) => {
     switch (source) {
@@ -899,7 +923,7 @@ export function LeadDetail() {
                 title="স্ট্যাটাস পরিবর্তন করতে ক্লিক করুন"
               >
                 {getStatusIcon(lead.status)}
-                {lead.status}
+                {leadStatusDisplay}
                 <Edit className="w-3 h-3 ml-1 opacity-80" />
               </button>
             ) : (
@@ -915,7 +939,7 @@ export function LeadDetail() {
                 }
               >
                 {getStatusIcon(lead.status)}
-                {lead.status}
+                {leadStatusDisplay}
               </span>
             )}
             {lead.convertedToClientId ? (
@@ -924,7 +948,7 @@ export function LeadDetail() {
                 Already added as client
               </span>
             ) : (
-              lead.status === 'Won' && isMonitoringAllowed && (
+              leadStatusCode === 'Won' && isMonitoringAllowed && (
                 <Button onClick={openConvertModal} className="bg-amber-600 hover:bg-amber-500 text-white border-amber-500/50">
                   <UserPlus className="w-4 h-4 mr-2" />
                   Convert to Client
@@ -1012,6 +1036,29 @@ export function LeadDetail() {
                     <span>{lead.source}</span>
                   </p>
                 </div>
+                {lead.priority && (
+                  <div>
+                    <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">প্রায়োরিটি</label>
+                    <p className="mt-1 text-amber-100 font-medium">{lead.priority.name}</p>
+                  </div>
+                )}
+                {lead.labelAssignments && lead.labelAssignments.length > 0 && (
+                  <div className="md:col-span-2">
+                    <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">লেবেল</label>
+                    <div className="mt-1 flex flex-wrap gap-2">
+                      {lead.labelAssignments.map((a: { id: number; label: { id: number; name: string; color?: string | null } }) => (
+                        <span
+                          key={a.id}
+                          className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded border text-xs font-medium"
+                          style={a.label.color ? { borderColor: a.label.color, color: a.label.color } : undefined}
+                        >
+                          {a.label.color && <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: a.label.color }} />}
+                          {a.label.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {lead.description && (
                   <div className="md:col-span-2">
                     <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider">Description</label>
@@ -1863,35 +1910,35 @@ export function LeadDetail() {
               </div>
               <div className="space-y-4">
                 <p className="text-sm text-amber-200/80 mb-4">
-                  বর্তমান স্ট্যাটাস: <span className={cn("px-2 py-1 rounded border text-xs font-medium", getStatusColor(lead.status))}>{lead.status}</span>
+                  বর্তমান স্ট্যাটাস: <span className={cn("px-2 py-1 rounded border text-xs font-medium", getStatusColor(lead.status))}>{leadStatusDisplay}</span>
                 </p>
                 <div className="space-y-2">
-                  {statusOptions.map((opt) => (
+                  {(statusModalStatuses as { id: number; name: string; code: string }[]).map((opt) => (
                     <button
-                      key={opt.value}
-                      onClick={() => setSelectedStatus(opt.value)}
-                      disabled={lead.status === opt.value}
+                      key={opt.id}
+                      onClick={() => setSelectedStatusId(opt.id)}
+                      disabled={lead?.statusId === opt.id}
                       className={cn(
                         "w-full p-3 rounded-lg border text-left transition-all",
-                        selectedStatus === opt.value ? "border-amber-500 bg-amber-500/20 ring-2 ring-amber-500/40" : "border-amber-500/30 hover:border-amber-500/50 hover:bg-amber-500/10",
-                        lead.status === opt.value && "opacity-50"
+                        selectedStatusId === opt.id ? "border-amber-500 bg-amber-500/20 ring-2 ring-amber-500/40" : "border-amber-500/30 hover:border-amber-500/50 hover:bg-amber-500/10",
+                        lead?.statusId === opt.id && "opacity-50"
                       )}
                     >
                       <div className="flex items-center justify-between">
-                        <span className={cn("px-2 py-1 rounded border text-sm font-medium", getStatusColor(opt.value))}>
-                          {opt.label}
+                        <span className={cn("px-2 py-1 rounded border text-sm font-medium", getStatusColor(opt))}>
+                          {opt.name}
                         </span>
-                        {lead.status === opt.value && <span className="text-xs text-amber-200/60">(বর্তমান)</span>}
-                        {selectedStatus === opt.value && lead.status !== opt.value && <CheckCircle className="w-5 h-5 text-amber-400" />}
+                        {lead?.statusId === opt.id && <span className="text-xs text-amber-200/60">(বর্তমান)</span>}
+                        {selectedStatusId === opt.id && lead?.statusId !== opt.id && <CheckCircle className="w-5 h-5 text-amber-400" />}
                       </div>
-                      {opt.value === 'Won' && lead.status !== 'Won' && (
+                      {opt.code === 'Won' && leadStatusCode !== 'Won' && (
                         <p className="text-xs text-emerald-400 mt-2">✨ এই স্ট্যাটাস সিলেক্ট করলে রিজার্ভ পয়েন্ট মেইন পয়েন্টে ট্রান্সফার হবে</p>
                       )}
                     </button>
                   ))}
                 </div>
                 <div className="flex gap-3 pt-4 border-t border-amber-500/20">
-                  <Button onClick={handleStatusUpdate} className="flex-1 bg-amber-600 hover:bg-amber-500 text-white" disabled={updateStatusMutation.isPending || selectedStatus === lead.status}>
+                  <Button onClick={handleStatusUpdate} className="flex-1 bg-amber-600 hover:bg-amber-500 text-white" disabled={updateStatusMutation.isPending || selectedStatusId === lead?.statusId}>
                     {updateStatusMutation.isPending && <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />}
                     স্ট্যাটাস আপডেট করুন
                   </Button>
@@ -2096,6 +2143,63 @@ export function LeadDetail() {
                   </select>
                 </div>
               </div>
+
+              {/* Row: Priority + Status */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider block mb-1">প্রায়োরিটি</label>
+                  <select
+                    value={editLeadForm.priorityId || ''}
+                    onChange={(e) => handleEditLeadField('priorityId', e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-amber-500/20 bg-slate-800/60 text-amber-100 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                  >
+                    <option value="">-- কোনো প্রায়োরিটি নেই --</option>
+                    {editPriorities.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider block mb-1">স্ট্যাটাস</label>
+                  <select
+                    value={editLeadForm.statusId || ''}
+                    onChange={(e) => handleEditLeadField('statusId', e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-amber-500/20 bg-slate-800/60 text-amber-100 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                  >
+                    <option value="">-- স্ট্যাটাস নির্বাচন করুন --</option>
+                    {editStatuses.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {/* Labels multi-select */}
+              {editLabels.length > 0 && (
+                <div>
+                  <label className="text-xs font-medium text-amber-200/70 uppercase tracking-wider block mb-2">লেবেল</label>
+                  <div className="flex flex-wrap gap-2">
+                    {editLabels.map((l: any) => {
+                      const ids: number[] = editLeadForm.labelIds ?? [];
+                      const checked = ids.includes(l.id);
+                      return (
+                        <label key={l.id} className={cn(
+                          "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border cursor-pointer text-sm",
+                          checked ? "border-amber-500 bg-amber-500/20 text-amber-100" : "border-amber-500/30 text-amber-200/80 hover:border-amber-500/50"
+                        )}>
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => {
+                              const next = checked ? ids.filter((i: number) => i !== l.id) : [...ids, l.id];
+                              handleEditLeadField('labelIds', next);
+                            }}
+                            className="sr-only"
+                          />
+                          {l.color && <span className="w-2 h-2 rounded-full" style={{ backgroundColor: l.color || '#f59e0b' }} />}
+                          {l.name}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Row: Campaign + Product */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

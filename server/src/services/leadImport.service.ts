@@ -1,8 +1,9 @@
 import ExcelJS from 'exceljs';
 import { prisma } from '../lib/prisma.js';
 import { leadService } from './lead.service.js';
+import { leadStatusConfigService } from './leadStatusConfig.service.js';
 import { AppError } from '../middleware/errorHandler.js';
-import { LeadSource, LeadStatus } from '@prisma/client';
+import { LeadSource } from '@prisma/client';
 import { z } from 'zod';
 
 const rowSchema = z.object({
@@ -256,6 +257,14 @@ export const leadImportService = {
           row.interest
         );
 
+        let statusId = await leadStatusConfigService.resolveStatusId(
+          companyId,
+          row.status ?? ''
+        );
+        if (!statusId) {
+          statusId = await leadStatusConfigService.getDefaultStatusId(companyId);
+        }
+
         await leadService.createLead({
           companyId,
           createdBy: userId,
@@ -264,7 +273,7 @@ export const leadImportService = {
           phone: row.phone ?? undefined,
           description: row.description ?? undefined,
           value: row.value,
-          status: (row.status as LeadStatus) || 'New',
+          statusId,
           categoryId: categoryId ?? undefined,
           interestId: interestId ?? undefined,
           source: 'Excel' as LeadSource,

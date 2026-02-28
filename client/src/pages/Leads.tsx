@@ -3,9 +3,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { leadApi, leadCategoryApi, leadInterestApi, campaignApi } from '@/lib/api';
+import { leadApi, leadCategoryApi, leadInterestApi, leadPriorityApi, leadLabelApi, leadStatusConfigApi, campaignApi } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { Target, Search, Filter, X, Eye, Edit, ChevronDown, ChevronUp, Download, Upload, Users } from 'lucide-react';
+import { Target, Search, Filter, X, Eye, Edit, ChevronDown, ChevronUp, Download, Upload, Users, Code2 } from 'lucide-react';
 import { ErrorAlert } from '@/components/ErrorAlert';
 import { EmployeeSelector } from '@/components/EmployeeSelector';
 import { cn } from '@/lib/utils';
@@ -15,7 +15,9 @@ type LeadListView = 'all' | 'complete';
 
 const defaultFilters = {
   search: '',
-  status: '',
+  statusId: '',
+  priorityId: '',
+  labelIds: '' as string,
   categoryId: '',
   interestId: '',
   campaignId: '',
@@ -51,7 +53,9 @@ export function Leads() {
       params.convertedOnly = leadListView === 'complete' ? 'true' : 'false';
       params.source = activeTab === 'Inbox' ? 'Inbox' : activeTab === 'Website' ? 'Website' : activeTab === 'FacebookPixel' ? 'FacebookPixel' : 'Excel';
       if (filters.search) params.search = filters.search;
-      if (filters.status) params.status = filters.status;
+      if (filters.statusId) params.statusId = parseInt(filters.statusId);
+      if (filters.priorityId) params.priorityId = parseInt(filters.priorityId);
+      if (filters.labelIds) params.labelIds = [parseInt(filters.labelIds)].filter((n) => !isNaN(n) && n > 0);
       if (filters.categoryId) params.categoryId = parseInt(filters.categoryId);
       if (filters.interestId) params.interestId = parseInt(filters.interestId);
       if (filters.campaignId) params.campaignId = parseInt(filters.campaignId);
@@ -78,11 +82,34 @@ export function Leads() {
     },
   });
 
-  // Fetch interests
   const { data: interests = [] } = useQuery({
     queryKey: ['lead-interests'],
     queryFn: async () => {
       const response = await leadInterestApi.getAll();
+      return response.data.data || [];
+    },
+  });
+
+  const { data: priorities = [] } = useQuery({
+    queryKey: ['lead-priorities'],
+    queryFn: async () => {
+      const response = await leadPriorityApi.getAll();
+      return response.data.data || [];
+    },
+  });
+
+  const { data: labels = [] } = useQuery({
+    queryKey: ['lead-labels'],
+    queryFn: async () => {
+      const response = await leadLabelApi.getAll();
+      return response.data.data || [];
+    },
+  });
+
+  const { data: statuses = [] } = useQuery({
+    queryKey: ['lead-statuses'],
+    queryFn: async () => {
+      const response = await leadStatusConfigApi.getAll();
       return response.data.data || [];
     },
   });
@@ -199,8 +226,9 @@ export function Leads() {
 
   const activeFilterCount = Object.values(filters).filter(v => v !== '').length;
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
+  const getStatusColor = (status: { code?: string; name?: string } | string) => {
+    const code = typeof status === 'object' ? status?.code : status;
+    switch (code) {
       case 'Won': return 'bg-emerald-500/30 text-emerald-300 border border-emerald-500/20';
       case 'Lost': return 'bg-red-500/30 text-red-300 border border-red-500/20';
       case 'New': return 'bg-blue-500/30 text-blue-300 border border-blue-500/20';
@@ -292,6 +320,22 @@ export function Leads() {
           </button>
         ))}
       </div>
+
+      {/* Website tab: Link to Lead Form Config / Embed code */}
+      {activeTab === 'Website' && hasPermission?.('can_manage_lead_config') && (
+        <div className="rounded-xl border border-blue-500/20 bg-slate-800/40 p-4">
+          <div className="flex flex-wrap gap-3 items-center">
+            <Button
+              onClick={() => navigate('/lead-form-config')}
+              className="bg-blue-600 hover:bg-blue-500 text-white border border-blue-500/50 flex items-center gap-2"
+            >
+              <Code2 className="w-4 h-4" />
+              Lead Form Configuration
+            </Button>
+            <span className="text-slate-400 text-sm">Configure the form, get embed code, and customize fields.</span>
+          </div>
+        </div>
+      )}
 
       {/* Excel tab: Download template + Upload */}
       {activeTab === 'Excel' && (
@@ -385,14 +429,33 @@ export function Leads() {
               {/* Status */}
               <div>
                 <Label className="text-amber-200/90 text-xs mb-1 block">স্ট্যাটাস (Status)</Label>
-                <select value={filters.status} onChange={(e) => handleFilterChange('status', e.target.value)} className={selectClass}>
+                <select value={filters.statusId} onChange={(e) => handleFilterChange('statusId', e.target.value)} className={selectClass}>
                   <option value="">সব স্ট্যাটাস</option>
-                  <option value="New">New – নতুন</option>
-                  <option value="Contacted">Contacted – যোগাযোগ হয়েছে</option>
-                  <option value="Qualified">Qualified – যোগ্য</option>
-                  <option value="Negotiation">Negotiation – আলোচনা চলছে</option>
-                  <option value="Won">Won – সফল</option>
-                  <option value="Lost">Lost – ব্যর্থ</option>
+                  {(statuses as { id: number; name: string; code: string }[]).map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Priority */}
+              <div>
+                <Label className="text-amber-200/90 text-xs mb-1 block">প্রায়োরিটি (Priority)</Label>
+                <select value={filters.priorityId} onChange={(e) => handleFilterChange('priorityId', e.target.value)} className={selectClass}>
+                  <option value="">সব প্রায়োরিটি</option>
+                  {(priorities as { id: number; name: string }[]).map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Label */}
+              <div>
+                <Label className="text-amber-200/90 text-xs mb-1 block">লেবেল (Label)</Label>
+                <select value={filters.labelIds} onChange={(e) => handleFilterChange('labelIds', e.target.value)} className={selectClass}>
+                  <option value="">সব লেবেল</option>
+                  {(labels as { id: number; name: string }[]).map((l) => (
+                    <option key={l.id} value={String(l.id)}>{l.name}</option>
+                  ))}
                 </select>
               </div>
 
@@ -707,7 +770,7 @@ export function Leads() {
                       ) : <span className="text-slate-500 text-sm">-</span>}
                     </td>
                     <td className="py-3 px-4">
-                      <span className={`px-2 py-1 rounded-lg text-xs font-medium ${getStatusColor(lead.status)}`}>{lead.status}</span>
+                      <span className={`px-2 py-1 rounded-lg text-xs font-medium ${getStatusColor(lead.status || lead)}`}>{typeof lead.status === 'object' ? lead.status?.name : (lead as any).status}</span>
                     </td>
                     <td className="py-3 px-4">
                       <span className={`px-2 py-1 rounded-lg text-xs font-medium ${getSourceColor(lead.source)}`}>{lead.source}</span>
