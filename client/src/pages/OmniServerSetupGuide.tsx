@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { ChevronDown, Copy, Check, Server, Terminal, CheckCircle2, Package } from 'lucide-react';
+import { ChevronDown, Copy, Check, Server, Terminal, CheckCircle2, Package, AlertCircle } from 'lucide-react';
 
 // ─── Copyable content constants ────────────────────────────────────────────────
 
@@ -196,6 +196,36 @@ export default function OmniServerSetupGuide() {
           <span className={s.badge('border-blue-500/40 text-blue-300 bg-blue-500/10')}>SSH</span>
           <span className={s.badge('border-purple-500/40 text-purple-300 bg-purple-500/10')}>VPS</span>
           <span className={s.badge('border-emerald-500/40 text-emerald-300 bg-emerald-500/10')}>ধাপ ১</span>
+        </div>
+      </div>
+
+      {/* Current Status Widget */}
+      <div className="p-5 rounded-xl border border-amber-500/30 bg-amber-500/5">
+        <div className="flex items-center gap-2 mb-3">
+          <AlertCircle className="h-5 w-5 text-amber-400" />
+          <h2 className="text-lg font-bold text-amber-100">বর্তমান স্ট্যাটাস</h2>
+        </div>
+        <div className="space-y-3 text-sm text-amber-200/90">
+          <p>
+            <strong className="text-amber-300">আপনি এখন কোথায়:</strong> ধাপ ২.৮ – প্রথমবার Build ও Migration চালানোর সময়। <code className={s.inline}>node scripts/migrate-simple.cjs</code> চালানোর পর migration গুলো একে একে apply হয়।
+          </p>
+          <p>
+            <strong className="text-amber-300">সমস্যা কী ছিল:</strong> Migration চলার সময় <code className={s.inline}>add_campaign_0_table.sql</code> এ SQL syntax error (trailing comma) এর কারণে migration থেমে যেত। এটা ঠিক করা হয়েছে।
+          </p>
+          <p>
+            <strong className="text-amber-300">কী করবেন:</strong> যদি migration এ error আসে, তাহলে (১) local repo থেকে commit & push করুন, (২) সার্ভারে <code className={s.inline}>git pull</code> করুন, (৩) নিচের কমান্ড দিয়ে DB reset করে আবার migration চালান:
+          </p>
+          <div className={`relative ${s.code} mt-2`}>
+            <pre className={`${s.pre} text-xs`}>{`mysql -u root -pYOUR_PASSWORD -h 127.0.0.1 -e "DROP DATABASE IF EXISTS omni_db; CREATE DATABASE omni_db;"
+echo '[]' > prisma/migrations/.migrations_applied.json
+node scripts/migrate-simple.cjs`}</pre>
+            <CopyBtn text={`mysql -u root -pYOUR_PASSWORD -h 127.0.0.1 -e "DROP DATABASE IF EXISTS omni_db; CREATE DATABASE omni_db;"
+echo '[]' > prisma/migrations/.migrations_applied.json
+node scripts/migrate-simple.cjs`} id="status-reset-migrate" />
+          </div>
+          <p className="text-amber-200/70 text-xs">
+            <code className={s.inline}>YOUR_PASSWORD</code> এর জায়গায় আপনার MariaDB root পাসওয়ার্ড দিন। <code className={s.inline}>cd ~/omni-repo/server</code> এর ভেতর থেকে কমান্ড চালান।
+          </p>
         </div>
       </div>
 
