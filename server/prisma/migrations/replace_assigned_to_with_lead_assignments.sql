@@ -16,5 +16,9 @@ INSERT IGNORE INTO lead_assignments (lead_id, employee_id)
 SELECT id, assigned_to FROM leads WHERE assigned_to IS NOT NULL;
 
 -- 3. Drop assigned_to from leads
+-- Disable FK checks to allow drop regardless of auto-generated FK name (leads_ibfk_1 on MariaDB)
+SET FOREIGN_KEY_CHECKS=0;
 ALTER TABLE leads DROP FOREIGN KEY IF EXISTS leads_assigned_to_fkey;
+ALTER TABLE leads DROP FOREIGN KEY IF EXISTS leads_ibfk_1;
 ALTER TABLE leads DROP COLUMN IF EXISTS assigned_to;
+SET FOREIGN_KEY_CHECKS=1;
