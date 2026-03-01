@@ -109,6 +109,72 @@ pm2 start dist/server.js --name omni
 pm2 save
 pm2 startup`;
 
+const CMD_NGINX_INSTALL = `# Nginx ইন্সটল
+dnf install -y nginx
+
+# Config ফাইল তৈরি করুন
+cat > /etc/nginx/conf.d/omni.conf << 'EOF'
+server {
+    listen 80;
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /api/ {
+        proxy_pass http://localhost:5001;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+EOF
+
+# Default nginx server block সরিয়ে দিন (conflict এড়াতে)
+sed -n '/^    server {/q;p' /etc/nginx/nginx.conf > /tmp/nginx_top.conf
+cat /tmp/nginx_top.conf > /etc/nginx/nginx.conf
+echo "}" >> /etc/nginx/nginx.conf
+rm -f /etc/nginx/default.d/welcome.conf`;
+
+const CMD_NGINX_DEPLOY = `# Frontend build করুন
+cd ~/omni-repo/client
+npm install
+npm run build
+
+# Nginx এ কপি করুন (\cp দিয়ে alias bypass)
+\cp -rf ~/omni-repo/client/dist/* /usr/share/nginx/html/
+
+# Nginx চালু করুন
+systemctl start nginx
+systemctl enable nginx
+nginx -t && systemctl reload nginx`;
+
+const CMD_FIREWALL = `# firewall-cmd এই সার্ভারে নেই — iptables ব্যবহার করুন
+iptables -I INPUT -p tcp --dport 80 -j ACCEPT
+iptables -I INPUT -p tcp --dport 5001 -j ACCEPT`;
+
+const CMD_DEPLOY_UPDATE = `# প্রতিবার git push এর পর সার্ভারে চালান
+cd ~/omni-repo && git pull
+
+# নতুন migration থাকলে চালান
+cd server && node scripts/migrate-simple.cjs
+
+# Frontend পরিবর্তন হলে rebuild করুন
+cd ~/omni-repo/client && npm run build
+\cp -rf dist/* /usr/share/nginx/html/
+
+# API restart করুন
+pm2 restart omni`;
+
+const CMD_MIGRATION_RESET = `cd ~/omni-repo/server
+mysql -u root -pOmniDB2024Secure -h 127.0.0.1 -e "DROP DATABASE IF EXISTS omni_db; CREATE DATABASE omni_db;"
+echo '[]' > prisma/migrations/.migrations_applied.json
+node scripts/migrate-simple.cjs`;
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function OmniServerSetupGuide() {
@@ -200,32 +266,33 @@ export default function OmniServerSetupGuide() {
       </div>
 
       {/* Current Status Widget */}
-      <div className="p-5 rounded-xl border border-amber-500/30 bg-amber-500/5">
+      <div className="p-5 rounded-xl border border-emerald-500/30 bg-emerald-500/5">
         <div className="flex items-center gap-2 mb-3">
-          <AlertCircle className="h-5 w-5 text-amber-400" />
-          <h2 className="text-lg font-bold text-amber-100">বর্তমান স্ট্যাটাস</h2>
+          <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+          <h2 className="text-lg font-bold text-emerald-100">বর্তমান স্ট্যাটাস — ✅ লাইভ!</h2>
         </div>
-        <div className="space-y-3 text-sm text-amber-200/90">
+        <div className="space-y-3 text-sm text-emerald-200/90">
           <p>
-            <strong className="text-amber-300">আপনি এখন কোথায়:</strong> ধাপ ২.৮ – প্রথমবার Build ও Migration চালানোর সময়। <code className={s.inline}>node scripts/migrate-simple.cjs</code> চালানোর পর migration গুলো একে একে apply হয়।
+            <strong className="text-emerald-300">সার্ভার:</strong> AlmaLinux 9 (Hetzner) — <code className={s.inline}>46.225.230.71</code>
           </p>
           <p>
-            <strong className="text-amber-300">সমস্যা কী ছিল:</strong> Migration চলার সময় <code className={s.inline}>add_campaign_0_table.sql</code> এ SQL syntax error (trailing comma) এর কারণে migration থেমে যেত। এটা ঠিক করা হয়েছে।
+            <strong className="text-emerald-300">সাইট লাইভ:</strong>{' '}
+            <a href="http://46.225.230.71" target="_blank" rel="noreferrer" className="underline text-emerald-300">http://46.225.230.71</a> — Omni CRM frontend চলছে ✅
           </p>
           <p>
-            <strong className="text-amber-300">কী করবেন:</strong> যদি migration এ error আসে, তাহলে (১) local repo থেকে commit & push করুন, (২) সার্ভারে <code className={s.inline}>git pull</code> করুন, (৩) নিচের কমান্ড দিয়ে DB reset করে আবার migration চালান:
+            <strong className="text-emerald-300">API:</strong> PM2 এ <code className={s.inline}>omni</code> নামে port 5001 এ চলছে ✅
+          </p>
+          <p>
+            <strong className="text-emerald-300">DB Migration:</strong> সব ৬৮ টি migration সফলভাবে apply হয়েছে ✅
+          </p>
+          <p>
+            <strong className="text-emerald-300">পরবর্তী কাজ:</strong> ডোমেইন connect করুন → SSL সেটআপ করুন → Admin user তৈরি করুন
           </p>
           <div className={`relative ${s.code} mt-2`}>
-            <pre className={`${s.pre} text-xs`}>{`mysql -u root -pYOUR_PASSWORD -h 127.0.0.1 -e "DROP DATABASE IF EXISTS omni_db; CREATE DATABASE omni_db;"
-echo '[]' > prisma/migrations/.migrations_applied.json
-node scripts/migrate-simple.cjs`}</pre>
-            <CopyBtn text={`mysql -u root -pYOUR_PASSWORD -h 127.0.0.1 -e "DROP DATABASE IF EXISTS omni_db; CREATE DATABASE omni_db;"
-echo '[]' > prisma/migrations/.migrations_applied.json
-node scripts/migrate-simple.cjs`} id="status-reset-migrate" />
+            <pre className={`${s.pre} text-xs`}>{CMD_MIGRATION_RESET}</pre>
+            <CopyBtn text={CMD_MIGRATION_RESET} id="status-reset-migrate" />
           </div>
-          <p className="text-amber-200/70 text-xs">
-            <code className={s.inline}>YOUR_PASSWORD</code> এর জায়গায় আপনার MariaDB root পাসওয়ার্ড দিন। <code className={s.inline}>cd ~/omni-repo/server</code> এর ভেতর থেকে কমান্ড চালান।
-          </p>
+          <p className="text-emerald-200/60 text-xs">উপরের কমান্ড দিয়ে যেকোনো সময় DB reset করে সব migration নতুনভাবে চালাতে পারবেন।</p>
         </div>
       </div>
 
@@ -381,10 +448,138 @@ node scripts/migrate-simple.cjs`} id="status-reset-migrate" />
         </div>
       </Section>
 
-      {/* Optional: Nginx, Domain */}
-      <div className="p-5 rounded-xl border border-amber-500/10 bg-slate-800/20 text-amber-200/60 text-sm text-center">
-        <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-amber-500/60" />
-        <p>Nginx রিভার্স প্রক্সি, Domain ও SSL সেটআপ শীঘ্রই যোগ করা হবে।</p>
+      {/* ধাপ ৪: Nginx সেটআপ */}
+      <Section
+        icon={<Server className="h-5 w-5" />}
+        title="ধাপ ৪: Nginx সেটআপ — Frontend সার্ভ করা"
+        badge="ধাপ ৪"
+      >
+        <p>API port 5001 এ চলে। Frontend React app সার্ভ করতে এবং API proxy করতে Nginx ব্যবহার করা হয়।</p>
+
+        <h4 className="text-amber-200 font-medium mt-4 mb-2">৪.১ Nginx ইন্সটল ও Config তৈরি</h4>
+        <CodeBlock code={CMD_NGINX_INSTALL} id="nginx-install" />
+
+        <h4 className="text-amber-200 font-medium mt-4 mb-2">৪.২ Frontend Build ও Deploy</h4>
+        <p>প্রথমবার বা client code পরিবর্তন হলে build করতে হবে।</p>
+        <CodeBlock code={CMD_NGINX_DEPLOY} id="nginx-deploy" />
+        <div className={s.note}>
+          <strong className="text-amber-300">নোট:</strong> <code className={s.inline}>cp</code> কমান্ড overwrite confirm চাইলে <code className={s.inline}>\cp</code> (backslash সহ) ব্যবহার করুন — এটা alias bypass করে সরাসরি কপি করে।
+        </div>
+
+        <h4 className="text-amber-200 font-medium mt-4 mb-2">৪.৩ Firewall Port খোলা</h4>
+        <p>এই সার্ভারে <code className={s.inline}>firewall-cmd</code> নেই — <code className={s.inline}>iptables</code> ব্যবহার করতে হবে।</p>
+        <CodeBlock code={CMD_FIREWALL} id="firewall" />
+
+        <div className={s.tip}>
+          <strong className="text-emerald-400">✅ সফল হলে:</strong> <code className={s.inline}>http://46.225.230.71</code> এ Omni CRM এর Landing Page দেখা যাবে।
+        </div>
+      </Section>
+
+      {/* ধাপ ৫: Deploy Update */}
+      <Section
+        icon={<Terminal className="h-5 w-5" />}
+        title="ধাপ ৫: প্রতিবার Update Deploy করার কমান্ড"
+        badge="Deploy"
+      >
+        <p>Local machine এ code লিখে <code className={s.inline}>git push</code> করার পর সার্ভারে গিয়ে নিচের কমান্ড চালান।</p>
+        <CodeBlock code={CMD_DEPLOY_UPDATE} id="deploy-update" />
+        <div className={s.tip}>
+          <strong className="text-emerald-400">টিপস:</strong> ভবিষ্যতে GitHub Actions CI/CD সেটআপ করলে এই ধাপ আর ম্যানুয়ালি করতে হবে না — push করলেই অটো deploy হবে।
+        </div>
+      </Section>
+
+      {/* ধাপ ৬: Migration সমস্যা ও সমাধান */}
+      <Section
+        icon={<AlertCircle className="h-5 w-5" />}
+        title="ধাপ ৬: Migration সমস্যা ও সমাধান (MariaDB vs MySQL)"
+        badge="Bug Fix"
+      >
+        <p>
+          Localhost এ MySQL (XAMPP) ব্যবহার হয়, কিন্তু সার্ভারে MariaDB। এই দুটোর মধ্যে কিছু পার্থক্যের কারণে migration error আসে।
+        </p>
+
+        <div className={s.note}>
+          <strong className="text-amber-300">মূল পার্থক্য:</strong>
+          <ul className="mt-2 space-y-1 list-disc list-inside">
+            <li>FK auto-name: MySQL → <code className={s.inline}>leads_assigned_to_fkey</code>, MariaDB → <code className={s.inline}>leads_ibfk_1</code></li>
+            <li><code className={s.inline}>DELIMITER</code> শুধু MySQL CLI তে কাজ করে — Node.js runner এ কাজ করে না</li>
+            <li><code className={s.inline}>PREPARE/EXECUTE/CONCAT</code> — runner semicolon দিয়ে split করে, তাই CONCAT এর ভেতরে semicolon থাকলে ভাঙে</li>
+          </ul>
+        </div>
+
+        <h4 className="text-amber-200 font-medium mt-4 mb-2">🐛 Bug 1 — Alphabetical Order (Table আগে তৈরি হয়নি)</h4>
+        <p>Migrations alphabetical order এ চলে। কিছু file এমন table ALTER করছিল যেটা পরে তৈরি হয়।</p>
+        <div className="overflow-x-auto mt-2">
+          <table className="w-full text-xs border border-amber-500/20 rounded-lg">
+            <thead><tr className="border-b border-amber-500/20">
+              <th className="text-left p-2 text-amber-300">File</th>
+              <th className="text-left p-2 text-amber-300">সমস্যা</th>
+              <th className="text-left p-2 text-amber-300">সমাধান</th>
+            </tr></thead>
+            <tbody className="text-amber-200/80">
+              <tr className="border-b border-amber-500/10"><td className="p-2 font-mono">add_payment_system.sql</td><td className="p-2">projects table নেই</td><td className="p-2">add_z_projects_status_enum.sql এ সরানো</td></tr>
+              <tr className="border-b border-amber-500/10"><td className="p-2 font-mono">add_product_lead_customer_points.sql</td><td className="p-2">products table নেই</td><td className="p-2">add_z_ prefix দিয়ে rename</td></tr>
+              <tr className="border-b border-amber-500/10"><td className="p-2 font-mono">add_service_delivery_toggle...sql</td><td className="p-2">services table নেই</td><td className="p-2">add_z_services_extra.sql এ সরানো</td></tr>
+              <tr className="border-b border-amber-500/10"><td className="p-2 font-mono">add_z_campaigns_table_invoice.sql</td><td className="p-2">p.company_id নেই</td><td className="p-2">UPDATE query সরানো হয়েছে</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div className={s.tip}>
+          <strong className="text-emerald-400">নিয়ম:</strong> কোনো migration যদি পরে তৈরি হওয়া table ALTER করে, সেটার filename এ <code className={s.inline}>add_z_</code> prefix দিন — এটা সবার শেষে run হবে।
+        </div>
+
+        <h4 className="text-amber-200 font-medium mt-4 mb-2">🐛 Bug 2 — PREPARE/EXECUTE/CONCAT ব্যবহার</h4>
+        <div className={s.code}>
+          <pre className={s.pre}>{`-- ❌ ভুল — semicolon CONCAT এর ভেতরে থাকায় runner ভাঙে
+SET @sql = IF(@exists = 0, CONCAT('ALTER TABLE x ...'), 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- ✅ সঠিক
+ALTER TABLE x ADD COLUMN IF NOT EXISTS col_name INT NULL;`}</pre>
+        </div>
+
+        <h4 className="text-amber-200 font-medium mt-4 mb-2">🐛 Bug 3 — DELIMITER কাজ করে না</h4>
+        <div className={s.code}>
+          <pre className={s.pre}>{`-- ❌ ভুল — DELIMITER শুধু MySQL CLI তে কাজ করে
+DELIMITER // CREATE PROCEDURE ... END // DELIMITER ;
+
+-- ✅ সঠিক — IF NOT EXISTS ব্যবহার করুন
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS started_at DATETIME NULL;`}</pre>
+        </div>
+
+        <h4 className="text-amber-200 font-medium mt-4 mb-2">🐛 Bug 4 — MariaDB তে FK নাম আলাদা</h4>
+        <div className={s.code}>
+          <pre className={s.pre}>{`-- ❌ ভুল — MariaDB তে FK নাম leads_ibfk_1, তাই এটা কাজ করে না
+ALTER TABLE leads DROP FOREIGN KEY IF EXISTS leads_assigned_to_fkey;
+
+-- ✅ সঠিক — দুটো নাম try করুন + FK checks বন্ধ রাখুন
+SET FOREIGN_KEY_CHECKS=0;
+ALTER TABLE leads DROP FOREIGN KEY IF EXISTS leads_assigned_to_fkey;
+ALTER TABLE leads DROP FOREIGN KEY IF EXISTS leads_ibfk_1;
+ALTER TABLE leads DROP COLUMN IF EXISTS assigned_to;
+SET FOREIGN_KEY_CHECKS=1;`}</pre>
+        </div>
+
+        <h4 className="text-amber-200 font-medium mt-4 mb-2">🐛 Bug 5 — init.sql এ description column ছিল না</h4>
+        <p>Leads table এ <code className={s.inline}>description TEXT</code> column ছিল না init.sql এ, কিন্তু migration তা expect করছিল। <code className={s.inline}>server/prisma/init.sql</code> এ যোগ করা হয়েছে।</p>
+
+        <h4 className="text-amber-200 font-medium mt-4 mb-2">নতুন Migration লেখার নিয়ম</h4>
+        <div className={s.note}>
+          <ol className="list-decimal list-inside space-y-1">
+            <li>পরে তৈরি table ALTER করলে filename এ <code className={s.inline}>add_z_</code> prefix দিন</li>
+            <li><code className={s.inline}>DELIMITER</code> কখনো ব্যবহার করবেন না</li>
+            <li><code className={s.inline}>PREPARE/EXECUTE/CONCAT</code> এর বদলে <code className={s.inline}>ADD COLUMN IF NOT EXISTS</code> ব্যবহার করুন</li>
+            <li>FK drop করার আগে <code className={s.inline}>SET FOREIGN_KEY_CHECKS=0</code> দিন এবং দুটো নাম try করুন</li>
+            <li>সব <code className={s.inline}>CREATE TABLE</code>, <code className={s.inline}>ADD COLUMN</code>, <code className={s.inline}>DROP TABLE</code> এ <code className={s.inline}>IF NOT EXISTS</code> / <code className={s.inline}>IF EXISTS</code> ব্যবহার করুন</li>
+          </ol>
+        </div>
+      </Section>
+
+      {/* Footer */}
+      <div className="p-5 rounded-xl border border-emerald-500/20 bg-emerald-500/5 text-center">
+        <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-emerald-400" />
+        <p className="text-emerald-300 font-semibold">✅ Server সেটআপ সম্পন্ন — http://46.225.230.71</p>
+        <p className="text-emerald-200/60 text-sm mt-1">পরবর্তী ধাপ: ডোমেইন connect → SSL (Let's Encrypt) → Admin user তৈরি</p>
       </div>
     </div>
   );
