@@ -575,11 +575,88 @@ SET FOREIGN_KEY_CHECKS=1;`}</pre>
         </div>
       </Section>
 
+      {/* ধাপ ৭: Domain ও Cloudflare সেটআপ */}
+      <Section
+        icon={<Server className="h-5 w-5" />}
+        title="ধাপ ৭: Domain ও Cloudflare সেটআপ (imoics.com)"
+        badge="Domain"
+      >
+        <p>
+          Domain registrar থেকে শুধু Nameserver পরিবর্তন করার সুযোগ থাকলে <strong className={s.strong}>Cloudflare</strong> সবচেয়ে সহজ ও ভালো সমাধান।
+          Cloudflare দিলে — Free SSL, DDoS protection, CDN সব পাবেন।
+        </p>
+
+        <h4 className="text-amber-200 font-medium mt-4 mb-2">৭.১ Cloudflare Nameserver কোথায় পাবেন</h4>
+        <div className={s.note}>
+          <ol className="list-decimal list-inside space-y-2">
+            <li><a href="https://dash.cloudflare.com" target="_blank" rel="noreferrer" className="underline text-blue-300">dash.cloudflare.com</a> এ যান → <strong className="text-amber-300">imoics.com</strong> এ click করুন</li>
+            <li>বাম মেনুতে <strong className="text-amber-300">DNS</strong> click করুন</li>
+            <li>উপরে <strong className="text-amber-300">"Nameservers"</strong> বা <strong className="text-amber-300">"Change your nameservers"</strong> section দেখবেন</li>
+            <li>দুটো nameserver দেখাবে এরকম:<br />
+              <code className={s.inline}>aria.ns.cloudflare.com</code><br />
+              <code className={s.inline}>bob.ns.cloudflare.com</code><br />
+              (আপনার জন্য নাম আলাদা হবে — Cloudflare থেকেই দেখুন)
+            </li>
+          </ol>
+        </div>
+
+        <h4 className="text-amber-200 font-medium mt-4 mb-2">৭.২ Domain Registrar এ Nameserver পরিবর্তন করুন</h4>
+        <p>যেখান থেকে <strong className={s.strong}>imoics.com</strong> কিনেছেন (GoDaddy, Namecheap, ইত্যাদি) সেখানে যান:</p>
+        <div className={s.note}>
+          <ol className="list-decimal list-inside space-y-2">
+            <li>Domain registrar এ login করুন</li>
+            <li><strong className="text-amber-300">My Domains</strong> বা <strong className="text-amber-300">Domain Management</strong> এ যান</li>
+            <li><strong className="text-amber-300">imoics.com</strong> এ click করুন → <strong className="text-amber-300">Nameservers</strong> বা <strong className="text-amber-300">DNS Settings</strong> খুঁজুন</li>
+            <li><strong className="text-amber-300">"Custom Nameservers"</strong> বা <strong className="text-amber-300">"Change Nameservers"</strong> select করুন</li>
+            <li>Cloudflare এর দুটো nameserver টাইপ করুন → Save করুন</li>
+          </ol>
+        </div>
+        <div className={s.tip}>
+          <strong className="text-emerald-400">সময়:</strong> Nameserver পরিবর্তনের পর ৫ মিনিট থেকে ৪৮ ঘণ্টা লাগতে পারে propagate হতে। সাধারণত ৫-৩০ মিনিটেই হয়।
+        </div>
+
+        <h4 className="text-amber-200 font-medium mt-4 mb-2">৭.৩ Cloudflare এ DNS A Record যোগ করুন</h4>
+        <p>Cloudflare DNS এ server IP point করুন। <strong className={s.strong}>Add record</strong> click করে:</p>
+        <div className="overflow-x-auto mt-2">
+          <table className="w-full text-sm border border-amber-500/20 rounded-lg">
+            <thead><tr className="border-b border-amber-500/20">
+              <th className="text-left p-3 text-amber-300">Type</th>
+              <th className="text-left p-3 text-amber-300">Name</th>
+              <th className="text-left p-3 text-amber-300">Content (IPv4)</th>
+              <th className="text-left p-3 text-amber-300">Proxy</th>
+            </tr></thead>
+            <tbody className="text-amber-200/80">
+              <tr className="border-b border-amber-500/10"><td className="p-3 font-mono">A</td><td className="p-3 font-mono">@</td><td className="p-3 font-mono">46.225.230.71</td><td className="p-3">🟠 Proxied</td></tr>
+              <tr className="border-b border-amber-500/10"><td className="p-3 font-mono">A</td><td className="p-3 font-mono">www</td><td className="p-3 font-mono">46.225.230.71</td><td className="p-3">🟠 Proxied</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4 className="text-amber-200 font-medium mt-4 mb-2">৭.৪ Cloudflare SSL চালু করুন</h4>
+        <div className={s.note}>
+          <ol className="list-decimal list-inside space-y-1">
+            <li>Cloudflare → <strong className="text-amber-300">SSL/TLS</strong> → <strong className="text-amber-300">"Full"</strong> select করুন</li>
+            <li>Free HTTPS চালু হয়ে যাবে — certbot লাগবে না</li>
+          </ol>
+        </div>
+
+        <h4 className="text-amber-200 font-medium mt-4 mb-2">৭.৫ Domain Active হলে App Update করুন</h4>
+        <p>Domain চালু হওয়ার পর local machine এ <code className={s.inline}>client/.env.production</code> আপডেট করুন:</p>
+        <CodeBlock code={`# client/.env.production এ পরিবর্তন করুন:\nVITE_API_URL=https://imoics.com/api\n\n# তারপর push করুন:\ngit add client/.env.production\ngit commit -m "Update API URL to imoics.com"\ngit push`} id="domain-env-update" />
+
+        <p className="mt-3">সার্ভারে গিয়ে:</p>
+        <CodeBlock code={`# Server .env আপডেট\nsed -i 's|CLIENT_URL=.*|CLIENT_URL=https://imoics.com|' ~/omni-repo/server/.env\n\n# Rebuild ও deploy\ncd ~/omni-repo && git pull\ncd server && npm run build && pm2 restart omni\ncd ~/omni-repo/client && npm run build\n\\cp -rf dist/* /usr/share/nginx/html/`} id="domain-deploy" />
+
+        <div className={s.tip}>
+          <strong className="text-emerald-400">✅ সফল হলে:</strong> <code className={s.inline}>https://imoics.com</code> এ Omni CRM loan page দেখা যাবে — HTTPS সহ।
+        </div>
+      </Section>
+
       {/* Footer */}
       <div className="p-5 rounded-xl border border-emerald-500/20 bg-emerald-500/5 text-center">
         <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-emerald-400" />
         <p className="text-emerald-300 font-semibold">✅ Server সেটআপ সম্পন্ন — http://46.225.230.71</p>
-        <p className="text-emerald-200/60 text-sm mt-1">পরবর্তী ধাপ: ডোমেইন connect → SSL (Let's Encrypt) → Admin user তৈরি</p>
+        <p className="text-emerald-200/60 text-sm mt-1">পরবর্তী ধাপ: imoics.com Nameserver পরিবর্তন → Cloudflare → SSL → Admin user তৈরি</p>
       </div>
     </div>
   );
