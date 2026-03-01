@@ -13,11 +13,11 @@ CREATE TABLE IF NOT EXISTS facebook_app_configs (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 ALTER TABLE integrations
-  ADD COLUMN display_name VARCHAR(255) NULL AFTER is_webhook_active,
-  ADD COLUMN meta_json JSON NULL AFTER display_name,
-  ADD COLUMN last_error TEXT NULL AFTER meta_json,
-  ADD COLUMN last_validated_at DATETIME NULL AFTER last_error,
-  ADD COLUMN last_webhook_at DATETIME NULL AFTER last_validated_at;
+  ADD COLUMN IF NOT EXISTS display_name VARCHAR(255) NULL,
+  ADD COLUMN IF NOT EXISTS meta_json JSON NULL,
+  ADD COLUMN IF NOT EXISTS last_error TEXT NULL,
+  ADD COLUMN IF NOT EXISTS last_validated_at DATETIME NULL,
+  ADD COLUMN IF NOT EXISTS last_webhook_at DATETIME NULL;
 
 ALTER TABLE social_conversations
   ADD COLUMN IF NOT EXISTS facebook_page_id VARCHAR(255) NULL,
