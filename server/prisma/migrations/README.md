@@ -70,6 +70,7 @@ SHOW INDEXES FROM conversation_labels;
 
 ## Migration Guidelines (Prevention)
 
+- **Execution order**: Migrations run in **alphabetical order**. If migration B alters a table created by migration A, ensure B's filename sorts after A (e.g. `add_lead_meetings.sql` before `add_lead_meetings_assigned_to.sql`).
 - **Avoid duplicate DDL**: Before adding a new migration that adds a column/index, search existing migrations for the same table/column.
 - **Prefer idempotency**: For `ADD COLUMN` / `ADD INDEX`, use INFORMATION_SCHEMA + PREPARE/EXECUTE when MySQL compatibility is required.
 - **MariaDB-only**: `ADD COLUMN IF NOT EXISTS` works on MariaDB; use it only if the deployment target is known to be MariaDB.
