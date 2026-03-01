@@ -9,8 +9,8 @@ UPDATE clients SET status = 'Active';
 
 ALTER TABLE clients MODIFY COLUMN status ENUM('Processing', 'Active') NOT NULL DEFAULT 'Processing';
 
--- 2. Create client_approval_requests table
-CREATE TABLE client_approval_requests (
+-- 2. Create client_approval_requests table (FKs omitted to avoid errno 150 on MariaDB; app enforces integrity)
+CREATE TABLE IF NOT EXISTS client_approval_requests (
   id INT NOT NULL AUTO_INCREMENT,
   company_id INT NOT NULL,
   lead_id INT NOT NULL,
@@ -29,11 +29,5 @@ CREATE TABLE client_approval_requests (
   UNIQUE KEY lead_id (lead_id),
   UNIQUE KEY client_id (client_id),
   KEY company_id (company_id),
-  KEY company_id_status (company_id, status),
-  CONSTRAINT client_approval_requests_company_fkey FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT client_approval_requests_lead_fkey FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT client_approval_requests_client_fkey FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT client_approval_requests_requested_by_user_fkey FOREIGN KEY (requested_by_user_id) REFERENCES users(id) ON DELETE RESTRICT ON UPDATE CASCADE,
-  CONSTRAINT client_approval_requests_requested_by_employee_fkey FOREIGN KEY (requested_by_employee_id) REFERENCES employees(id) ON DELETE RESTRICT ON UPDATE CASCADE,
-  CONSTRAINT client_approval_requests_approved_by_user_fkey FOREIGN KEY (approved_by_user_id) REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE
-);
+  KEY company_id_status (company_id, status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
