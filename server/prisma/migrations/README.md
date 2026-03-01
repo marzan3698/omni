@@ -68,6 +68,13 @@ SHOW INDEXES FROM conversation_labels;
 3. The migration tracking file `.migrations_applied.json` should be updated after successful migration
 4. After running migrations, regenerate Prisma client: `npx prisma generate`
 
+## Migration Guidelines (Prevention)
+
+- **Avoid duplicate DDL**: Before adding a new migration that adds a column/index, search existing migrations for the same table/column.
+- **Prefer idempotency**: For `ADD COLUMN` / `ADD INDEX`, use INFORMATION_SCHEMA + PREPARE/EXECUTE when MySQL compatibility is required.
+- **MariaDB-only**: `ADD COLUMN IF NOT EXISTS` works on MariaDB; use it only if the deployment target is known to be MariaDB.
+- **Consolidation**: When fixing redundant migrations, prefer making them idempotent over converting to no-ops, so fresh installs and partial runs both work.
+
 ## Fresh Database Setup
 
 When setting up a new database, run all migrations in order:
