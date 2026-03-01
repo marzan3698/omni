@@ -13,8 +13,10 @@ async function main() {
         update: {},
         create: {
             id: 1,
-            name: 'Omni CRM',
-            email: 'admin@omni.com',
+            name: 'imoics',
+            email: 'admin@imoics.com',
+            phone: '',
+            website: 'https://imoics.com',
             isActive: true,
         },
     });
@@ -632,12 +634,12 @@ async function main() {
     // Create Super Admin User
     console.log('👤 Creating super admin user...');
 
-    const superAdminPassword = await bcrypt.hash('superadmin123', 10);
+    const superAdminPassword = await bcrypt.hash('SuperAdmin@imoics2024', 10);
 
     const superAdminUser = await prisma.user.upsert({
         where: {
             email_companyId: {
-                email: 'superadmin@omni.com',
+                email: 'superadmin@imoics.com',
                 companyId: defaultCompany.id,
             },
         },
@@ -645,7 +647,8 @@ async function main() {
             roleId: superAdminRole.id,
         },
         create: {
-            email: 'superadmin@omni.com',
+            name: 'Super Admin',
+            email: 'superadmin@imoics.com',
             passwordHash: superAdminPassword,
             roleId: superAdminRole.id,
             companyId: defaultCompany.id,
@@ -655,18 +658,19 @@ async function main() {
     // Create Admin User
     console.log('👤 Creating admin user...');
 
-    const hashedPassword = await bcrypt.hash('admin123', 10);
+    const hashedPassword = await bcrypt.hash('Admin@imoics2024', 10);
 
     const adminUser = await prisma.user.upsert({
         where: {
             email_companyId: {
-                email: 'admin@omni.com',
+                email: 'admin@imoics.com',
                 companyId: defaultCompany.id,
             },
         },
         update: {},
         create: {
-            email: 'admin@omni.com',
+            name: 'Admin',
+            email: 'admin@imoics.com',
             passwordHash: hashedPassword,
             roleId: adminRole.id,
             companyId: defaultCompany.id,
