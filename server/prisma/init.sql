@@ -79,6 +79,7 @@ CREATE TABLE IF NOT EXISTS clients (
 CREATE TABLE IF NOT EXISTS leads (
   id INT AUTO_INCREMENT PRIMARY KEY,
   title VARCHAR(255) NOT NULL,
+  description TEXT,
   source ENUM('Website', 'Referral', 'SocialMedia', 'Email', 'Phone', 'Other') NOT NULL DEFAULT 'Website',
   status ENUM('New', 'Contacted', 'Qualified', 'Negotiation', 'Won', 'Lost') NOT NULL DEFAULT 'New',
   assigned_to INT,
