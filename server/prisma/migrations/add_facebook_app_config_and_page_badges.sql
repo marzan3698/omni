@@ -20,6 +20,6 @@ ALTER TABLE integrations
   ADD COLUMN last_webhook_at DATETIME NULL AFTER last_validated_at;
 
 ALTER TABLE social_conversations
-  ADD COLUMN facebook_page_id VARCHAR(255) NULL AFTER whatsapp_slot_id,
-  ADD COLUMN facebook_page_name VARCHAR(255) NULL AFTER facebook_page_id,
-  ADD INDEX idx_social_conversations_facebook_page_id (facebook_page_id);
+  ADD COLUMN IF NOT EXISTS facebook_page_id VARCHAR(255) NULL,
+  ADD COLUMN IF NOT EXISTS facebook_page_name VARCHAR(255) NULL,
+  ADD INDEX IF NOT EXISTS idx_social_conversations_facebook_page_id (facebook_page_id);
