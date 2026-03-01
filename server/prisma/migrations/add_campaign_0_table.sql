@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS campaigns (
   INDEX idx_type (type),
   INDEX idx_start_date (start_date),
   INDEX idx_end_date (end_date),
-  INDEX idx_is_active (is_active),
+  INDEX idx_is_active (is_active)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Add campaign_id to leads table
