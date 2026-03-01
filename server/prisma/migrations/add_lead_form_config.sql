@@ -11,6 +11,5 @@ CREATE TABLE IF NOT EXISTS `lead_form_configs` (
   `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE INDEX `slug` (`slug`),
-  INDEX `idx_company_id` (`company_id`),
-  CONSTRAINT `fk_lead_form_configs_company` FOREIGN KEY (`company_id`) REFERENCES `companies`(`id`) ON DELETE CASCADE
+  INDEX `idx_company_id` (`company_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

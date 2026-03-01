@@ -13,11 +13,9 @@ CREATE TABLE IF NOT EXISTS product_categories (
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_company_id (company_id),
-  INDEX idx_name (name),
-  FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE
+  INDEX idx_name (name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Create Product table
 CREATE TABLE IF NOT EXISTS products (
   id INT AUTO_INCREMENT PRIMARY KEY,
   company_id INT NOT NULL,
@@ -35,8 +33,6 @@ CREATE TABLE IF NOT EXISTS products (
   INDEX idx_company_id (company_id),
   INDEX idx_category_id (category_id),
   INDEX idx_name (name),
-  INDEX idx_currency (currency),
-  FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE,
-  FOREIGN KEY (category_id) REFERENCES product_categories(id) ON DELETE RESTRICT
+  INDEX idx_currency (currency)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

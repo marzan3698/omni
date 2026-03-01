@@ -12,7 +12,5 @@ CREATE TABLE IF NOT EXISTS `integration_webhook_logs` (
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   INDEX `idx_integration_id` (`integration_id`),
-  INDEX `idx_created_at` (`created_at`),
-  CONSTRAINT `fk_integration_webhook_logs_integration` 
-    FOREIGN KEY (`integration_id`) REFERENCES `integrations`(`id`) ON DELETE CASCADE
+  INDEX `idx_created_at` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

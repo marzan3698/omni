@@ -1,6 +1,6 @@
 -- Facebook v2: per-company app config, integration display/diagnostics, conversation page badges
 
-CREATE TABLE facebook_app_configs (
+CREATE TABLE IF NOT EXISTS facebook_app_configs (
   id INT AUTO_INCREMENT PRIMARY KEY,
   company_id INT NOT NULL UNIQUE,
   app_id VARCHAR(100) NOT NULL,
@@ -9,9 +9,8 @@ CREATE TABLE facebook_app_configs (
   redirect_uri_override VARCHAR(500) NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  INDEX idx_facebook_app_configs_company_id (company_id),
-  FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE
-);
+  INDEX idx_facebook_app_configs_company_id (company_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 ALTER TABLE integrations
   ADD COLUMN display_name VARCHAR(255) NULL AFTER is_webhook_active,

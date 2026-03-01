@@ -17,9 +17,7 @@ CREATE TABLE IF NOT EXISTS `lead_imports` (
   `error_details` JSON NULL,
   PRIMARY KEY (`id`),
   INDEX `idx_company_id` (`company_id`),
-  INDEX `idx_uploaded_by` (`uploaded_by`),
-  CONSTRAINT `fk_lead_imports_company` FOREIGN KEY (`company_id`) REFERENCES `companies`(`id`) ON DELETE CASCADE,
-  CONSTRAINT `fk_lead_imports_user` FOREIGN KEY (`uploaded_by`) REFERENCES `users`(`id`) ON DELETE CASCADE
+  INDEX `idx_uploaded_by` (`uploaded_by`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Step 3: Add lead_import_id to leads table with index
@@ -27,6 +25,4 @@ ALTER TABLE `leads`
 ADD COLUMN `lead_import_id` INT NULL,
 ADD INDEX `idx_lead_import_id` (`lead_import_id`);
 
--- Step 4: Add foreign key
-ALTER TABLE `leads`
-ADD CONSTRAINT `fk_leads_lead_import` FOREIGN KEY (`lead_import_id`) REFERENCES `lead_imports`(`id`) ON DELETE SET NULL;
+-- Step 4: FK omitted (errno 150 on MariaDB)

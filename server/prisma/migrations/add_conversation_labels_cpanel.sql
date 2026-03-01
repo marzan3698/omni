@@ -17,9 +17,7 @@ CREATE TABLE IF NOT EXISTS `conversation_labels` (
   `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX `idx_conversation_id` (`conversation_id`),
   INDEX `idx_company_id` (`company_id`),
-  INDEX `idx_name` (`name`),
-  FOREIGN KEY (`conversation_id`) REFERENCES `social_conversations`(`id`) ON DELETE CASCADE,
-  FOREIGN KEY (`company_id`) REFERENCES `companies`(`id`) ON DELETE CASCADE
+  INDEX `idx_name` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Verification query (run after migration)

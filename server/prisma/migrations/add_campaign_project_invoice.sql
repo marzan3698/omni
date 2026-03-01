@@ -20,8 +20,7 @@ WHERE c.project_id IS NULL;
 -- Now make project_id required and add foreign key
 ALTER TABLE campaigns
 MODIFY COLUMN project_id INT NOT NULL,
-ADD INDEX idx_project_id (project_id),
-ADD FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE;
+ADD INDEX idx_project_id (project_id);
 
 -- Step 2: Remove employee assignment tables (campaign_employees, campaign_groups)
 -- Note: Drop foreign keys first, then tables
@@ -34,8 +33,6 @@ CREATE TABLE IF NOT EXISTS campaign_invoices (
   campaign_id INT NOT NULL,
   invoice_id INT NOT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
-  FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE,
   UNIQUE KEY unique_campaign_invoice (campaign_id, invoice_id),
   INDEX idx_campaign_id (campaign_id),
   INDEX idx_invoice_id (invoice_id)

@@ -4,6 +4,5 @@
 USE omni_db;
 
 ALTER TABLE invoice_items
-ADD COLUMN service_id INT NULL AFTER product_id,
-ADD INDEX idx_service_id (service_id),
-ADD FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE SET NULL;
+ADD COLUMN IF NOT EXISTS service_id INT NULL AFTER product_id,
+ADD INDEX IF NOT EXISTS idx_service_id (service_id);

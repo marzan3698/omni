@@ -9,10 +9,7 @@ CREATE TABLE IF NOT EXISTS `conversation_releases` (
   INDEX `idx_conversation_id` (`conversation_id`),
   INDEX `idx_employee_id` (`employee_id`),
   INDEX `idx_company_id` (`company_id`),
-  INDEX `idx_released_at` (`released_at`),
-  FOREIGN KEY (`conversation_id`) REFERENCES `social_conversations`(`id`) ON DELETE CASCADE,
-  FOREIGN KEY (`employee_id`) REFERENCES `employees`(`id`) ON DELETE CASCADE,
-  FOREIGN KEY (`company_id`) REFERENCES `companies`(`id`) ON DELETE CASCADE
+  INDEX `idx_released_at` (`released_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 

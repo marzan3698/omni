@@ -12,8 +12,7 @@ CREATE TABLE IF NOT EXISTS `lead_priorities` (
   `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   INDEX `idx_company_id` (`company_id`),
-  INDEX `idx_is_active` (`is_active`),
-  CONSTRAINT `fk_lead_priorities_company` FOREIGN KEY (`company_id`) REFERENCES `companies`(`id`) ON DELETE CASCADE
+  INDEX `idx_is_active` (`is_active`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS `lead_labels` (
@@ -26,8 +25,7 @@ CREATE TABLE IF NOT EXISTS `lead_labels` (
   `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   INDEX `idx_company_id` (`company_id`),
-  INDEX `idx_is_active` (`is_active`),
-  CONSTRAINT `fk_lead_labels_company` FOREIGN KEY (`company_id`) REFERENCES `companies`(`id`) ON DELETE CASCADE
+  INDEX `idx_is_active` (`is_active`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS `lead_statuses` (
@@ -43,8 +41,7 @@ CREATE TABLE IF NOT EXISTS `lead_statuses` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `unique_company_code` (`company_id`, `code`),
   INDEX `idx_company_id` (`company_id`),
-  INDEX `idx_is_system` (`is_system`),
-  CONSTRAINT `fk_lead_statuses_company` FOREIGN KEY (`company_id`) REFERENCES `companies`(`id`) ON DELETE CASCADE
+  INDEX `idx_is_system` (`is_system`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 INSERT INTO `lead_statuses` (`company_id`, `name`, `code`, `sort_order`, `is_system`, `is_active`, `created_at`, `updated_at`)
@@ -79,7 +76,5 @@ CREATE TABLE IF NOT EXISTS `lead_label_assignments` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `unique_lead_label` (`lead_id`, `label_id`),
   INDEX `idx_lead_id` (`lead_id`),
-  INDEX `idx_label_id` (`label_id`),
-  CONSTRAINT `fk_lead_label_assignments_lead` FOREIGN KEY (`lead_id`) REFERENCES `leads`(`id`) ON DELETE CASCADE,
-  CONSTRAINT `fk_lead_label_assignments_label` FOREIGN KEY (`label_id`) REFERENCES `lead_labels`(`id`) ON DELETE CASCADE
+  INDEX `idx_label_id` (`label_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

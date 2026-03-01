@@ -8,10 +8,8 @@ CREATE TABLE IF NOT EXISTS lead_assignments (
   assigned_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   UNIQUE KEY lead_assignments_lead_id_employee_id_key (lead_id, employee_id),
   INDEX lead_assignments_lead_id_idx (lead_id),
-  INDEX lead_assignments_employee_id_idx (employee_id),
-  CONSTRAINT lead_assignments_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT lead_assignments_employee_id_fkey FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE ON UPDATE CASCADE
-);
+  INDEX lead_assignments_employee_id_idx (employee_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 2. Migrate existing assigned_to data
 INSERT IGNORE INTO lead_assignments (lead_id, employee_id)

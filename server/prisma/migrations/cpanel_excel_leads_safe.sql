@@ -18,7 +18,5 @@ CREATE TABLE IF NOT EXISTS `lead_imports` (
   `error_details` JSON NULL,
   PRIMARY KEY (`id`),
   INDEX `idx_company_id` (`company_id`),
-  INDEX `idx_uploaded_by` (`uploaded_by`),
-  CONSTRAINT `fk_lead_imports_company` FOREIGN KEY (`company_id`) REFERENCES `companies`(`id`) ON DELETE CASCADE,
-  CONSTRAINT `fk_lead_imports_user` FOREIGN KEY (`uploaded_by`) REFERENCES `users`(`id`) ON DELETE CASCADE
+  INDEX `idx_uploaded_by` (`uploaded_by`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

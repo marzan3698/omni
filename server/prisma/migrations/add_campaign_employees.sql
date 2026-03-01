@@ -8,8 +8,6 @@ CREATE TABLE IF NOT EXISTS campaign_employees (
   campaign_id INT NOT NULL,
   employee_id INT NOT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
-  FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE,
   UNIQUE KEY unique_campaign_employee (campaign_id, employee_id),
   INDEX idx_campaign_id (campaign_id),
   INDEX idx_employee_id (employee_id)

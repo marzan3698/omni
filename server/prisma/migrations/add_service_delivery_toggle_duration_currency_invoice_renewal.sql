@@ -6,5 +6,4 @@ ALTER TABLE services MODIFY COLUMN delivery_start_date DATE NULL;
 ALTER TABLE services MODIFY COLUMN delivery_end_date DATE NULL;
 
 -- Invoice: Add renewedFromId for renewal tracking
-ALTER TABLE invoices ADD COLUMN renewed_from_id INT NULL;
-ALTER TABLE invoices ADD CONSTRAINT fk_invoices_renewed_from FOREIGN KEY (renewed_from_id) REFERENCES invoices(id) ON DELETE SET NULL;
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS renewed_from_id INT NULL;

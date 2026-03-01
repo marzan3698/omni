@@ -9,10 +9,5 @@ ADD COLUMN `profit` DECIMAL(12, 2) NULL AFTER `sale_price`;
 ALTER TABLE `leads`
 ADD INDEX `idx_product_id` (`product_id`);
 
--- Add foreign key constraint for product_id
-ALTER TABLE `leads`
-ADD CONSTRAINT `fk_leads_product` 
-FOREIGN KEY (`product_id`) 
-REFERENCES `products`(`id`) 
-ON DELETE SET NULL;
+-- FK omitted (errno 150 on MariaDB)
 

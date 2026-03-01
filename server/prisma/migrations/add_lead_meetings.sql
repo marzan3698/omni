@@ -20,8 +20,5 @@ CREATE TABLE IF NOT EXISTS `lead_meetings` (
   INDEX `idx_lead_id` (`lead_id`),
   INDEX `idx_client_id` (`client_id`),
   INDEX `idx_status` (`status`),
-  INDEX `idx_meeting_time` (`meeting_time`),
-  FOREIGN KEY (`company_id`) REFERENCES `companies`(`id`) ON DELETE CASCADE,
-  FOREIGN KEY (`lead_id`) REFERENCES `leads`(`id`) ON DELETE CASCADE,
-  FOREIGN KEY (`client_id`) REFERENCES `clients`(`id`) ON DELETE SET NULL
+  INDEX `idx_meeting_time` (`meeting_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

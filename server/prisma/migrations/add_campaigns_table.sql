@@ -19,12 +19,10 @@ CREATE TABLE IF NOT EXISTS campaigns (
   INDEX idx_start_date (start_date),
   INDEX idx_end_date (end_date),
   INDEX idx_is_active (is_active),
-  FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Add campaign_id to leads table (all in one ALTER so column exists before index/FK)
+-- Add campaign_id to leads table
 ALTER TABLE leads
-  ADD COLUMN campaign_id INT NULL,
-  ADD INDEX idx_campaign_id (campaign_id),
-  ADD CONSTRAINT fk_lead_campaign FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE SET NULL;
+  ADD COLUMN IF NOT EXISTS campaign_id INT NULL,
+  ADD INDEX IF NOT EXISTS idx_campaign_id (campaign_id);
 

@@ -16,8 +16,7 @@ CREATE TABLE IF NOT EXISTS projects (
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_client_id (client_id),
-  INDEX idx_status (status),
-  FOREIGN KEY (client_id) REFERENCES users(id) ON DELETE CASCADE
+  INDEX idx_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Add title column if it doesn't exist (for existing tables)
@@ -31,8 +30,6 @@ CREATE TABLE IF NOT EXISTS campaign_clients (
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY unique_campaign_client (campaign_id, client_id),
   INDEX idx_campaign_id (campaign_id),
-  INDEX idx_client_id (client_id),
-  FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
-  FOREIGN KEY (client_id) REFERENCES users(id) ON DELETE CASCADE
+  INDEX idx_client_id (client_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

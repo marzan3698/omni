@@ -7,10 +7,5 @@ ADD COLUMN `assigned_at` DATETIME NULL;
 ALTER TABLE `social_conversations`
 ADD INDEX `idx_assigned_to` (`assigned_to`);
 
--- Add foreign key constraint
-ALTER TABLE `social_conversations`
-ADD CONSTRAINT `fk_social_conversations_assigned_to` 
-FOREIGN KEY (`assigned_to`) 
-REFERENCES `employees`(`id`) 
-ON DELETE SET NULL;
+-- FK omitted (errno 150 on MariaDB)
 

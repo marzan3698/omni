@@ -24,11 +24,7 @@ CREATE TABLE IF NOT EXISTS `lead_calls` (
   INDEX `idx_client_id` (`client_id`),
   INDEX `idx_assigned_to` (`assigned_to`),
   INDEX `idx_status` (`status`),
-  INDEX `idx_call_time` (`call_time`),
-  FOREIGN KEY (`company_id`) REFERENCES `companies`(`id`) ON DELETE CASCADE,
-  FOREIGN KEY (`lead_id`) REFERENCES `leads`(`id`) ON DELETE CASCADE,
-  FOREIGN KEY (`client_id`) REFERENCES `clients`(`id`) ON DELETE SET NULL,
-  FOREIGN KEY (`assigned_to`) REFERENCES `employees`(`id`) ON DELETE RESTRICT
+  INDEX `idx_call_time` (`call_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Drop temporary table

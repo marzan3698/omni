@@ -1,8 +1,7 @@
 -- Add company_id column to social_conversations table
 ALTER TABLE social_conversations
   ADD COLUMN IF NOT EXISTS company_id INT NOT NULL DEFAULT 1 AFTER id,
-  ADD INDEX IF NOT EXISTS idx_company_id (company_id),
-  ADD CONSTRAINT fk_social_conversations_company FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE;
+  ADD INDEX IF NOT EXISTS idx_company_id (company_id);
 
 -- Update existing records to use companyId from integrations
 -- For Chatwoot conversations, try to find matching integration

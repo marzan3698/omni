@@ -12,8 +12,6 @@ CREATE TABLE IF NOT EXISTS employee_groups (
   created_by_id VARCHAR(36) NOT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE,
-  FOREIGN KEY (created_by_id) REFERENCES users(id) ON DELETE RESTRICT,
   INDEX idx_company_id (company_id),
   INDEX idx_created_by_id (created_by_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -24,8 +22,6 @@ CREATE TABLE IF NOT EXISTS employee_group_members (
   group_id INT NOT NULL,
   employee_id INT NOT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (group_id) REFERENCES employee_groups(id) ON DELETE CASCADE,
-  FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE,
   UNIQUE KEY unique_group_employee (group_id, employee_id),
   INDEX idx_group_id (group_id),
   INDEX idx_employee_id (employee_id)
@@ -37,8 +33,6 @@ CREATE TABLE IF NOT EXISTS campaign_groups (
   campaign_id INT NOT NULL,
   group_id INT NOT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
-  FOREIGN KEY (group_id) REFERENCES employee_groups(id) ON DELETE CASCADE,
   UNIQUE KEY unique_campaign_group (campaign_id, group_id),
   INDEX idx_campaign_id (campaign_id),
   INDEX idx_group_id (group_id)

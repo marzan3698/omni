@@ -24,10 +24,7 @@ CREATE TABLE IF NOT EXISTS `sub_tasks` (
   INDEX `idx_task_id` (`task_id`),
   INDEX `idx_company_id` (`company_id`),
   INDEX `idx_status` (`status`),
-  INDEX `idx_order` (`order`),
-  
-  FOREIGN KEY (`task_id`) REFERENCES `tasks`(`id`) ON DELETE CASCADE,
-  FOREIGN KEY (`company_id`) REFERENCES `companies`(`id`) ON DELETE CASCADE
+  INDEX `idx_order` (`order`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Step 3: Create task_attachments table
@@ -54,15 +51,7 @@ CREATE TABLE IF NOT EXISTS `task_attachments` (
   INDEX `idx_sub_task_id` (`sub_task_id`),
   INDEX `idx_company_id` (`company_id`),
   INDEX `idx_file_type` (`file_type`),
-  INDEX `idx_created_by` (`created_by`),
-  
-  FOREIGN KEY (`task_id`) REFERENCES `tasks`(`id`) ON DELETE CASCADE,
-  FOREIGN KEY (`sub_task_id`) REFERENCES `sub_tasks`(`id`) ON DELETE CASCADE,
-  FOREIGN KEY (`company_id`) REFERENCES `companies`(`id`) ON DELETE CASCADE,
-  FOREIGN KEY (`created_by`) REFERENCES `users`(`id`) ON DELETE CASCADE,
-  
-  -- Ensure attachment belongs to either task or sub_task, not both
-  CHECK ((`task_id` IS NULL) != (`sub_task_id` IS NULL))
+  INDEX `idx_created_by` (`created_by`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Step 4: Create task_conversations table
@@ -74,10 +63,7 @@ CREATE TABLE IF NOT EXISTS `task_conversations` (
   `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   
   INDEX `idx_task_id` (`task_id`),
-  INDEX `idx_company_id` (`company_id`),
-  
-  FOREIGN KEY (`task_id`) REFERENCES `tasks`(`id`) ON DELETE CASCADE,
-  FOREIGN KEY (`company_id`) REFERENCES `companies`(`id`) ON DELETE CASCADE
+  INDEX `idx_company_id` (`company_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Step 5: Create task_messages table
@@ -97,27 +83,8 @@ CREATE TABLE IF NOT EXISTS `task_messages` (
   INDEX `idx_sender_id` (`sender_id`),
   INDEX `idx_attachment_id` (`attachment_id`),
   INDEX `idx_is_read` (`is_read`),
-  INDEX `idx_created_at` (`created_at`),
-  
-  FOREIGN KEY (`conversation_id`) REFERENCES `task_conversations`(`id`) ON DELETE CASCADE,
-  FOREIGN KEY (`sender_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
-  FOREIGN KEY (`attachment_id`) REFERENCES `task_attachments`(`id`) ON DELETE SET NULL
+  INDEX `idx_created_at` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Step 6: Add foreign key for conversation_id in tasks table (after task_conversations is created)
-ALTER TABLE `tasks`
-ADD CONSTRAINT `fk_task_conversation` 
-  FOREIGN KEY (`conversation_id`) REFERENCES `task_conversations`(`id`) ON DELETE SET NULL;
-
--- Step 7: Update existing tasks to have progress = 0
+-- Step 6: Update existing tasks to have progress = 0
 UPDATE `tasks` SET `progress` = 0.00 WHERE `progress` IS NULL;
-
--- Verify migration
-SELECT 
-  (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'sub_tasks') as sub_tasks_exists,
-  (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'task_attachments') as task_attachments_exists,
-  (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'task_conversations') as task_conversations_exists,
-  (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'task_messages') as task_messages_exists,
-  (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'tasks' AND column_name = 'progress') as progress_column_exists,
-  (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'tasks' AND column_name = 'conversation_id') as conversation_id_column_exists;
-

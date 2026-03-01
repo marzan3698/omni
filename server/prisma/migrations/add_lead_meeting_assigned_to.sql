@@ -19,8 +19,4 @@ UPDATE lead_meetings SET assigned_to = (SELECT id FROM employees LIMIT 1) WHERE 
 -- 4. Make NOT NULL and add FK (skip if no employees exist - leave NULL for that edge case)
 ALTER TABLE lead_meetings MODIFY COLUMN assigned_to INT NOT NULL;
 
-ALTER TABLE lead_meetings
-  ADD CONSTRAINT lead_meetings_assigned_to_fkey
-  FOREIGN KEY (assigned_to) REFERENCES employees(id) ON DELETE RESTRICT ON UPDATE CASCADE;
-
-CREATE INDEX lead_meetings_assigned_to_idx ON lead_meetings(assigned_to);
+CREATE INDEX IF NOT EXISTS lead_meetings_assigned_to_idx ON lead_meetings(assigned_to);

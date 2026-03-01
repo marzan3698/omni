@@ -22,7 +22,5 @@ CREATE TABLE IF NOT EXISTS `lead_label_assignments` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `unique_lead_label` (`lead_id`, `label_id`),
   INDEX `idx_lead_id` (`lead_id`),
-  INDEX `idx_label_id` (`label_id`),
-  CONSTRAINT `fk_lead_label_assignments_lead` FOREIGN KEY (`lead_id`) REFERENCES `leads`(`id`) ON DELETE CASCADE,
-  CONSTRAINT `fk_lead_label_assignments_label` FOREIGN KEY (`label_id`) REFERENCES `lead_labels`(`id`) ON DELETE CASCADE
+  INDEX `idx_label_id` (`label_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
