@@ -122,11 +122,16 @@ async function applyMigration(migrationFile) {
       multipleStatements: true,
     });
 
-    // Split SQL by semicolons and execute each statement
-    const statements = sql
+    // Strip whole-line comments (; inside comments would break naive split)
+    const sqlNoLineComments = sql
+      .split('\n')
+      .map((line) => (line.trimStart().startsWith('--') ? '' : line))
+      .join('\n');
+    // Split by semicolons and execute each statement
+    const statements = sqlNoLineComments
       .split(';')
-      .map(s => s.trim())
-      .filter(s => s.length > 0 && !s.startsWith('--'));
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
     
     for (const statement of statements) {
       if (statement.trim()) {
