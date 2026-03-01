@@ -1,28 +1,8 @@
 -- Add company_id column to social_conversations table
--- This migration adds company_id to support multi-tenancy
-
--- Check if company_id column already exists, if not add it
-SET @column_exists = (
-  SELECT COUNT(*) 
-  FROM INFORMATION_SCHEMA.COLUMNS 
-  WHERE TABLE_SCHEMA = DATABASE()
-    AND TABLE_NAME = 'social_conversations'
-    AND COLUMN_NAME = 'company_id'
-);
-
--- Add company_id column if it doesn't exist
-SET @sql = IF(@column_exists = 0,
-  'ALTER TABLE social_conversations 
-   ADD COLUMN company_id INT NOT NULL DEFAULT 1 AFTER id,
-   ADD INDEX idx_company_id (company_id),
-   ADD CONSTRAINT fk_social_conversations_company 
-   FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE',
-  'SELECT "Column company_id already exists" AS message'
-);
-
-PREPARE stmt FROM @sql;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
+ALTER TABLE social_conversations
+  ADD COLUMN IF NOT EXISTS company_id INT NOT NULL DEFAULT 1 AFTER id,
+  ADD INDEX IF NOT EXISTS idx_company_id (company_id),
+  ADD CONSTRAINT fk_social_conversations_company FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE;
 
 -- Update existing records to use companyId from integrations
 -- For Chatwoot conversations, try to find matching integration

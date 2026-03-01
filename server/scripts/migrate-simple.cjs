@@ -122,6 +122,9 @@ async function applyMigration(migrationFile) {
       multipleStatements: true,
     });
 
+    // Disable FK checks during migration to avoid errno 150 on MariaDB (charset/order issues)
+    await connection.query('SET FOREIGN_KEY_CHECKS=0');
+
     // Strip whole-line comments (; inside comments would break naive split)
     const sqlNoLineComments = sql
       .split('\n')
@@ -132,12 +135,14 @@ async function applyMigration(migrationFile) {
       .split(';')
       .map((s) => s.trim())
       .filter((s) => s.length > 0);
-    
+
     for (const statement of statements) {
       if (statement.trim()) {
         await connection.query(statement);
       }
     }
+
+    await connection.query('SET FOREIGN_KEY_CHECKS=1');
 
     console.log(`✅ Migration applied successfully: ${migrationFile}`);
     markMigrationAsApplied(migrationFile);
