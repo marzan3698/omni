@@ -1,29 +1,19 @@
--- Migration: Add projectId to campaigns, remove employee/group relations, add campaign_invoices table
--- This connects campaigns to projects and their associated invoices
+-- Migration: Add projectId to campaigns, add campaign_invoices table
 
 USE omni_db;
 
--- Step 1: Add project_id column to campaigns (nullable first, then we'll make it required)
+-- Step 1: Add project_id column to campaigns (nullable - no data to migrate on fresh install)
 ALTER TABLE campaigns 
-ADD COLUMN project_id INT NULL AFTER company_id;
+ADD COLUMN IF NOT EXISTS project_id INT NULL AFTER company_id;
 
--- For existing campaigns, assign them to the first available project (if exists)
--- Update this based on your actual data requirements
-UPDATE campaigns c
-SET c.project_id = (
-  SELECT p.id FROM projects p 
-  WHERE p.company_id = c.company_id 
-  LIMIT 1
-)
-WHERE c.project_id IS NULL;
-
--- Now make project_id required and add foreign key
 ALTER TABLE campaigns
-MODIFY COLUMN project_id INT NOT NULL,
-ADD INDEX idx_project_id (project_id);
+ADD INDEX IF NOT EXISTS idx_project_id (project_id);
 
--- Step 2: Remove employee assignment tables (campaign_employees, campaign_groups)
--- Note: Drop foreign keys first, then tables
+-- NOTE: The UPDATE to populate project_id from projects is skipped because:
+-- 1. On a fresh install there are no campaigns to update
+-- 2. projects.company_id column doesn't exist yet at this point (added in add_z_projects_status_enum.sql)
+
+-- Step 2: Remove employee assignment tables (already run by add_campaign_employees / add_campaign_groups)
 DROP TABLE IF EXISTS campaign_employees;
 DROP TABLE IF EXISTS campaign_groups;
 
@@ -38,6 +28,4 @@ CREATE TABLE IF NOT EXISTS campaign_invoices (
   INDEX idx_invoice_id (invoice_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Note: You may need to populate existing campaigns with a default project_id
--- Or handle this manually for existing data
 
