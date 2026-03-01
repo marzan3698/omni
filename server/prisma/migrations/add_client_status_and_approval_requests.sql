@@ -1,13 +1,8 @@
 -- Add Client.status (Processing/Active) and ClientApprovalRequest table for pending client approval flow
 
--- 1. Add status to clients (default Processing; existing clients become Active)
-ALTER TABLE clients
-  ADD COLUMN status ENUM('Processing', 'Active') NOT NULL DEFAULT 'Processing';
-
--- All existing clients were created before this feature; treat as Active
+-- 1. Add status to clients
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS status ENUM('Processing', 'Active') NOT NULL DEFAULT 'Processing';
 UPDATE clients SET status = 'Active';
-
-ALTER TABLE clients MODIFY COLUMN status ENUM('Processing', 'Active') NOT NULL DEFAULT 'Processing';
 
 -- 2. Create client_approval_requests table (FKs omitted to avoid errno 150 on MariaDB; app enforces integrity)
 CREATE TABLE IF NOT EXISTS client_approval_requests (
