@@ -23,7 +23,7 @@ if (DATABASE_URL && DATABASE_URL.startsWith('mysql://')) {
   DB_USER = url.username;
   DB_PASSWORD = url.password;
   DB_HOST = url.hostname;
-  DB_NAME = url.pathname.substring(1); // Remove leading /
+  DB_NAME = (url.pathname || '').replace(/^\//, '').split('?')[0] || 'omni_db';
 } else {
   DB_HOST = process.env.DB_HOST || DB_HOST;
   DB_USER = process.env.DB_USER || DB_USER;
@@ -33,6 +33,7 @@ if (DATABASE_URL && DATABASE_URL.startsWith('mysql://')) {
 
 const MIGRATIONS_DIR = path.join(__dirname, '../prisma/migrations');
 const MIGRATION_TRACKER_FILE = path.join(__dirname, '../prisma/migrations/.migrations_applied.json');
+const INIT_SQL_PATH = path.join(__dirname, '../prisma/init.sql');
 
 function getAppliedMigrations() {
   if (!fs.existsSync(MIGRATION_TRACKER_FILE)) {
@@ -61,6 +62,42 @@ function getMigrationFiles() {
   return fs.readdirSync(MIGRATIONS_DIR)
     .filter(file => file.endsWith('.sql'))
     .sort();
+}
+
+/**
+ * Run init.sql if base tables (users) don't exist.
+ * Required because migrations depend on users, roles, etc. from init.sql.
+ */
+async function ensureInit() {
+  let connection;
+  try {
+    connection = await mysql.createConnection({
+      host: DB_HOST,
+      user: DB_USER,
+      password: DB_PASSWORD,
+      database: DB_NAME,
+      multipleStatements: true,
+    });
+
+    const [rows] = await connection.query(
+      "SELECT 1 AS ok FROM information_schema.tables WHERE table_schema = ? AND table_name = 'users'",
+      [DB_NAME]
+    );
+    if (rows && rows.length > 0) {
+      return; // users exists, init already done
+    }
+
+    if (!fs.existsSync(INIT_SQL_PATH)) {
+      console.error('❌ init.sql not found. Migrations require base tables from init.sql.');
+      process.exit(1);
+    }
+    console.log('📦 Base tables missing. Running init.sql...');
+    const initSql = fs.readFileSync(INIT_SQL_PATH, 'utf8');
+    await connection.query(initSql);
+    console.log('✅ init.sql applied successfully.\n');
+  } finally {
+    if (connection) await connection.end();
+  }
 }
 
 async function applyMigration(migrationFile) {
@@ -114,6 +151,8 @@ async function main() {
   const force = args.includes('--force');
 
   try {
+    await ensureInit();
+
     if (args.length > 0 && !args[0].startsWith('--')) {
       // Apply specific migration file
       const migrationFile = args[0];
