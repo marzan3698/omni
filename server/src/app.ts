@@ -27,7 +27,6 @@ const getAllowedOrigins = (): string[] => {
   ];
 };
 
-
 /** Set CORS headers on response - use in all paths so errors also return CORS */
 function setCorsHeaders(req: Request, res: Response): void {
   const origin = req.headers.origin;
