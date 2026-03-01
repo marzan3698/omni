@@ -1,4 +1,4 @@
--- Add Services table and update Projects/Invoices tables
+-- Add Services table and update Invoices table
 USE omni_db;
 
 -- Create Services table
@@ -18,17 +18,7 @@ CREATE TABLE IF NOT EXISTS services (
   INDEX idx_is_active (is_active)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Add service_id and company_id to projects table
-ALTER TABLE projects 
-  ADD COLUMN IF NOT EXISTS company_id INT AFTER id,
-  ADD COLUMN IF NOT EXISTS service_id INT AFTER company_id,
-  ADD COLUMN IF NOT EXISTS delivery_start_date DATE AFTER budget,
-  ADD COLUMN IF NOT EXISTS delivery_end_date DATE AFTER delivery_start_date;
-
--- Add indexes for projects
-ALTER TABLE projects
-  ADD INDEX IF NOT EXISTS idx_company_id (company_id),
-  ADD INDEX IF NOT EXISTS idx_service_id (service_id);
+-- NOTE: ALTER TABLE projects is done in add_z_projects_status_enum.sql (after projects table is created)
 
 -- Add project_id to invoices table
 ALTER TABLE invoices
@@ -37,4 +27,5 @@ ALTER TABLE invoices
 -- Add index for invoices
 ALTER TABLE invoices
   ADD INDEX IF NOT EXISTS idx_project_id (project_id);
+
 
