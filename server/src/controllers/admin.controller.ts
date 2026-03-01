@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { adminService } from '../services/admin.service.js';
 import { getLiveUsers, getLiveUserDetail } from '../services/liveUsers.service.js';
+import { getWebhookLog } from '../services/integrationWebhookLog.service.js';
 import { sendSuccess, sendError } from '../utils/response.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { AuthRequest } from '../types/index.js';
@@ -317,6 +318,30 @@ export const adminController = {
         return sendError(res, error.message, error.statusCode);
       }
       return sendError(res, 'Failed to retrieve project details', 500);
+    }
+  },
+
+  /**
+   * Get integration webhook log (SuperAdmin)
+   * GET /api/admin/integration-webhook-log?limit=50&integrationId=optional
+   */
+  getIntegrationWebhookLog: async (req: AuthRequest, res: Response) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return sendError(res, 'Company ID is required', 400);
+      }
+      const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 50;
+      const integrationId = req.query.integrationId
+        ? parseInt(req.query.integrationId as string, 10)
+        : undefined;
+      const result = await getWebhookLog(companyId, { limit, integrationId });
+      return sendSuccess(res, result, 'Webhook log retrieved successfully');
+    } catch (error) {
+      if (error instanceof AppError) {
+        return sendError(res, error.message, error.statusCode);
+      }
+      return sendError(res, 'Failed to retrieve webhook log', 500);
     }
   },
 };

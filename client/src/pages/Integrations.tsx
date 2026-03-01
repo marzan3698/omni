@@ -232,6 +232,19 @@ export default function Integrations() {
                 <p className="text-sm text-amber-200/80 mb-4">
                   একাধিক Facebook Page কানেক্ট করুন - সব মেসেজ ইনবক্সে জমা হবে
                 </p>
+                <details className="mb-4 p-3 rounded-lg bg-slate-800/40 border border-amber-500/20">
+                  <summary className="cursor-pointer text-sm font-medium text-amber-200 hover:text-amber-100">
+                    কীভাবে মেসেজ রিসিভ করবেন?
+                  </summary>
+                  <ul className="mt-2 text-xs text-amber-200/80 space-y-1 list-disc list-inside">
+                    <li>Webhook verify করুন এবং Page-কে webhook-এ subscribe করুন (messages field)</li>
+                    <li>মেসেজ শুধুমাত্র <strong>গ্রাহকদের</strong> থেকে আসবে — Page admin/owner এর মেসেজ webhook-এ যাবে না</li>
+                    <li>Dashboard এ Live Messages card দিয়ে রিয়েল-টাইম মেসেজ মনিটর করুন</li>
+                  </ul>
+                  <p className="mt-2 text-xs text-slate-400">
+                    বিস্তারিত: docs/WHY_MESSAGES_NOT_COMING.md ও docs/WEBHOOK_DEBUGGING.md
+                  </p>
+                </details>
                 {!hasFacebookConfig && (
                   <div className="mb-4 p-3 rounded-lg bg-amber-500/20 border border-amber-500/40 text-sm text-amber-200">
                     <p className="font-medium">কনফিগ প্রয়োজন</p>

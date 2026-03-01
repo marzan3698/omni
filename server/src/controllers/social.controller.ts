@@ -9,6 +9,7 @@ import { sendSuccess, sendError } from '../utils/response.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { prisma } from '../lib/prisma.js';
 import { getChatwootConfig, sendReplyToChatwoot } from '../services/chatwoot.service.js';
+import { logWebhookEvent } from '../services/integrationWebhookLog.service.js';
 
 export const socialController = {
   /**
@@ -50,6 +51,7 @@ export const socialController = {
    * Receives messages from Facebook
    */
   handleFacebookWebhook: async (req: Request, res: Response, next: NextFunction) => {
+    let payload: any = null;
     try {
       const timestamp = new Date().toISOString();
       console.log(`\n${'='.repeat(60)}`);
@@ -65,7 +67,6 @@ export const socialController = {
 
       // Process the webhook payload asynchronously
       // If body is raw buffer, parse it as JSON
-      let payload;
       if (Buffer.isBuffer(req.body)) {
         const bodyString = req.body.toString();
         console.log('Raw body length:', bodyString.length);
@@ -95,7 +96,40 @@ export const socialController = {
         });
       }
 
+      // Resolve Facebook integrations from payload for webhook logging
+      const pageIds: string[] = [];
+      if (payload.entry && Array.isArray(payload.entry)) {
+        for (const entry of payload.entry) {
+          if (entry.id) pageIds.push(String(entry.id));
+        }
+      }
+      if (payload.field === 'messages' && payload.value) {
+        // Test webhook - use default Facebook integration's pageId
+        const def = await prisma.integration.findFirst({
+          where: { provider: 'facebook', isActive: true },
+          select: { pageId: true },
+        });
+        if (def) pageIds.push(def.pageId);
+      }
+      const integrations = pageIds.length > 0
+        ? await prisma.integration.findMany({
+            where: { provider: 'facebook', pageId: { in: pageIds } },
+            select: { id: true },
+          })
+        : [];
+
       await socialService.processFacebookMessage(payload);
+
+      // Log success for each integration
+      const payloadSnippet = JSON.stringify(payload).substring(0, 500);
+      for (const int of integrations) {
+        await logWebhookEvent({
+          integrationId: int.id,
+          success: true,
+          payloadSnippet,
+          source: 'facebook',
+        });
+      }
 
       console.log('✅ === Webhook Processing Complete ===');
       console.log(`${'='.repeat(60)}\n`);
@@ -111,6 +145,48 @@ export const socialController = {
       } else {
         console.error('Stack:', (error as Error).stack);
       }
+
+      // Log failure to IntegrationWebhookLog (need at least one integration)
+      try {
+        const pageIds: string[] = [];
+        if (payload?.entry && Array.isArray(payload.entry)) {
+          for (const entry of payload.entry) {
+            if (entry?.id) pageIds.push(String(entry.id));
+          }
+        }
+        if (payload?.field === 'messages' && payload?.value) {
+          const def = await prisma.integration.findFirst({
+            where: { provider: 'facebook', isActive: true },
+            select: { id: true },
+          });
+          if (def) {
+            await logWebhookEvent({
+              integrationId: def.id,
+              success: false,
+              errorMessage: (error as Error).message,
+              payloadSnippet: payload ? JSON.stringify(payload).substring(0, 500) : null,
+              source: 'facebook',
+            });
+          }
+        } else if (pageIds.length > 0) {
+          const int = await prisma.integration.findFirst({
+            where: { provider: 'facebook', pageId: pageIds[0] },
+            select: { id: true },
+          });
+          if (int) {
+            await logWebhookEvent({
+              integrationId: int.id,
+              success: false,
+              errorMessage: (error as Error).message,
+              payloadSnippet: payload ? JSON.stringify(payload).substring(0, 500) : null,
+              source: 'facebook',
+            });
+          }
+        }
+      } catch (logErr) {
+        console.error('Failed to log webhook error:', logErr);
+      }
+
       console.error(`${'='.repeat(60)}\n`);
     }
   },
@@ -140,6 +216,25 @@ export const socialController = {
 
       const conversations = await socialService.getConversations(status, companyId, tab, assignedToEmployeeId);
       sendSuccess(res, conversations, 'Conversations retrieved successfully');
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  /**
+   * Get recent customer messages for dashboard live messages card
+   * GET /api/conversations/recent-messages?limit=20&integrationId=optional
+   */
+  getRecentMessages: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const companyId = (req as any).user?.companyId;
+      if (!companyId) {
+        return sendError(res, 'Company context required', 400);
+      }
+      const limit = req.query.limit ? Math.min(100, Math.max(1, parseInt(req.query.limit as string, 10))) : 20;
+      const integrationId = req.query.integrationId ? parseInt(req.query.integrationId as string, 10) : undefined;
+      const messages = await socialService.getRecentCustomerMessages(companyId, limit, integrationId);
+      sendSuccess(res, { messages }, 'Recent messages retrieved successfully');
     } catch (error) {
       next(error);
     }

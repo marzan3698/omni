@@ -1139,13 +1139,30 @@ model Integration {
   createdAt         DateTime            @default(now()) @map("created_at")
   updatedAt         DateTime            @updatedAt @map("updated_at")
 
-  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company              Company                  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  webhookLogs          IntegrationWebhookLog[]
 
   @@unique([companyId, provider, pageId])
   @@index([companyId])
   @@index([provider])
   @@index([isActive])
   @@map("integrations")
+}
+
+model IntegrationWebhookLog {
+  id             Int       @id @default(autoincrement())
+  integrationId  Int       @map("integration_id")
+  success        Boolean
+  errorMessage   String?   @map("error_message") @db.Text
+  payloadSnippet String?   @map("payload_snippet") @db.VarChar(500)
+  source         String?   @db.VarChar(50)
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  integration Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+
+  @@index([integrationId])
+  @@index([createdAt])
+  @@map("integration_webhook_logs")
 }
 
 model FacebookAppConfig {

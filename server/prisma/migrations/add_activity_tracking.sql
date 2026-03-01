@@ -1,6 +1,8 @@
 -- Activity tracking: activity_logs and screen_captures tables
+-- NOTE: session_id FK to work_sessions is added in link_activity_to_work_sessions.sql
+-- (work_sessions is created in add_work_sessions.sql which runs later alphabetically)
 
-CREATE TABLE activity_logs (
+CREATE TABLE IF NOT EXISTS activity_logs (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id VARCHAR(36) NOT NULL,
   company_id INT NOT NULL,
@@ -17,11 +19,10 @@ CREATE TABLE activity_logs (
   INDEX idx_activity_logs_session_id (session_id),
   INDEX idx_activity_logs_interval_start (interval_start),
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE,
-  FOREIGN KEY (session_id) REFERENCES work_sessions(id) ON DELETE SET NULL
-);
+  FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE screen_captures (
+CREATE TABLE IF NOT EXISTS screen_captures (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id VARCHAR(36) NOT NULL,
   company_id INT NOT NULL,
@@ -35,6 +36,5 @@ CREATE TABLE screen_captures (
   INDEX idx_screen_captures_session_id (session_id),
   INDEX idx_screen_captures_captured_at (captured_at),
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE,
-  FOREIGN KEY (session_id) REFERENCES work_sessions(id) ON DELETE SET NULL
-);
+  FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

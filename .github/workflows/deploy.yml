@@ -1,4 +1,7 @@
-name: Deploy Omni CRM to cPanel
+# Deploy Omni CRM to VPS (root server)
+# Push to main → Build → Deploy → Migrate → Restart
+
+name: Deploy Omni CRM to VPS
 
 on:
   push:
@@ -9,7 +12,7 @@ on:
 
 jobs:
   deploy:
-    name: Build & Deploy to cPanel
+    name: Build & Deploy to VPS
     runs-on: ubuntu-latest
 
     steps:
@@ -24,7 +27,7 @@ jobs:
       - name: Build Frontend
         working-directory: ./client
         env:
-          VITE_API_URL: https://imoics.com/api
+          VITE_API_URL: ${{ secrets.VITE_API_URL || 'https://imoics.com/api' }}
         run: |
           npm ci
           npm run build
@@ -40,77 +43,68 @@ jobs:
           npm run build
           echo "✅ Backend build completed"
 
-      - name: Deploy Frontend to public_html via SCP
+      - name: Deploy Frontend to VPS via SCP
         uses: appleboy/scp-action@v1
         with:
-          host: ${{ secrets.CPANEL_HOST }}
-          username: ${{ secrets.CPANEL_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT }}
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER || 'root' }}
+          key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          port: ${{ secrets.VPS_SSH_PORT || '22' }}
           source: "client/dist/*"
-          target: "~/public_html/"
+          target: "~/omni-repo/client/dist/"
           strip_components: 2
           timeout: 60s
-          command_timeout: 120s
           overwrite: true
-          use_insecure_cipher: true
 
-      - name: Deploy Backend dist/ to server via SCP
+      - name: Deploy Backend dist to VPS via SCP
         uses: appleboy/scp-action@v1
         with:
-          host: ${{ secrets.CPANEL_HOST }}
-          username: ${{ secrets.CPANEL_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT }}
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER || 'root' }}
+          key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          port: ${{ secrets.VPS_SSH_PORT || '22' }}
           source: "server/dist/*"
           target: "~/omni-repo/server/dist/"
           strip_components: 2
           timeout: 60s
-          command_timeout: 120s
           overwrite: true
-          use_insecure_cipher: true
 
-      - name: Setup .htaccess & Restart Backend
+      - name: Git Pull, Migrate, Restart on VPS
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.CPANEL_HOST }}
-          username: ${{ secrets.CPANEL_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT }}
-          timeout: 60s
-          use_insecure_cipher: true
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER || 'root' }}
+          key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          port: ${{ secrets.VPS_SSH_PORT || '22' }}
+          timeout: 120s
           script: |
-            echo "🚀 Post-deploy setup..."
+            set -e
+            echo "🚀 Post-deploy on VPS..."
 
-            # Create .htaccess for React Router (exclude /api)
-            cat > ~/public_html/.htaccess << 'EOF'
-            <IfModule mod_rewrite.c>
-              RewriteEngine On
-              RewriteBase /
-              RewriteRule ^index\.html$ - [L]
-              RewriteCond %{REQUEST_FILENAME} !-f
-              RewriteCond %{REQUEST_FILENAME} !-d
-              RewriteRule . /index.html [L]
-            </IfModule>
-            EOF
-
-            # Update backend source code
             cd ~/omni-repo
-            git pull origin main
-            echo "✅ Backend source & dist updated"
+            git pull origin main || git pull origin master
+            echo "✅ Git pull completed"
 
-            # Restart Node.js app via Passenger touch
-            mkdir -p ~/omni-repo/server/tmp
-            touch ~/omni-repo/server/tmp/restart.txt
-            echo "✅ Backend restart triggered"
+            cd ~/omni-repo/server
+            npm install --ignore-scripts
+            npx prisma generate
+            node scripts/migrate-simple.cjs
+            echo "✅ npm install, prisma generate, migrations done"
 
-            echo "🎉 Deployment complete!"
+            if command -v pm2 &> /dev/null; then
+              pm2 restart omni || pm2 start dist/server.js --name omni
+              echo "✅ PM2 restart done"
+            else
+              echo "⚠️ PM2 not found - restart backend manually if needed"
+            fi
+
+            echo "🎉 VPS Deployment complete!"
 
       - name: Deployment Status
         if: always()
         run: |
           if [ "${{ job.status }}" == "success" ]; then
-            echo "✅ Deployment completed successfully!"
+            echo "✅ VPS deployment completed successfully!"
           else
             echo "❌ Deployment failed! Check the logs above."
           fi

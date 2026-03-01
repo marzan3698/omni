@@ -639,6 +639,8 @@ export const adminApi = {
   updateClient: (id: number, data: any) =>
     apiClientInstance.put<ApiResponse>(`/admin/clients/${id}`, data),
   deleteClient: (id: number) => apiClientInstance.delete<ApiResponse>(`/admin/clients/${id}`),
+  getIntegrationWebhookLog: (params?: { limit?: number; integrationId?: number }) =>
+    apiClientInstance.get<ApiResponse>('/admin/integration-webhook-log', { params }),
 };
 
 // Invoice API

@@ -130,6 +130,30 @@ export const socialApi = {
   },
 
   /**
+   * Get recent customer messages for dashboard live messages card
+   */
+  async getRecentMessages(params?: { limit?: number; integrationId?: number }): Promise<{
+    messages: Array<{
+      id: number;
+      content: string;
+      createdAt: string;
+      conversation: { id: number; platform: string; facebookPageName?: string | null; whatsappSlotId?: string | null };
+      integrationDisplayName: string;
+    }>;
+  }> {
+    const searchParams = new URLSearchParams();
+    if (params?.limit) searchParams.set('limit', String(params.limit));
+    if (params?.integrationId) searchParams.set('integrationId', String(params.integrationId));
+    const query = searchParams.toString();
+    const url = query ? `/conversations/recent-messages?${query}` : '/conversations/recent-messages';
+    const response = await apiClient.get<ApiResponse<{ messages: any[] }>>(url);
+    if (response.data.success && response.data.data) {
+      return response.data.data as any;
+    }
+    throw new Error(response.data.message || 'Failed to fetch recent messages');
+  },
+
+  /**
    * Get messages for a conversation
    */
   async getConversationMessages(conversationId: number): Promise<SocialConversation> {

@@ -19,8 +19,10 @@ import { ProjectSign } from './pages/ProjectSign';
 import { Inbox } from './pages/Inbox';
 import InboxReport from './pages/InboxReport';
 import CpanelAutoDeploymentGuide from './pages/CpanelAutoDeploymentGuide';
+import OmniServerSetupGuide from './pages/OmniServerSetupGuide';
 import AdvancedWhatsappSetup from './pages/AdvancedWhatsappSetup';
 import ChatwootSettings from './pages/ChatwootSettings';
+import FacebookVerificationGuideline from './pages/FacebookVerificationGuideline';
 import ActivityMonitor from './pages/ActivityMonitor';
 import ActivityDetail from './pages/ActivityDetail';
 import { Settings } from './pages/Settings';
@@ -130,6 +132,18 @@ function App() {
                 }
               />
               <Route
+                path="/admin/omni-server-setup"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <PermissionGuard permission="can_manage_root_items">
+                        <OmniServerSetupGuide />
+                      </PermissionGuard>
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/admin/cpanel-auto-deployment-guide"
                 element={
                   <ProtectedRoute>
@@ -160,6 +174,18 @@ function App() {
                     <Layout>
                       <PermissionGuard permission="can_manage_root_items">
                         <ChatwootSettings />
+                      </PermissionGuard>
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/facebook-verification-guideline"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <PermissionGuard permission="can_manage_root_items">
+                        <FacebookVerificationGuideline />
                       </PermissionGuard>
                     </Layout>
                   </ProtectedRoute>

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { adminController } from '../controllers/admin.controller.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
-import { verifyPermission, verifyPermissionAny } from '../middleware/authMiddleware.js';
+import { verifyPermission, verifyPermissionAny, verifyRole } from '../middleware/authMiddleware.js';
 
 const router = Router();
 
@@ -54,6 +54,13 @@ router.delete(
   '/clients/:id',
   verifyPermissionAny(['can_manage_companies', 'can_manage_clients']),
   adminController.deleteClient
+);
+
+// Integration webhook log - SuperAdmin only (dashboard error history)
+router.get(
+  '/integration-webhook-log',
+  verifyRole(['SuperAdmin']),
+  adminController.getIntegrationWebhookLog
 );
 
 export default router;

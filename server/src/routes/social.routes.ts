@@ -12,6 +12,7 @@ router.get('/conversations/analytics/public', socialController.getPublicConversa
 
 // Protected endpoints (require authentication)
 router.get('/conversations', authMiddleware, socialController.getConversations);
+router.get('/conversations/recent-messages', authMiddleware, socialController.getRecentMessages);
 router.get('/conversations/assignment-stats', authMiddleware, socialController.getAssignmentStats);
 router.get('/conversations/superadmin-stats', authMiddleware, verifyRole(['SuperAdmin']), socialController.getSuperAdminStats);
 router.post('/conversations/distribute', authMiddleware, verifyRole(['SuperAdmin']), socialController.distributeConversations);

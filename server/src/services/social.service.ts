@@ -368,6 +368,94 @@ export const socialService = {
   },
 
   /**
+   * Get recent customer messages for dashboard live messages card
+   * @param companyId - Filter by company
+   * @param limit - Max messages to return (default 20)
+   * @param integrationId - Optional: filter by integration (Facebook page or WhatsApp slot)
+   */
+  async getRecentCustomerMessages(companyId: number, limit: number = 20, integrationId?: number) {
+    const convWhere: any = { companyId };
+    if (integrationId) {
+      const integration = await prisma.integration.findFirst({
+        where: { id: integrationId, companyId },
+        select: { provider: true, pageId: true },
+      });
+      if (integration) {
+        if (integration.provider === 'facebook') {
+          convWhere.facebookPageId = integration.pageId;
+        } else if (integration.provider === 'whatsapp') {
+          const slotMatch = integration.pageId?.match(/^whatsapp-slot-(.+)$/);
+          const slotId = slotMatch ? slotMatch[1] : (integration.pageId === 'whatsapp-web' ? '1' : null);
+          if (slotId) {
+            convWhere.whatsappSlotId = slotId;
+          }
+        }
+      }
+    }
+
+    const messages = await prisma.socialMessage.findMany({
+      where: {
+        senderType: 'customer',
+        conversation: convWhere,
+      },
+      include: {
+        conversation: {
+          select: {
+            id: true,
+            platform: true,
+            facebookPageId: true,
+            facebookPageName: true,
+            whatsappSlotId: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    });
+
+    // Enrich with integration display name
+    const integrationIds = new Set<string>();
+    for (const m of messages) {
+      const c = m.conversation;
+      if (c.platform === 'facebook' && c.facebookPageId) {
+        integrationIds.add(`facebook:${c.facebookPageId}`);
+      } else if (c.platform === 'whatsapp' && c.whatsappSlotId) {
+        integrationIds.add(`whatsapp:${c.whatsappSlotId}`);
+      }
+    }
+    const integrations = await prisma.integration.findMany({
+      where: { companyId },
+      select: { pageId: true, displayName: true, provider: true },
+    });
+    const displayNameMap = new Map<string, string>();
+    for (const i of integrations) {
+      if (i.provider === 'facebook') {
+        displayNameMap.set(`facebook:${i.pageId}`, i.displayName || i.pageId);
+      } else if (i.provider === 'whatsapp' && i.pageId) {
+        const slotId = i.pageId === 'whatsapp-web' ? '1' : i.pageId.replace('whatsapp-slot-', '');
+        displayNameMap.set(`whatsapp:${slotId}`, i.displayName || `WhatsApp Slot ${slotId}`);
+      }
+    }
+
+    return messages.map((m) => {
+      const c = m.conversation;
+      const key = c.platform === 'facebook' ? `facebook:${c.facebookPageId}` : `whatsapp:${c.whatsappSlotId}`;
+      return {
+        id: m.id,
+        content: m.content,
+        createdAt: m.createdAt,
+        conversation: {
+          id: c.id,
+          platform: c.platform,
+          facebookPageName: c.facebookPageName,
+          whatsappSlotId: c.whatsappSlotId,
+        },
+        integrationDisplayName: displayNameMap.get(key) || (c.platform === 'facebook' ? c.facebookPageName : `WhatsApp Slot ${c.whatsappSlotId}`),
+      };
+    });
+  },
+
+  /**
    * Get all conversations
    */
   async getConversations(status?: 'Open' | 'Closed', companyId?: number, tab?: 'inbox' | 'taken' | 'complete', assignedToEmployeeId?: number) {

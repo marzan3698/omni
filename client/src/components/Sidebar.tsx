@@ -32,10 +32,12 @@ import {
   Menu,
   FileCode,
   FileEdit,
+  FileText,
   Monitor,
   Receipt,
   Link2,
   Server,
+  Terminal,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -272,6 +274,12 @@ const menuSections: MenuSection[] = [
     label: 'SuperAdmin Dashboard',
     items: [
       {
+        label: 'Omni Setup on Server',
+        icon: Terminal,
+        path: '/admin/omni-server-setup',
+        permission: 'can_manage_root_items',
+      },
+      {
         label: 'New cPanel Setup',
         icon: FileCode,
         path: '/admin/cpanel-auto-deployment-guide',
@@ -299,6 +307,12 @@ const menuSections: MenuSection[] = [
         label: 'App Config',
         icon: Plug,
         path: '/settings/facebook-app-config',
+        permission: 'can_manage_root_items',
+      },
+      {
+        label: 'Facebook Verification Step Guideline',
+        icon: FileText,
+        path: '/admin/facebook-verification-guideline',
         permission: 'can_manage_root_items',
       },
     ]

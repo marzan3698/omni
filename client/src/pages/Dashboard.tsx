@@ -9,6 +9,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { PermissionGuard } from '@/components/PermissionGuard';
 import { WorkTimeline } from '@/components/WorkTimeline';
 import { LiveUsersSection } from '@/components/LiveUsersSection';
+import { LiveMessagesCard } from '@/components/LiveMessagesCard';
+import { IntegrationErrorLogCard } from '@/components/IntegrationErrorLogCard';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -302,6 +304,15 @@ export function Dashboard() {
               {canViewLiveUsers && (
                 <LiveUsersSection />
               )}
+              {/* Live Messages & Integration Error Log */}
+              <div className="grid gap-4 md:grid-cols-2">
+                <DashboardWidgetCard index={10}>
+                  <LiveMessagesCard />
+                </DashboardWidgetCard>
+                <DashboardWidgetCard index={11}>
+                  <IntegrationErrorLogCard />
+                </DashboardWidgetCard>
+              </div>
               {/* Conversation Statistics Widgets */}
               <div className="grid gap-4 md:grid-cols-2">
                 <DashboardWidgetCard index={0}>

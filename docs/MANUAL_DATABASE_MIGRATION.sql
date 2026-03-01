@@ -183,11 +183,32 @@ ALTER TABLE `leads` ADD CONSTRAINT `fk_leads_status` FOREIGN KEY (`status_id`) R
 
 
 -- =============================================================================
+-- SECTION E: Integration Webhook Log (Admin Dashboard Error History)
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS `integration_webhook_logs` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `integration_id` INT NOT NULL,
+  `success` TINYINT(1) NOT NULL,
+  `error_message` TEXT NULL,
+  `payload_snippet` VARCHAR(500) NULL,
+  `source` VARCHAR(50) NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  INDEX `idx_integration_id` (`integration_id`),
+  INDEX `idx_created_at` (`created_at`),
+  CONSTRAINT `fk_integration_webhook_logs_integration`
+    FOREIGN KEY (`integration_id`) REFERENCES `integrations`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+-- =============================================================================
 -- VERIFICATION
 -- =============================================================================
 -- Run these to verify:
 -- SHOW TABLES LIKE 'lead_imports';
 -- SHOW TABLES LIKE 'lead_form_configs';
+-- SHOW TABLES LIKE 'integration_webhook_logs';
 -- SHOW TABLES LIKE 'lead_priorities';
 -- SHOW TABLES LIKE 'lead_labels';
 -- SHOW TABLES LIKE 'lead_statuses';
