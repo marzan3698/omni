@@ -51,8 +51,6 @@ CREATE TABLE IF NOT EXISTS payments (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 4. Update project_status enum to include StartedWorking
--- Note: MySQL doesn't support ALTER ENUM directly, so we need to recreate the column
--- This is a simplified version - in production, you may need to handle existing data more carefully
-
-ALTER TABLE projects MODIFY COLUMN status ENUM('Draft', 'Submitted', 'StartedWorking', 'InProgress', 'Completed', 'Cancelled') NOT NULL DEFAULT 'Draft';
+-- NOTE: projects table is created by add_projects_and_campaign_clients.sql which runs later.
+-- The ALTER TABLE projects is done in add_z_projects_status_enum.sql after projects exists.
 
