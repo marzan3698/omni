@@ -19,11 +19,14 @@ const getAllowedOrigins = (): string[] => {
     'https://www.paaera.com',
     'http://paaera.com',
     'http://www.paaera.com',
+    'http://46.225.230.71',
+    'http://46.225.230.71:5001',
     'http://localhost:5173',
     'http://localhost:5174',
     'http://localhost:3000',
   ];
 };
+
 
 /** Set CORS headers on response - use in all paths so errors also return CORS */
 function setCorsHeaders(req: Request, res: Response): void {
