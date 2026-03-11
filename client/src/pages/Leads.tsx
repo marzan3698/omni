@@ -210,7 +210,10 @@ export function Leads() {
     if (customForm.statusId) payload.statusId = parseInt(customForm.statusId);
     if (customForm.priorityId) payload.priorityId = parseInt(customForm.priorityId);
     if (customForm.campaignId) payload.campaignId = parseInt(customForm.campaignId);
-    if (customForm.value) payload.value = parseFloat(customForm.value);
+    if (customForm.value !== '') {
+      const parsed = parseFloat(customForm.value);
+      if (!isNaN(parsed) && parsed >= 0) payload.value = parsed;
+    }
     createLeadMutation.mutate(payload);
   };
 
