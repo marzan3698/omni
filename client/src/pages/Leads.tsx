@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { leadApi, leadCategoryApi, leadInterestApi, leadPriorityApi, leadLabelApi, leadStatusConfigApi, campaignApi } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { Target, Search, Filter, X, Eye, Edit, ChevronDown, ChevronUp, Download, Upload, Users, Code2 } from 'lucide-react';
+import { Target, Search, Filter, X, Eye, Edit, ChevronDown, ChevronUp, Download, Upload, Users, Code2, Plus, CheckCircle2 } from 'lucide-react';
 import { ErrorAlert } from '@/components/ErrorAlert';
 import { EmployeeSelector } from '@/components/EmployeeSelector';
 import { cn } from '@/lib/utils';
@@ -38,7 +38,21 @@ export function Leads() {
   const [selectedLeadIds, setSelectedLeadIds] = useState<Set<number>>(new Set());
   const [bulkAssignModalOpen, setBulkAssignModalOpen] = useState(false);
   const [bulkAssignEmployeeIds, setBulkAssignEmployeeIds] = useState<number[]>([]);
-  const [activeTab, setActiveTab] = useState<'Inbox' | 'Website' | 'FacebookPixel' | 'Excel'>('Inbox');
+  const [activeTab, setActiveTab] = useState<'Inbox' | 'Website' | 'FacebookPixel' | 'Excel' | 'Custom'>('Inbox');
+  const [customLeadSuccess, setCustomLeadSuccess] = useState(false);
+  const [customLeadError, setCustomLeadError] = useState<string | null>(null);
+  const [customForm, setCustomForm] = useState({
+    title: '',
+    customerName: '',
+    phone: '',
+    description: '',
+    categoryId: '',
+    interestId: '',
+    statusId: '',
+    priorityId: '',
+    campaignId: '',
+    value: '',
+  });
   const [filters, setFilters] = useState(defaultFilters);
   const [showFilters, setShowFilters] = useState(false);
   const [importResult, setImportResult] = useState<{ successCount: number; errorCount: number; errors?: { row: number; message: string }[] } | null>(null);
@@ -51,7 +65,7 @@ export function Leads() {
     queryFn: async () => {
       const params: any = {};
       params.convertedOnly = leadListView === 'complete' ? 'true' : 'false';
-      params.source = activeTab === 'Inbox' ? 'Inbox' : activeTab === 'Website' ? 'Website' : activeTab === 'FacebookPixel' ? 'FacebookPixel' : 'Excel';
+      params.source = activeTab === 'Inbox' ? 'Inbox' : activeTab === 'Website' ? 'Website' : activeTab === 'FacebookPixel' ? 'FacebookPixel' : activeTab === 'Custom' ? 'Custom' : 'Excel';
       if (filters.search) params.search = filters.search;
       if (filters.statusId) params.statusId = parseInt(filters.statusId);
       if (filters.priorityId) params.priorityId = parseInt(filters.priorityId);
@@ -162,6 +176,48 @@ export function Leads() {
     },
   });
 
+  // Create Custom Lead mutation
+  const createLeadMutation = useMutation({
+    mutationFn: (data: any) => leadApi.create(data),
+    onSuccess: () => {
+      setCustomLeadSuccess(true);
+      setCustomLeadError(null);
+      setCustomForm({ title: '', customerName: '', phone: '', description: '', categoryId: '', interestId: '', statusId: '', priorityId: '', campaignId: '', value: '' });
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      setTimeout(() => setCustomLeadSuccess(false), 4000);
+    },
+    onError: (err: any) => {
+      setCustomLeadError(err?.response?.data?.message || 'লিড তৈরি করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।');
+    },
+  });
+
+  const handleCustomLeadSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setCustomLeadError(null);
+    if (!customForm.title.trim()) {
+      setCustomLeadError('লিডের শিরোনাম (Title) দেওয়া আবশ্যক।');
+      return;
+    }
+    const payload: any = {
+      title: customForm.title.trim(),
+      source: 'Custom',
+    };
+    if (customForm.customerName) payload.customerName = customForm.customerName;
+    if (customForm.phone) payload.phone = customForm.phone;
+    if (customForm.description) payload.description = customForm.description;
+    if (customForm.categoryId) payload.categoryId = parseInt(customForm.categoryId);
+    if (customForm.interestId) payload.interestId = parseInt(customForm.interestId);
+    if (customForm.statusId) payload.statusId = parseInt(customForm.statusId);
+    if (customForm.priorityId) payload.priorityId = parseInt(customForm.priorityId);
+    if (customForm.campaignId) payload.campaignId = parseInt(customForm.campaignId);
+    if (customForm.value) payload.value = parseFloat(customForm.value);
+    createLeadMutation.mutate(payload);
+  };
+
+  const handleCustomFormChange = (key: string, value: string) => {
+    setCustomForm(prev => ({ ...prev, [key]: value }));
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -246,6 +302,7 @@ export function Leads() {
       case 'SocialMedia': return 'bg-pink-500/30 text-pink-300';
       case 'FacebookPixel': return 'bg-sky-500/30 text-sky-300';
       case 'Excel': return 'bg-emerald-500/30 text-emerald-300';
+      case 'Custom': return 'bg-violet-500/30 text-violet-300';
       default: return 'bg-slate-600/50 text-slate-300';
     }
   };
@@ -301,6 +358,7 @@ export function Leads() {
           { key: 'Website' as const, label: 'Website' },
           { key: 'FacebookPixel' as const, label: 'Facebook Pixel' },
           { key: 'Excel' as const, label: 'Excel' },
+          { key: 'Custom' as const, label: 'Custom Leads' },
         ] as const).map((tab) => (
           <button
             key={tab.key}
@@ -334,6 +392,161 @@ export function Leads() {
             </Button>
             <span className="text-slate-400 text-sm">Configure the form, get embed code, and customize fields.</span>
           </div>
+        </div>
+      )}
+
+      {/* Custom Leads tab: Manual lead creation form */}
+      {activeTab === 'Custom' && (
+        <div className="rounded-xl border border-violet-500/30 bg-slate-800/40 p-6">
+          <div className="mb-5 flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-violet-500/20 border border-violet-500/30">
+              <Plus className="w-5 h-5 text-violet-400" />
+            </div>
+            <div>
+              <h3 className="text-violet-200 font-semibold text-lg">নতুন কাস্টম লিড তৈরি করুন</h3>
+              <p className="text-slate-400 text-sm">ফর্ম পূরণ করে নতুন লিড যোগ করুন</p>
+            </div>
+          </div>
+
+          {customLeadSuccess && (
+            <div className="mb-4 flex items-center gap-2 p-3 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300">
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <span className="text-sm font-medium">✅ লিড সফলভাবে তৈরি হয়েছে!</span>
+            </div>
+          )}
+          {customLeadError && (
+            <div className="mb-4 p-3 rounded-lg bg-red-500/15 border border-red-500/30 text-red-300 text-sm">
+              ❌ {customLeadError}
+            </div>
+          )}
+
+          <form onSubmit={handleCustomLeadSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Title - Required */}
+              <div className="md:col-span-2">
+                <Label className="text-amber-200/90 text-xs mb-1 block">শিরোনাম (Title) <span className="text-red-400">*</span></Label>
+                <Input
+                  required
+                  placeholder="লিডের শিরোনাম লিখুন..."
+                  value={customForm.title}
+                  onChange={(e) => handleCustomFormChange('title', e.target.value)}
+                  className="bg-slate-800/60 border-violet-500/30 text-amber-100 placeholder-slate-500 focus-visible:ring-violet-500/50"
+                />
+              </div>
+
+              {/* Customer Name */}
+              <div>
+                <Label className="text-amber-200/90 text-xs mb-1 block">কাস্টমার নাম (Customer Name)</Label>
+                <Input
+                  placeholder="কাস্টমারের নাম..."
+                  value={customForm.customerName}
+                  onChange={(e) => handleCustomFormChange('customerName', e.target.value)}
+                  className="bg-slate-800/60 border-amber-500/20 text-amber-100 placeholder-slate-500 focus-visible:ring-amber-500/50"
+                />
+              </div>
+
+              {/* Phone */}
+              <div>
+                <Label className="text-amber-200/90 text-xs mb-1 block">ফোন নম্বর (Phone)</Label>
+                <Input
+                  type="tel"
+                  placeholder="01XXXXXXXXX"
+                  value={customForm.phone}
+                  onChange={(e) => handleCustomFormChange('phone', e.target.value)}
+                  className="bg-slate-800/60 border-amber-500/20 text-amber-100 placeholder-slate-500 focus-visible:ring-amber-500/50"
+                />
+              </div>
+
+              {/* Category */}
+              <div>
+                <Label className="text-amber-200/90 text-xs mb-1 block">ক্যাটাগরি (Category)</Label>
+                <select value={customForm.categoryId} onChange={(e) => handleCustomFormChange('categoryId', e.target.value)} className={selectClass}>
+                  <option value="">ক্যাটাগরি নির্বাচন করুন</option>
+                  {(categories as any[]).map((cat) => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+                </select>
+              </div>
+
+              {/* Interest */}
+              <div>
+                <Label className="text-amber-200/90 text-xs mb-1 block">ইন্টারেস্ট (Interest)</Label>
+                <select value={customForm.interestId} onChange={(e) => handleCustomFormChange('interestId', e.target.value)} className={selectClass}>
+                  <option value="">ইন্টারেস্ট নির্বাচন করুন</option>
+                  {(interests as any[]).map((int) => <option key={int.id} value={int.id}>{int.name}</option>)}
+                </select>
+              </div>
+
+              {/* Status */}
+              <div>
+                <Label className="text-amber-200/90 text-xs mb-1 block">স্ট্যাটাস (Status)</Label>
+                <select value={customForm.statusId} onChange={(e) => handleCustomFormChange('statusId', e.target.value)} className={selectClass}>
+                  <option value="">স্ট্যাটাস নির্বাচন করুন</option>
+                  {(statuses as any[]).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              </div>
+
+              {/* Priority */}
+              <div>
+                <Label className="text-amber-200/90 text-xs mb-1 block">প্রায়োরিটি (Priority)</Label>
+                <select value={customForm.priorityId} onChange={(e) => handleCustomFormChange('priorityId', e.target.value)} className={selectClass}>
+                  <option value="">প্রায়োরিটি নির্বাচন করুন</option>
+                  {(priorities as any[]).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </div>
+
+              {/* Campaign */}
+              <div>
+                <Label className="text-amber-200/90 text-xs mb-1 block">ক্যাম্পেইন (Campaign)</Label>
+                <select value={customForm.campaignId} onChange={(e) => handleCustomFormChange('campaignId', e.target.value)} className={selectClass}>
+                  <option value="">ক্যাম্পেইন নির্বাচন করুন</option>
+                  {(campaigns as any[]).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+
+              {/* Value */}
+              <div>
+                <Label className="text-amber-200/90 text-xs mb-1 block">মূল্য (Value ৳)</Label>
+                <Input
+                  type="number"
+                  placeholder="যেমন: 5000"
+                  value={customForm.value}
+                  onChange={(e) => handleCustomFormChange('value', e.target.value)}
+                  min={0}
+                  className="bg-slate-800/60 border-amber-500/20 text-amber-100 placeholder-slate-500 focus-visible:ring-amber-500/50"
+                />
+              </div>
+
+              {/* Description */}
+              <div className="md:col-span-2">
+                <Label className="text-amber-200/90 text-xs mb-1 block">বিবরণ (Description)</Label>
+                <textarea
+                  rows={3}
+                  placeholder="লিড সম্পর্কে বিস্তারিত লিখুন..."
+                  value={customForm.description}
+                  onChange={(e) => handleCustomFormChange('description', e.target.value)}
+                  className="w-full px-3 py-2 border border-amber-500/20 rounded-lg bg-slate-800/60 text-amber-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 text-sm resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => { setCustomForm({ title: '', customerName: '', phone: '', description: '', categoryId: '', interestId: '', statusId: '', priorityId: '', campaignId: '', value: '' }); setCustomLeadError(null); }}
+                className="border-slate-600 text-slate-300 hover:bg-slate-700/50 bg-transparent"
+              >
+                রিসেট করুন
+              </Button>
+              <Button
+                type="submit"
+                disabled={createLeadMutation.isPending}
+                className="bg-gradient-to-r from-violet-600 to-violet-500 hover:from-violet-500 hover:to-violet-400 text-white border border-violet-400/50 shadow-lg shadow-violet-500/25 flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                {createLeadMutation.isPending ? 'তৈরি হচ্ছে...' : 'লিড তৈরি করুন'}
+              </Button>
+            </div>
+          </form>
         </div>
       )}
 

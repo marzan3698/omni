@@ -468,6 +468,7 @@ enum LeadSource {
   FacebookPixel
   Excel
   Other
+  Custom
 
   @@map("lead_source")
 }

@@ -25,7 +25,7 @@ httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔌 Socket.IO server initialized`);
   // Restore WhatsApp clients for companies with active integration (so messages are received after restart)
-  setImmediate(() => restoreActiveWhatsAppClients());
+  // setImmediate(() => restoreActiveWhatsAppClients());
 });
 
 // Handle errors
