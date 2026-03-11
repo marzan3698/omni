@@ -8,10 +8,10 @@ import { AuthRequest } from '../types/index.js';
 
 // Validation schemas
 const createLeadSchema = z.object({
-  companyId: z.number().int().positive(),
+  companyId: z.number().int().positive().optional(),
   title: z.string().min(1, 'Lead title is required'),
   description: z.string().optional(),
-  source: z.enum(['Website', 'Referral', 'SocialMedia', 'Email', 'Phone', 'Inbox', 'Excel', 'FacebookPixel', 'Other']),
+  source: z.enum(['Website', 'Referral', 'SocialMedia', 'Email', 'Phone', 'Inbox', 'Excel', 'FacebookPixel', 'Other', 'Custom']),
   statusId: z.number().int().positive().optional(),
   priorityId: z.number().int().positive().optional(),
   labelIds: z.array(z.number().int().positive()).optional(),
@@ -19,6 +19,10 @@ const createLeadSchema = z.object({
   value: z.number().positive().optional(),
   conversationId: z.number().int().positive().optional(),
   campaignId: z.number().int().positive().optional(),
+  customerName: z.string().optional(),
+  phone: z.string().optional(),
+  categoryId: z.number().int().positive().optional(),
+  interestId: z.number().int().positive().optional(),
 });
 
 // IMPORTANT:
@@ -27,7 +31,7 @@ const createLeadSchema = z.object({
 const updateLeadSchema = z.object({
   title: z.string().min(1, 'Lead title is required').optional(),
   description: z.string().optional().nullable(),
-  source: z.enum(['Website', 'Referral', 'SocialMedia', 'Email', 'Phone', 'Inbox', 'Excel', 'FacebookPixel', 'Other']).optional(),
+  source: z.enum(['Website', 'Referral', 'SocialMedia', 'Email', 'Phone', 'Inbox', 'Excel', 'FacebookPixel', 'Other', 'Custom']).optional(),
   statusId: z.number().int().positive().optional(),
   priorityId: z.number().int().positive().optional().nullable(),
   labelIds: z.array(z.number().int().positive()).optional(),
@@ -311,13 +315,19 @@ export const leadController = {
    */
   createLead: async (req: Request, res: Response) => {
     try {
-      const userId = (req as AuthRequest).user?.id;
+      const authReq = req as AuthRequest;
+      const userId = authReq.user?.id;
       if (!userId) {
         return sendError(res, 'User ID not found', 400);
       }
       const validatedData = createLeadSchema.parse(req.body);
+      // If companyId not provided in body, use the user's companyId from auth context
+      const companyId = validatedData.companyId ?? authReq.user?.companyId;
+      if (!companyId) {
+        return sendError(res, 'Company ID is required', 400);
+      }
       const lead = await leadService.createLead({
-        companyId: validatedData.companyId,
+        companyId,
         createdBy: userId,
         title: validatedData.title,
         description: validatedData.description,
@@ -329,6 +339,10 @@ export const leadController = {
         value: validatedData.value,
         conversationId: validatedData.conversationId,
         campaignId: validatedData.campaignId,
+        customerName: validatedData.customerName,
+        phone: validatedData.phone,
+        categoryId: validatedData.categoryId,
+        interestId: validatedData.interestId,
       });
       return sendSuccess(res, lead, 'Lead created successfully', 201);
     } catch (error) {
