@@ -22,8 +22,8 @@ const createProjectSchema = z.object({
   serviceId: z.coerce.number().int().refine((v) => v > 0, 'Service is required'),
   title: z.string().optional(),
   description: z.string().optional(),
-  budget: z.coerce.number().positive('Budget is required'),
-  time: z.string().min(1, 'Time is required'),
+  budget: z.union([z.coerce.number(), z.literal('')]).optional(),
+  time: z.string().optional(),
   deliveryStartDate: z.string().optional(),
   deliveryEndDate: z.string().optional(),
 });
@@ -198,7 +198,7 @@ export function ProjectCreate() {
       serviceId: 0,
       title: '',
       description: '',
-      budget: 0,
+      budget: '',
       time: '',
       deliveryStartDate: '',
       deliveryEndDate: '',
@@ -245,8 +245,8 @@ export function ProjectCreate() {
         serviceId: data.serviceId,
         title: data.title || undefined,
         description: data.description || undefined,
-        budget: data.budget,
-        time: data.time,
+        budget: data.budget === '' || data.budget === undefined ? 0 : Number(data.budget),
+        time: data.time || '',
         deliveryStartDate: data.deliveryStartDate
           ? new Date(data.deliveryStartDate).toISOString()
           : undefined,
@@ -461,7 +461,7 @@ export function ProjectCreate() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="budget" className="text-amber-100">
-                      Budget *
+                      Budget
                     </Label>
                     <Input
                       id="budget"
@@ -471,13 +471,10 @@ export function ProjectCreate() {
                       {...register('budget')}
                       className={cn('mt-1', inputDark)}
                     />
-                    {errors.budget && (
-                      <p className="text-red-400 text-sm mt-1">{errors.budget.message}</p>
-                    )}
                   </div>
                   <div>
                     <Label htmlFor="time" className="text-amber-100">
-                      Time (e.g., 2 weeks) *
+                      Time (e.g., 2 weeks)
                     </Label>
                     <Input
                       id="time"
@@ -485,9 +482,6 @@ export function ProjectCreate() {
                       placeholder="e.g., 2 weeks, 1 month"
                       className={cn('mt-1', inputDark)}
                     />
-                    {errors.time && (
-                      <p className="text-red-400 text-sm mt-1">{errors.time.message}</p>
-                    )}
                   </div>
                 </div>
               </GameCard>

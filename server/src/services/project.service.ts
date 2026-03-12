@@ -176,36 +176,13 @@ export const projectService = {
       const title = data.title || service.title;
       const description = data.description || service.details;
 
-      // Validate budget is within ±50% of service pricing
-      const minBudget = Number(service.pricing) * 0.5;
-      const maxBudget = Number(service.pricing) * 1.5;
-      if (data.budget < minBudget || data.budget > maxBudget) {
-        throw new AppError(
-          `Budget must be between ${minBudget.toFixed(2)} and ${maxBudget.toFixed(2)} (50% to 150% of service price)`,
-          400
-        );
-      }
-
-      // Delivery dates: when service uses date range, validate; otherwise use provided or null
+      // Delivery dates fallback
       let deliveryStartDate: Date | undefined = data.deliveryStartDate;
       let deliveryEndDate: Date | undefined = data.deliveryEndDate;
 
       if (service.useDeliveryDate && service.deliveryStartDate && service.deliveryEndDate) {
         deliveryStartDate = deliveryStartDate || service.deliveryStartDate;
         deliveryEndDate = deliveryEndDate || service.deliveryEndDate;
-        if (deliveryStartDate < service.deliveryStartDate || deliveryStartDate > service.deliveryEndDate) {
-          throw new AppError('Delivery start date must be within service date range', 400);
-        }
-        if (deliveryEndDate < service.deliveryStartDate || deliveryEndDate > service.deliveryEndDate) {
-          throw new AppError('Delivery end date must be within service date range', 400);
-        }
-        if (deliveryStartDate >= deliveryEndDate) {
-          throw new AppError('Delivery end date must be after start date', 400);
-        }
-      } else if (service.durationDays && (deliveryStartDate || deliveryEndDate)) {
-        if (deliveryStartDate && deliveryEndDate && deliveryStartDate >= deliveryEndDate) {
-          throw new AppError('Delivery end date must be after start date', 400);
-        }
       }
 
       const project = await prisma.project.create({
