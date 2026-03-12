@@ -8,7 +8,7 @@ import { z } from 'zod';
 
 const rowSchema = z.object({
   title: z.string().min(1, 'Title is required'),
-  customer_name: z.string().min(1, 'Customer name is required'),
+  customer_name: z.string().optional().default(''),
   phone: z.string().optional(),
   description: z.string().optional(),
   value: z.union([z.number(), z.string()]).optional().transform((v) => {
@@ -108,9 +108,13 @@ export const leadImportService = {
     const toKey = (h: unknown): string => {
       if (h == null) return '';
       let s = String(h).trim();
-      s = s.replace(/\s*\([^)]*\)\s*$/g, '').trim();
+      // Strip ALL parenthetical content anywhere in the header (handles Bengali like "title (অর্থাৎ)" or "title (অবশ্যই)")
+      s = s.replace(/\s*\([^)]*\)\s*/g, ' ').trim();
+      // Also strip asterisks and common annotation chars
+      s = s.replace(/[*#!?]+/g, '').trim();
+      // Take first word/key portion (letters, numbers, underscores)
       const m = s.match(/^([a-z0-9_]+)/i);
-      return (m ? m[1] : s).toLowerCase().replace(/\s/g, '_');
+      return (m ? m[1] : s).toLowerCase().replace(/[\s-]+/g, '_');
     };
 
     let headerRow: string[] = [];
@@ -132,9 +136,9 @@ export const leadImportService = {
       }
     }
 
-    if (headerRow.length === 0 || !headerRow.includes('title') || !headerRow.includes('customer_name')) {
+    if (headerRow.length === 0 || !headerRow.includes('title')) {
       throw new AppError(
-        'Could not find required column headers. Expect: title, customer_name (or customer).',
+        'Excel ফাইলে "title" কলাম খুঁজে পাওয়া যায়নি। টেমপ্লেট ডাউনলোড করে সঠিক ফরম্যাটে ফাইল তৈরি করুন।',
         400
       );
     }
@@ -232,7 +236,13 @@ export const leadImportService = {
       throw new AppError('Excel file has no data rows', 400);
     }
     if (valid.length === 0) {
-      throw new AppError('No valid rows to import. Check required columns: title, customer_name.', 400);
+      const errDetail = errors.length > 0
+        ? `\n\nত্রুটিগুলো: ${errors.slice(0, 3).map(e => `Row ${e.row}: ${e.message}`).join('; ')}`
+        : '';
+      throw new AppError(
+        `কোনো বৈধ রো পাওয়া যায়নি। নিশ্চিত করুন ফাইলে "title" কলাম আছে এবং প্রতিটি রোতে title পূরণ করা আছে।${errDetail}`,
+        400
+      );
     }
 
     const batch = await prisma.leadImport.create({
