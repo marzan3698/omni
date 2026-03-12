@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useParams, useNavigate } from 'react-router-dom';
-import { invoiceApi, paymentGatewayApi, paymentApi } from '@/lib/api';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { invoiceApi, paymentGatewayApi, paymentApi, bkashApi } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -41,6 +41,25 @@ export function InvoiceView() {
         enabled: !!id,
     });
 
+    // Check for payment status in URL
+    const [searchParams, setSearchParams] = useSearchParams();
+    const paymentStatus = searchParams.get('payment');
+
+    useState(() => {
+        if (paymentStatus === 'success') {
+            const trxID = searchParams.get('trxID');
+            alert(`Payment Successful! Transaction ID: ${trxID}`);
+            setSearchParams({});
+        } else if (paymentStatus === 'cancel') {
+            alert('Payment was cancelled.');
+            setSearchParams({});
+        } else if (paymentStatus === 'failure' || paymentStatus === 'error') {
+            const msg = searchParams.get('message');
+            alert(`Payment Failed. ${msg ? `Reason: ${msg}` : 'Please try again.'}`);
+            setSearchParams({});
+        }
+    });
+
     // Fetch active payment gateways
     const { data: gatewaysResponse } = useQuery({
         queryKey: ['payment-gateways-active'],
@@ -65,6 +84,29 @@ export function InvoiceView() {
     const project = invoice?.project;
     const gateways = gatewaysResponse || [];
     const payments = paymentsResponse || [];
+
+    const bkashGateway = gateways.find((g: any) => g.name.toLowerCase().includes('bkash'));
+
+    const [isBkashLoading, setIsBkashLoading] = useState(false);
+
+    const handleBkashPayment = async () => {
+        if (!invoice) return;
+        setIsBkashLoading(true);
+        try {
+            const response = await bkashApi.createPayment({
+                invoiceId: invoice.id,
+                amount: remainingAmount
+            });
+            if (response.data?.data?.bkashURL) {
+                window.location.href = response.data.data.bkashURL;
+            } else {
+                throw new Error('No checkout URL received from bKash');
+            }
+        } catch (error: any) {
+            alert(error.response?.data?.message || error.message || 'Failed to initiate bKash payment');
+            setIsBkashLoading(false);
+        }
+    };
 
     const canRenew = invoice?.project?.service?.durationDays && new Date() >= new Date(invoice.dueDate);
 
@@ -599,13 +641,28 @@ export function InvoiceView() {
                                                     <p className="text-sm text-slate-600">No payment gateways available</p>
                                                 ) : (
                                                     <>
+                                                        {bkashGateway && (
+                                                            <Button
+                                                                onClick={handleBkashPayment}
+                                                                className="w-full mb-3 bg-pink-600 hover:bg-pink-700 text-white"
+                                                                disabled={remainingAmount <= 0 || isBkashLoading}
+                                                            >
+                                                                {isBkashLoading ? (
+                                                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                                ) : (
+                                                                    <div className="w-4 h-4 mr-2 flex items-center justify-center font-bold font-serif italic text-sm">b</div>
+                                                                )}
+                                                                Pay {remainingAmount.toLocaleString()} BDT via bKash
+                                                            </Button>
+                                                        )}
                                                         <Button
                                                             onClick={() => setShowPaymentForm(true)}
                                                             className="w-full"
+                                                            variant={bkashGateway ? "outline" : "default"}
                                                             disabled={remainingAmount <= 0}
                                                         >
                                                             <CreditCard className="w-4 h-4 mr-2" />
-                                                            Submit Payment
+                                                            Submit Manual Payment
                                                         </Button>
                                                         {remainingAmount <= 0 && (
                                                             <p className="text-xs text-green-600 text-center">Invoice fully paid</p>

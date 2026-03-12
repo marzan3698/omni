@@ -39,6 +39,118 @@ const paymentGatewaySchema = z.object({
 
 type PaymentGatewayFormData = z.infer<typeof paymentGatewaySchema>;
 
+function BkashSettings() {
+  const queryClient = useQueryClient();
+  const [isLive, setIsLive] = useState('false');
+  const [isActive, setIsActive] = useState('false');
+  const [appKey, setAppKey] = useState('');
+  const [appSecret, setAppSecret] = useState('');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+
+  const { data: settings, isLoading } = useQuery({
+    queryKey: ['bkash-settings'],
+    queryFn: async () => {
+      const response = await paymentGatewayApi.getBkashSettings();
+      return response.data.data;
+    },
+  });
+
+  // Effect to load data
+  useState(() => {
+    if (settings) {
+      setAppKey(settings.bkash_app_key || '');
+      setAppSecret(settings.bkash_app_secret || '');
+      setUsername(settings.bkash_username || '');
+      setPassword(settings.bkash_password || '');
+      setIsLive(settings.bkash_is_live || 'false');
+      setIsActive(settings.bkash_is_active || 'false');
+    }
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (data: any) => paymentGatewayApi.updateBkashSettings(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bkash-settings'] });
+      alert('bKash auto payment settings saved successfully');
+    },
+    onError: (error: any) => {
+      alert(error.response?.data?.message || 'Failed to preserve bKash settings');
+    }
+  });
+
+  const handleSave = () => {
+    updateMutation.mutate({
+      bkash_app_key: appKey,
+      bkash_app_secret: appSecret,
+      bkash_username: username,
+      bkash_password: password,
+      bkash_is_live: isLive,
+      bkash_is_active: isActive,
+    });
+  };
+
+  if (isLoading) return <div className="p-4 text-center">Loading bKash settings...</div>;
+
+  return (
+    <Card className="mt-8">
+      <CardHeader>
+        <CardTitle>Automatic bKash Integration</CardTitle>
+        <CardDescription>
+          Configure auto-payment API access. Enable this to let clients pay via bKash gateway.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label>App Key</Label>
+            <Input value={appKey} onChange={e => setAppKey(e.target.value)} type="text" />
+          </div>
+          <div>
+            <Label>App Secret</Label>
+            <Input value={appSecret} onChange={e => setAppSecret(e.target.value)} type="password" />
+          </div>
+          <div>
+            <Label>Username</Label>
+            <Input value={username} onChange={e => setUsername(e.target.value)} type="text" />
+          </div>
+          <div>
+            <Label>Password</Label>
+            <Input value={password} onChange={e => setPassword(e.target.value)} type="password" />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label>Environment</Label>
+            <select
+              value={isLive}
+              onChange={e => setIsLive(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white select-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="false">Sandbox (Test Mode)</option>
+              <option value="true">Production (Live)</option>
+            </select>
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label>Status</Label>
+            <select
+              value={isActive}
+              onChange={e => setIsActive(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white select-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="true">Active (Show to clients)</option>
+              <option value="false">Inactive</option>
+            </select>
+          </div>
+        </div>
+        <div className="pt-4 flex justify-end">
+          <Button onClick={handleSave} disabled={updateMutation.isPending}>
+            {updateMutation.isPending ? 'Saving...' : 'Save bKash Settings'}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function PaymentSettingsContent() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -328,6 +440,9 @@ export default function PaymentSettings() {
   return (
     <PermissionGuard permission="can_manage_payment_settings">
       <PaymentSettingsContent />
+      <div className="container mx-auto px-6 pb-6">
+        <BkashSettings />
+      </div>
     </PermissionGuard>
   );
 }

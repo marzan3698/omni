@@ -13,6 +13,10 @@ router.get('/', paymentGatewayController.getAll);
 // Get active payment gateways (for clients) - no permission check, clients need this
 router.get('/active', paymentGatewayController.getActive);
 
+// bKash Settings routes
+router.get('/bkash/settings', verifyPermission('can_manage_payment_settings'), paymentGatewayController.getBkashSettings);
+router.put('/bkash/settings', verifyPermission('can_manage_payment_settings'), paymentGatewayController.updateBkashSettings);
+
 // Get payment gateway by ID
 router.get('/:id', paymentGatewayController.getById);
 
