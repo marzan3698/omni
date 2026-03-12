@@ -399,25 +399,7 @@ export function Leads() {
         </div>
       )}
 
-      {/* Custom Leads tab: Button to open modal */}
-      {activeTab === 'Custom' && (
-        <div className="flex flex-col items-center justify-center py-12 gap-5">
-          <div className="p-4 rounded-2xl bg-violet-500/15 border border-violet-500/30 shadow-lg shadow-violet-500/10">
-            <Plus className="w-10 h-10 text-violet-400" />
-          </div>
-          <div className="text-center">
-            <h3 className="text-violet-200 font-semibold text-lg mb-1">কাস্টম লিড তৈরি করুন</h3>
-            <p className="text-slate-400 text-sm">ফর্ম পূরণ করে সরাসরি নতুন লিড যোগ করুন</p>
-          </div>
-          <Button
-            onClick={() => { setCustomLeadError(null); setCustomLeadSuccess(false); setShowCustomLeadModal(true); }}
-            className="bg-gradient-to-r from-violet-600 to-violet-500 hover:from-violet-500 hover:to-violet-400 text-white border border-violet-400/50 shadow-lg shadow-violet-500/25 flex items-center gap-2 px-6 py-2.5 text-base"
-          >
-            <Plus className="w-5 h-5" />
-            + নতুন কাস্টম লিড যোগ করুন
-          </Button>
-        </div>
-      )}
+      {/* Custom Leads tab: just shows the list below (same as other tabs) */}
 
       {/* Excel tab: Download template + Upload */}
       {activeTab === 'Excel' && (
@@ -500,6 +482,16 @@ export function Leads() {
               )}
               {showFilters ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
             </Button>
+            {activeTab === 'Custom' && (
+              <Button
+                size="sm"
+                onClick={() => { setCustomLeadError(null); setCustomLeadSuccess(false); setShowCustomLeadModal(true); }}
+                className="bg-gradient-to-r from-violet-600 to-violet-500 hover:from-violet-500 hover:to-violet-400 text-white border border-violet-400/50 shadow-sm shadow-violet-500/20 flex items-center gap-2 shrink-0"
+              >
+                <Plus className="w-4 h-4" />
+                + কাস্টম লিড যোগ করুন
+              </Button>
+            )}
           </div>
         </div>
 
