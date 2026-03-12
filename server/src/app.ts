@@ -119,6 +119,8 @@ import whatsappRoutes from './routes/whatsapp.routes.js';
 import chatwootRoutes from './routes/chatwoot.routes.js';
 import workSessionRoutes from './routes/workSession.routes.js';
 import activityRoutes from './routes/activity.routes.js';
+import smsRoutes from './routes/sms.routes.js';
+
 app.use('/api/auth', authRoutes);
 app.use('/api/work-session', workSessionRoutes);
 app.use('/api/activity', activityRoutes);
@@ -127,6 +129,7 @@ app.use('/api', chatwootRoutes); // Chatwoot webhook + config
 app.use('/api', socialRoutes);
 app.use('/api/integrations/facebook', facebookIntegrationRoutes);
 app.use('/api/integrations', integrationRoutes);
+app.use('/api/sms', smsRoutes);
 app.use('/api/facebook', facebookRoutes);
 app.use('/api/utils', utilsRoutes);
 app.use('/api/companies', companyRoutes);

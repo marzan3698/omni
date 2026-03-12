@@ -56,6 +56,7 @@ import TaskConfig from './pages/TaskConfig';
 import Integrations from './pages/Integrations';
 import FacebookOAuthCallback from './pages/FacebookOAuthCallback';
 import { FacebookAppConfig } from './pages/FacebookAppConfig';
+import SmsSettings from './pages/SmsSettings';
 import EnvironmentFileEditing from './pages/EnvironmentFileEditing';
 import Campaigns from './pages/Campaigns';
 import CampaignForm from './pages/CampaignForm';
@@ -174,6 +175,18 @@ function App() {
                     <Layout>
                       <PermissionGuard permission="can_manage_root_items">
                         <ChatwootSettings />
+                      </PermissionGuard>
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/sms-settings"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <PermissionGuard permission="can_manage_root_items">
+                        <SmsSettings />
                       </PermissionGuard>
                     </Layout>
                   </ProtectedRoute>

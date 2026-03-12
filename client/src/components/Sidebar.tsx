@@ -297,6 +297,12 @@ const menuSections: MenuSection[] = [
         path: '/admin/chatwoot-settings',
         permission: 'can_manage_root_items',
       },
+      {
+        label: 'SMS Integration',
+        icon: Plug,
+        path: '/admin/sms-settings',
+        permission: 'can_manage_root_items',
+      },
     ]
   },
   // Section 8: Facebook (SuperAdmin – set App ID/Secret before connecting pages)
