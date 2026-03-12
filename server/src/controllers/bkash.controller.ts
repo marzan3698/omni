@@ -21,8 +21,10 @@ export const bkashController = {
             }
 
             // Base URL from the request to construct callback URL
-            const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-            const host = req.headers.host;
+            // Base URL from the request to construct callback URL
+            const host = req.headers.host || '';
+            const isLocalhost = host.includes('localhost') || host.includes('127.0.0.1');
+            const protocol = isLocalhost ? 'http' : 'https';
             const callbackUrl = `${protocol}://${host}/api/bkash/callback?companyId=${companyId}&invoiceId=${invoiceId}`;
 
             const data = await bkashService.createPayment(companyId, invoiceId, amount, callbackUrl);

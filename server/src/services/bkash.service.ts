@@ -117,7 +117,8 @@ export const bkashService = {
             }
         } catch (error: any) {
             console.error('Bkash Grant Token Error:', error.response?.data || error.message);
-            throw new AppError('Could not communicate with bKash gateway', 502);
+            const msg = error.response?.data?.statusMessage || error.message || 'Could not communicate with bKash gateway';
+            throw new AppError(msg, 400);
         }
     },
 
@@ -171,7 +172,8 @@ export const bkashService = {
 
         } catch (error: any) {
             console.error('Bkash Create Payment Error:', error.response?.data || error.message);
-            throw new AppError('Failed to create bKash checkout order', 502);
+            const msg = error.response?.data?.statusMessage || error.message || 'Failed to create bKash checkout order';
+            throw new AppError(msg, 400);
         }
     },
 
@@ -196,7 +198,8 @@ export const bkashService = {
             return response.data;
         } catch (error: any) {
             console.error('Bkash Execute Payment Error:', error.response?.data || error.message);
-            throw new AppError('Failed to execute bKash payment', 502);
+            const msg = error.response?.data?.statusMessage || error.message || 'Failed to execute bKash payment';
+            throw new AppError(msg, 400);
         }
     },
 
@@ -221,7 +224,8 @@ export const bkashService = {
             return response.data;
         } catch (error: any) {
             console.error('Bkash Query Payment Error:', error.response?.data || error.message);
-            throw new AppError('Failed to query bKash payment', 502);
+            const msg = error.response?.data?.statusMessage || error.message || 'Failed to query bKash payment';
+            throw new AppError(msg, 400);
         }
     }
 };
