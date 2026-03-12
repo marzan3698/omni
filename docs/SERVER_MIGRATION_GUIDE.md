@@ -119,10 +119,13 @@ iptables -I INPUT -p tcp --dport 5001 -j ACCEPT
 cd ~/omni-repo && git pull
 
 # Run any new migrations
-cd server && node scripts/migrate-simple.cjs
+cd server && npm install && node scripts/migrate-simple.cjs
+
+# Rebuild backend API
+npm run build
 
 # Rebuild frontend if client code changed
-cd ~/omni-repo/client && npm run build
+cd ~/omni-repo/client && npm install && npm run build
 \cp -rf ~/omni-repo/client/dist/* /usr/share/nginx/html/
 
 # Restart API
