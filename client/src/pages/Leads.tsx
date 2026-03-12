@@ -41,6 +41,7 @@ export function Leads() {
   const [activeTab, setActiveTab] = useState<'Inbox' | 'Website' | 'FacebookPixel' | 'Excel' | 'Custom'>('Inbox');
   const [customLeadSuccess, setCustomLeadSuccess] = useState(false);
   const [customLeadError, setCustomLeadError] = useState<string | null>(null);
+  const [showCustomLeadModal, setShowCustomLeadModal] = useState(false);
   const [customForm, setCustomForm] = useState({
     title: '',
     customerName: '',
@@ -184,7 +185,7 @@ export function Leads() {
       setCustomLeadError(null);
       setCustomForm({ title: '', customerName: '', phone: '', description: '', categoryId: '', interestId: '', statusId: '', priorityId: '', campaignId: '', value: '' });
       queryClient.invalidateQueries({ queryKey: ['leads'] });
-      setTimeout(() => setCustomLeadSuccess(false), 4000);
+      setTimeout(() => { setCustomLeadSuccess(false); setShowCustomLeadModal(false); }, 1500);
     },
     onError: (err: any) => {
       setCustomLeadError(err?.response?.data?.message || 'লিড তৈরি করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।');
@@ -398,158 +399,23 @@ export function Leads() {
         </div>
       )}
 
-      {/* Custom Leads tab: Manual lead creation form */}
+      {/* Custom Leads tab: Button to open modal */}
       {activeTab === 'Custom' && (
-        <div className="rounded-xl border border-violet-500/30 bg-slate-800/40 p-6">
-          <div className="mb-5 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-violet-500/20 border border-violet-500/30">
-              <Plus className="w-5 h-5 text-violet-400" />
-            </div>
-            <div>
-              <h3 className="text-violet-200 font-semibold text-lg">নতুন কাস্টম লিড তৈরি করুন</h3>
-              <p className="text-slate-400 text-sm">ফর্ম পূরণ করে নতুন লিড যোগ করুন</p>
-            </div>
+        <div className="flex flex-col items-center justify-center py-12 gap-5">
+          <div className="p-4 rounded-2xl bg-violet-500/15 border border-violet-500/30 shadow-lg shadow-violet-500/10">
+            <Plus className="w-10 h-10 text-violet-400" />
           </div>
-
-          {customLeadSuccess && (
-            <div className="mb-4 flex items-center gap-2 p-3 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300">
-              <CheckCircle2 className="w-4 h-4 shrink-0" />
-              <span className="text-sm font-medium">✅ লিড সফলভাবে তৈরি হয়েছে!</span>
-            </div>
-          )}
-          {customLeadError && (
-            <div className="mb-4 p-3 rounded-lg bg-red-500/15 border border-red-500/30 text-red-300 text-sm">
-              ❌ {customLeadError}
-            </div>
-          )}
-
-          <form onSubmit={handleCustomLeadSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Title - Required */}
-              <div className="md:col-span-2">
-                <Label className="text-amber-200/90 text-xs mb-1 block">শিরোনাম (Title) <span className="text-red-400">*</span></Label>
-                <Input
-                  required
-                  placeholder="লিডের শিরোনাম লিখুন..."
-                  value={customForm.title}
-                  onChange={(e) => handleCustomFormChange('title', e.target.value)}
-                  className="bg-slate-800/60 border-violet-500/30 text-amber-100 placeholder-slate-500 focus-visible:ring-violet-500/50"
-                />
-              </div>
-
-              {/* Customer Name */}
-              <div>
-                <Label className="text-amber-200/90 text-xs mb-1 block">কাস্টমার নাম (Customer Name)</Label>
-                <Input
-                  placeholder="কাস্টমারের নাম..."
-                  value={customForm.customerName}
-                  onChange={(e) => handleCustomFormChange('customerName', e.target.value)}
-                  className="bg-slate-800/60 border-amber-500/20 text-amber-100 placeholder-slate-500 focus-visible:ring-amber-500/50"
-                />
-              </div>
-
-              {/* Phone */}
-              <div>
-                <Label className="text-amber-200/90 text-xs mb-1 block">ফোন নম্বর (Phone)</Label>
-                <Input
-                  type="tel"
-                  placeholder="01XXXXXXXXX"
-                  value={customForm.phone}
-                  onChange={(e) => handleCustomFormChange('phone', e.target.value)}
-                  className="bg-slate-800/60 border-amber-500/20 text-amber-100 placeholder-slate-500 focus-visible:ring-amber-500/50"
-                />
-              </div>
-
-              {/* Category */}
-              <div>
-                <Label className="text-amber-200/90 text-xs mb-1 block">ক্যাটাগরি (Category)</Label>
-                <select value={customForm.categoryId} onChange={(e) => handleCustomFormChange('categoryId', e.target.value)} className={selectClass}>
-                  <option value="">ক্যাটাগরি নির্বাচন করুন</option>
-                  {(categories as any[]).map((cat) => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
-                </select>
-              </div>
-
-              {/* Interest */}
-              <div>
-                <Label className="text-amber-200/90 text-xs mb-1 block">ইন্টারেস্ট (Interest)</Label>
-                <select value={customForm.interestId} onChange={(e) => handleCustomFormChange('interestId', e.target.value)} className={selectClass}>
-                  <option value="">ইন্টারেস্ট নির্বাচন করুন</option>
-                  {(interests as any[]).map((int) => <option key={int.id} value={int.id}>{int.name}</option>)}
-                </select>
-              </div>
-
-              {/* Status */}
-              <div>
-                <Label className="text-amber-200/90 text-xs mb-1 block">স্ট্যাটাস (Status)</Label>
-                <select value={customForm.statusId} onChange={(e) => handleCustomFormChange('statusId', e.target.value)} className={selectClass}>
-                  <option value="">স্ট্যাটাস নির্বাচন করুন</option>
-                  {(statuses as any[]).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
-              </div>
-
-              {/* Priority */}
-              <div>
-                <Label className="text-amber-200/90 text-xs mb-1 block">প্রায়োরিটি (Priority)</Label>
-                <select value={customForm.priorityId} onChange={(e) => handleCustomFormChange('priorityId', e.target.value)} className={selectClass}>
-                  <option value="">প্রায়োরিটি নির্বাচন করুন</option>
-                  {(priorities as any[]).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
-              </div>
-
-              {/* Campaign */}
-              <div>
-                <Label className="text-amber-200/90 text-xs mb-1 block">ক্যাম্পেইন (Campaign)</Label>
-                <select value={customForm.campaignId} onChange={(e) => handleCustomFormChange('campaignId', e.target.value)} className={selectClass}>
-                  <option value="">ক্যাম্পেইন নির্বাচন করুন</option>
-                  {(campaigns as any[]).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </div>
-
-              {/* Value */}
-              <div>
-                <Label className="text-amber-200/90 text-xs mb-1 block">মূল্য (Value ৳)</Label>
-                <Input
-                  type="number"
-                  placeholder="যেমন: 5000"
-                  value={customForm.value}
-                  onChange={(e) => handleCustomFormChange('value', e.target.value)}
-                  min={0}
-                  className="bg-slate-800/60 border-amber-500/20 text-amber-100 placeholder-slate-500 focus-visible:ring-amber-500/50"
-                />
-              </div>
-
-              {/* Description */}
-              <div className="md:col-span-2">
-                <Label className="text-amber-200/90 text-xs mb-1 block">বিবরণ (Description)</Label>
-                <textarea
-                  rows={3}
-                  placeholder="লিড সম্পর্কে বিস্তারিত লিখুন..."
-                  value={customForm.description}
-                  onChange={(e) => handleCustomFormChange('description', e.target.value)}
-                  className="w-full px-3 py-2 border border-amber-500/20 rounded-lg bg-slate-800/60 text-amber-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 text-sm resize-none"
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => { setCustomForm({ title: '', customerName: '', phone: '', description: '', categoryId: '', interestId: '', statusId: '', priorityId: '', campaignId: '', value: '' }); setCustomLeadError(null); }}
-                className="border-slate-600 text-slate-300 hover:bg-slate-700/50 bg-transparent"
-              >
-                রিসেট করুন
-              </Button>
-              <Button
-                type="submit"
-                disabled={createLeadMutation.isPending}
-                className="bg-gradient-to-r from-violet-600 to-violet-500 hover:from-violet-500 hover:to-violet-400 text-white border border-violet-400/50 shadow-lg shadow-violet-500/25 flex items-center gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                {createLeadMutation.isPending ? 'তৈরি হচ্ছে...' : 'লিড তৈরি করুন'}
-              </Button>
-            </div>
-          </form>
+          <div className="text-center">
+            <h3 className="text-violet-200 font-semibold text-lg mb-1">কাস্টম লিড তৈরি করুন</h3>
+            <p className="text-slate-400 text-sm">ফর্ম পূরণ করে সরাসরি নতুন লিড যোগ করুন</p>
+          </div>
+          <Button
+            onClick={() => { setCustomLeadError(null); setCustomLeadSuccess(false); setShowCustomLeadModal(true); }}
+            className="bg-gradient-to-r from-violet-600 to-violet-500 hover:from-violet-500 hover:to-violet-400 text-white border border-violet-400/50 shadow-lg shadow-violet-500/25 flex items-center gap-2 px-6 py-2.5 text-base"
+          >
+            <Plus className="w-5 h-5" />
+            + নতুন কাস্টম লিড যোগ করুন
+          </Button>
         </div>
       )}
 
@@ -804,10 +670,10 @@ export function Leads() {
             {/* Active filter badges */}
             {hasActiveFilters && (
               <div className="mt-3 flex flex-wrap gap-2">
-                {filters.status && (
+                {filters.statusId && (
                   <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs border border-blue-500/30">
-                    স্ট্যাটাস: {filters.status}
-                    <button onClick={() => handleFilterChange('status', '')} className="hover:text-white"><X className="w-3 h-3" /></button>
+                    স্ট্যাটাস: {filters.statusId}
+                    <button onClick={() => handleFilterChange('statusId', '')} className="hover:text-white"><X className="w-3 h-3" /></button>
                   </span>
                 )}
                 {filters.categoryId && (
@@ -1105,6 +971,123 @@ export function Leads() {
       {errorDialog && (
         <ErrorAlert error={errorDialog} onClose={() => setErrorDialog(null)} />
       )}
+
+      {/* Custom Lead Modal */}
+      {showCustomLeadModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={() => { setShowCustomLeadModal(false); setCustomLeadError(null); }}
+          />
+          {/* Modal panel */}
+          <div className="relative z-10 w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-violet-500/30 bg-slate-900 shadow-2xl shadow-violet-500/20">
+            {/* Header */}
+            <div className="sticky top-0 z-10 flex items-center justify-between p-5 border-b border-violet-500/20 bg-slate-900/95 backdrop-blur-sm">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-violet-500/20 border border-violet-500/30">
+                  <Plus className="w-5 h-5 text-violet-400" />
+                </div>
+                <div>
+                  <h3 className="text-violet-200 font-semibold text-lg">নতুন কাস্টম লিড তৈরি করুন</h3>
+                  <p className="text-slate-400 text-xs">ফর্ম পূরণ করে নতুন লিড যোগ করুন</p>
+                </div>
+              </div>
+              <button
+                onClick={() => { setShowCustomLeadModal(false); setCustomLeadError(null); }}
+                className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/60 transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-5">
+              {customLeadSuccess && (
+                <div className="mb-4 flex items-center gap-2 p-3 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300">
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                  <span className="text-sm font-medium">✅ লিড সফলভাবে তৈরি হয়েছে! মডাল বন্ধ হচ্ছে...</span>
+                </div>
+              )}
+              {customLeadError && (
+                <div className="mb-4 p-3 rounded-lg bg-red-500/15 border border-red-500/30 text-red-300 text-sm">
+                  ❌ {customLeadError}
+                </div>
+              )}
+
+              <form onSubmit={handleCustomLeadSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="md:col-span-2">
+                    <Label className="text-amber-200/90 text-xs mb-1 block">শিরোনাম (Title) <span className="text-red-400">*</span></Label>
+                    <Input required placeholder="লিডের শিরোনাম লিখুন..." value={customForm.title} onChange={(e) => handleCustomFormChange('title', e.target.value)} className="bg-slate-800/60 border-violet-500/30 text-amber-100 placeholder-slate-500 focus-visible:ring-violet-500/50" />
+                  </div>
+                  <div>
+                    <Label className="text-amber-200/90 text-xs mb-1 block">কাস্টমার নাম (Customer Name)</Label>
+                    <Input placeholder="কাস্টমারের নাম..." value={customForm.customerName} onChange={(e) => handleCustomFormChange('customerName', e.target.value)} className="bg-slate-800/60 border-amber-500/20 text-amber-100 placeholder-slate-500 focus-visible:ring-amber-500/50" />
+                  </div>
+                  <div>
+                    <Label className="text-amber-200/90 text-xs mb-1 block">ফোন নম্বর (Phone)</Label>
+                    <Input type="tel" placeholder="01XXXXXXXXX" value={customForm.phone} onChange={(e) => handleCustomFormChange('phone', e.target.value)} className="bg-slate-800/60 border-amber-500/20 text-amber-100 placeholder-slate-500 focus-visible:ring-amber-500/50" />
+                  </div>
+                  <div>
+                    <Label className="text-amber-200/90 text-xs mb-1 block">ক্যাটাগরি (Category)</Label>
+                    <select value={customForm.categoryId} onChange={(e) => handleCustomFormChange('categoryId', e.target.value)} className={selectClass}>
+                      <option value="">ক্যাটাগরি নির্বাচন করুন</option>
+                      {(categories as any[]).map((cat) => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <Label className="text-amber-200/90 text-xs mb-1 block">ইন্টারেস্ট (Interest)</Label>
+                    <select value={customForm.interestId} onChange={(e) => handleCustomFormChange('interestId', e.target.value)} className={selectClass}>
+                      <option value="">ইন্টারেস্ট নির্বাচন করুন</option>
+                      {(interests as any[]).map((int) => <option key={int.id} value={int.id}>{int.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <Label className="text-amber-200/90 text-xs mb-1 block">স্ট্যাটাস (Status)</Label>
+                    <select value={customForm.statusId} onChange={(e) => handleCustomFormChange('statusId', e.target.value)} className={selectClass}>
+                      <option value="">স্ট্যাটাস নির্বাচন করুন</option>
+                      {(statuses as any[]).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <Label className="text-amber-200/90 text-xs mb-1 block">প্রায়োরিটি (Priority)</Label>
+                    <select value={customForm.priorityId} onChange={(e) => handleCustomFormChange('priorityId', e.target.value)} className={selectClass}>
+                      <option value="">প্রায়োরিটি নির্বাচন করুন</option>
+                      {(priorities as any[]).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <Label className="text-amber-200/90 text-xs mb-1 block">ক্যাম্পেইন (Campaign) <span className="text-slate-500 text-xs">(ঐচ্ছিক)</span></Label>
+                    <select value={customForm.campaignId} onChange={(e) => handleCustomFormChange('campaignId', e.target.value)} className={selectClass}>
+                      <option value="">ক্যাম্পেইন নির্বাচন করুন</option>
+                      {(campaigns as any[]).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <Label className="text-amber-200/90 text-xs mb-1 block">মূল্য (Value ৳) <span className="text-slate-500 text-xs">(ঐচ্ছিক)</span></Label>
+                    <Input type="number" placeholder="যেমন: 5000" value={customForm.value} onChange={(e) => handleCustomFormChange('value', e.target.value)} min={0} className="bg-slate-800/60 border-amber-500/20 text-amber-100 placeholder-slate-500 focus-visible:ring-amber-500/50" />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label className="text-amber-200/90 text-xs mb-1 block">বিবরণ (Description)</Label>
+                    <textarea rows={3} placeholder="লিড সম্পর্কে বিস্তারিত লিখুন..." value={customForm.description} onChange={(e) => handleCustomFormChange('description', e.target.value)} className="w-full px-3 py-2 border border-amber-500/20 rounded-lg bg-slate-800/60 text-amber-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 text-sm resize-none" />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-3 pt-2 border-t border-violet-500/20">
+                  <Button type="button" variant="outline" onClick={() => { setCustomForm({ title: '', customerName: '', phone: '', description: '', categoryId: '', interestId: '', statusId: '', priorityId: '', campaignId: '', value: '' }); setCustomLeadError(null); }} className="border-slate-600 text-slate-300 hover:bg-slate-700/50 bg-transparent">
+                    রিসেট করুন
+                  </Button>
+                  <Button type="submit" disabled={createLeadMutation.isPending} className="bg-gradient-to-r from-violet-600 to-violet-500 hover:from-violet-500 hover:to-violet-400 text-white border border-violet-400/50 shadow-lg shadow-violet-500/25 flex items-center gap-2">
+                    <Plus className="w-4 h-4" />
+                    {createLeadMutation.isPending ? 'তৈরি হচ্ছে...' : '+ লিড তৈরি করুন'}
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
