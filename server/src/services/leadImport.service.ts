@@ -156,15 +156,21 @@ export const leadImportService = {
         if (key) obj[key] = row[idx];
       });
 
+      const toStr = (v: unknown): string | undefined => {
+        if (v == null || v === '') return undefined;
+        const s = String(v).trim();
+        return s === '' ? undefined : s;
+      };
+
       const mapped: Record<string, unknown> = {
-        title: obj.title ?? obj.titel,
-        customer_name: obj.customer_name ?? obj.customername ?? obj.customer ?? obj.name,
-        phone: obj.phone,
-        description: obj.description ?? obj.desc,
+        title: toStr(obj.title ?? obj.titel),
+        customer_name: toStr(obj.customer_name ?? obj.customername ?? obj.customer ?? obj.name),
+        phone: toStr(obj.phone),
+        description: toStr(obj.description ?? obj.desc),
         value: obj.value,
-        status: obj.status,
-        category: obj.category,
-        interest: obj.interest,
+        status: toStr(obj.status),
+        category: toStr(obj.category),
+        interest: toStr(obj.interest),
       };
 
       const result = rowSchema.safeParse(mapped);
