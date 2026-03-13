@@ -217,6 +217,12 @@ const menuSections: MenuSection[] = [
         ]
       },
       {
+        label: 'SMS Marketing',
+        icon: Megaphone,
+        path: '/sms-marketing',
+        permission: 'can_manage_campaigns',
+      },
+      {
         label: 'Products',
         icon: Package,
         permission: 'can_manage_products',

@@ -8,5 +8,6 @@ const router = Router();
 router.post('/settings', authMiddleware, smsController.saveSettings);
 router.get('/settings', authMiddleware, smsController.getSettings);
 router.post('/test', authMiddleware, smsController.sendTestSms);
+router.post('/bulk', authMiddleware, smsController.sendBulkSms);
 
 export default router;

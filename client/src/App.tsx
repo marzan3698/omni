@@ -57,6 +57,7 @@ import Integrations from './pages/Integrations';
 import FacebookOAuthCallback from './pages/FacebookOAuthCallback';
 import { FacebookAppConfig } from './pages/FacebookAppConfig';
 import SmsSettings from './pages/SmsSettings';
+import SmsMarketing from './pages/SmsMarketing';
 import EnvironmentFileEditing from './pages/EnvironmentFileEditing';
 import Campaigns from './pages/Campaigns';
 import CampaignForm from './pages/CampaignForm';
@@ -728,6 +729,21 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+
+              {/* SMS Marketing Route */}
+              <Route
+                path="/sms-marketing"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <PermissionGuard permission="can_manage_campaigns">
+                        <SmsMarketing />
+                      </PermissionGuard>
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+
               <Route
                 path="/services/:id/edit"
                 element={

@@ -694,3 +694,9 @@ export const bkashApi = {
     apiClientInstance.post<ApiResponse>('/bkash/create', data),
 };
 
+// SMS API
+export const smsApi = {
+  sendBulkSms: (data: { phones: string[]; message: string }) =>
+    apiClientInstance.post<ApiResponse>('/sms/bulk', data),
+};
+

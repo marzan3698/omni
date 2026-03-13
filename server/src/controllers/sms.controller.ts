@@ -73,5 +73,44 @@ export const smsController = {
             console.error('Test SMS Error:', error.message);
             return sendError(res, error.message || 'Failed to send test SMS', 500);
         }
+    },
+
+    /**
+     * Send Bulk SMS
+     * POST /api/sms/bulk
+     */
+    sendBulkSms: async (req: AuthRequest, res: Response) => {
+        try {
+            const companyId = req.user?.companyId;
+            if (!companyId) return sendError(res, 'Company ID is required', 400);
+
+            const { phones, message } = req.body;
+            if (!phones || !Array.isArray(phones) || phones.length === 0) {
+                return sendError(res, 'A valid array of destination numbers is required', 400);
+            }
+            if (!message) return sendError(res, 'Message body is required', 400);
+
+            // Filter out empty/invalid items and strip whitespace
+            const validPhones = phones
+                .filter((p: any) => typeof p === 'string' && p.trim().length > 5)
+                .map((p: string) => p.trim());
+
+            if (validPhones.length === 0) {
+                return sendError(res, 'No valid mobile numbers provided', 400);
+            }
+
+            // GreenWeb supports comma-separated numbers for bulk sending natively
+            const to = validPhones.join(',');
+
+            const result = await smsService.sendSms(companyId, to, message);
+
+            return sendSuccess(res, {
+                result,
+                count: validPhones.length
+            }, `Bulk SMS sent to ${validPhones.length} numbers successfully`);
+        } catch (error: any) {
+            console.error('Bulk SMS Error:', error.message);
+            return sendError(res, error.message || 'Failed to send bulk SMS', 500);
+        }
     }
 };
