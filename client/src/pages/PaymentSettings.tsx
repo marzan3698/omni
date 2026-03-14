@@ -2,12 +2,23 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { paymentGatewayApi } from '@/lib/api';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
 import { PermissionGuard } from '@/components/PermissionGuard';
-import { Plus, Edit, Trash2, X, CreditCard, CheckCircle2, XCircle } from 'lucide-react';
+import { DashboardWidgetCard } from '@/components/DashboardWidgetCard';
+import { 
+  Plus, 
+  Edit, 
+  Trash2, 
+  X, 
+  CreditCard, 
+  CheckCircle2, 
+  XCircle,
+  Settings,
+  ShieldCheck,
+  ChevronDown
+} from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -90,64 +101,101 @@ function BkashSettings() {
     });
   };
 
-  if (isLoading) return <div className="p-4 text-center">Loading bKash settings...</div>;
+  if (isLoading) return <div className="p-12 text-center text-amber-200/60 animate-pulse">Loading bKash settings...</div>;
 
   return (
-    <Card className="mt-8">
-      <CardHeader>
-        <CardTitle>Automatic bKash Integration</CardTitle>
-        <CardDescription>
-          Configure auto-payment API access. Enable this to let clients pay via bKash gateway.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label>App Key</Label>
-            <Input value={appKey} onChange={e => setAppKey(e.target.value)} type="text" />
+    <DashboardWidgetCard index={5} className="mt-8">
+      <div className="flex items-center gap-2 mb-6">
+        <div className="p-2 rounded-lg bg-pink-500/10 border border-pink-500/20">
+          <Settings className="w-5 h-5 text-pink-500" />
+        </div>
+        <div>
+          <h2 className="text-xl font-bold text-amber-100">Automatic bKash Integration</h2>
+          <p className="text-amber-200/60 text-xs">Configure auto-payment API access</p>
+        </div>
+      </div>
+
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <Label className="text-amber-200/80 font-bold uppercase tracking-wider text-[10px]">App Key</Label>
+            <Input 
+              value={appKey} 
+              onChange={e => setAppKey(e.target.value)} 
+              type="text" 
+              className="bg-slate-900/50 border-amber-500/20 text-amber-100 placeholder:text-amber-900/40"
+            />
           </div>
-          <div>
-            <Label>App Secret</Label>
-            <Input value={appSecret} onChange={e => setAppSecret(e.target.value)} type="password" />
+          <div className="space-y-2">
+            <Label className="text-amber-200/80 font-bold uppercase tracking-wider text-[10px]">App Secret</Label>
+            <Input 
+              value={appSecret} 
+              onChange={e => setAppSecret(e.target.value)} 
+              type="password" 
+              className="bg-slate-900/50 border-amber-500/20 text-amber-100 placeholder:text-amber-900/40"
+            />
           </div>
-          <div>
-            <Label>Username</Label>
-            <Input value={username} onChange={e => setUsername(e.target.value)} type="text" />
+          <div className="space-y-2">
+            <Label className="text-amber-200/80 font-bold uppercase tracking-wider text-[10px]">Username</Label>
+            <Input 
+              value={username} 
+              onChange={e => setUsername(e.target.value)} 
+              type="text" 
+              className="bg-slate-900/50 border-amber-500/20 text-amber-100 placeholder:text-amber-900/40"
+            />
           </div>
-          <div>
-            <Label>Password</Label>
-            <Input value={password} onChange={e => setPassword(e.target.value)} type="password" />
+          <div className="space-y-2">
+            <Label className="text-amber-200/80 font-bold uppercase tracking-wider text-[10px]">Password</Label>
+            <Input 
+              value={password} 
+              onChange={e => setPassword(e.target.value)} 
+              type="password" 
+              className="bg-slate-900/50 border-amber-500/20 text-amber-100 placeholder:text-amber-900/40"
+            />
           </div>
-          <div className="flex flex-col gap-2">
-            <Label>Environment</Label>
-            <select
-              value={isLive}
-              onChange={e => setIsLive(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white select-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="false">Sandbox (Test Mode)</option>
-              <option value="true">Production (Live)</option>
-            </select>
+          
+          <div className="space-y-2">
+            <Label className="text-amber-200/80 font-bold uppercase tracking-wider text-[10px]">Environment</Label>
+            <div className="relative">
+              <select
+                value={isLive}
+                onChange={e => setIsLive(e.target.value)}
+                className="w-full px-4 py-2 bg-slate-900/50 border border-amber-500/20 rounded-lg text-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-500/50 appearance-none cursor-pointer text-sm"
+              >
+                <option value="false" className="bg-slate-900">Sandbox (Test Mode)</option>
+                <option value="true" className="bg-slate-900">Production (Live)</option>
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-500/50 pointer-events-none" />
+            </div>
           </div>
-          <div className="flex flex-col gap-2">
-            <Label>Status</Label>
-            <select
-              value={isActive}
-              onChange={e => setIsActive(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white select-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="true">Active (Show to clients)</option>
-              <option value="false">Inactive</option>
-            </select>
+
+          <div className="space-y-2">
+            <Label className="text-amber-200/80 font-bold uppercase tracking-wider text-[10px]">Status</Label>
+            <div className="relative">
+              <select
+                value={isActive}
+                onChange={e => setIsActive(e.target.value)}
+                className="w-full px-4 py-2 bg-slate-900/50 border border-amber-500/20 rounded-lg text-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-500/50 appearance-none cursor-pointer text-sm"
+              >
+                <option value="true" className="bg-slate-900">Active (Show to clients)</option>
+                <option value="false" className="bg-slate-900">Inactive</option>
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-500/50 pointer-events-none" />
+            </div>
           </div>
         </div>
+
         <div className="pt-4 flex justify-end">
-          <Button onClick={handleSave} disabled={updateMutation.isPending}>
+          <Button 
+            onClick={handleSave} 
+            disabled={updateMutation.isPending}
+            className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold shadow-[0_0_20px_rgba(245,158,11,0.2)]"
+          >
             {updateMutation.isPending ? 'Saving...' : 'Save bKash Settings'}
           </Button>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </DashboardWidgetCard>
   );
 }
 
@@ -251,14 +299,14 @@ function PaymentSettingsContent() {
   };
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="flex justify-between items-center mb-6">
+    <div className="space-y-6">
+      <div className="p-4 rounded-xl border border-amber-500/20 bg-slate-800/40 backdrop-blur-sm flex flex-col md:flex-row justify-between items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <CreditCard className="h-8 w-8" />
+          <h1 className="text-3xl font-bold text-amber-100 drop-shadow-sm flex items-center gap-2">
+            <CreditCard className="h-8 w-8 text-amber-500" />
             Payment Settings
           </h1>
-          <p className="text-gray-600 mt-1">Manage payment gateways (Bkash, Nagad, Rocket, etc.)</p>
+          <p className="text-amber-200/80 mt-1">Manage payment gateways (Bkash, Nagad, Rocket, etc.)</p>
         </div>
         <PermissionGuard permission="can_manage_payment_settings">
           <Button
@@ -267,6 +315,7 @@ function PaymentSettingsContent() {
               reset();
               setIsModalOpen(true);
             }}
+            className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold"
           >
             <Plus className="mr-2 h-4 w-4" />
             Add Gateway
@@ -275,161 +324,169 @@ function PaymentSettingsContent() {
       </div>
 
       {isLoading ? (
-        <div className="text-center py-12">Loading payment gateways...</div>
+        <div className="text-center py-12 text-amber-200/60 animate-pulse">Loading payment gateways...</div>
       ) : gateways.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center text-gray-500">
-            No payment gateways found. Add your first payment gateway to get started.
-          </CardContent>
-        </Card>
+        <DashboardWidgetCard index={0} className="py-12 text-center text-amber-200/40">
+          No payment gateways found. Add your first payment gateway to get started.
+        </DashboardWidgetCard>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {gateways.map((gateway) => (
-            <Card key={gateway.id} className={!gateway.isActive ? 'opacity-60' : ''}>
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <CardTitle className="text-lg">{gateway.name}</CardTitle>
-                      {gateway.isActive ? (
-                        <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      ) : (
-                        <XCircle className="h-4 w-4 text-gray-400" />
-                      )}
-                    </div>
-                    <CardDescription className="mt-1">
-                      {gateway.accountType} • {gateway.accountNumber}
-                    </CardDescription>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {gateways.map((gateway, idx) => (
+            <DashboardWidgetCard key={gateway.id} index={idx} className={!gateway.isActive ? 'opacity-50 grayscale cursor-not-allowed' : 'group'}>
+              <div className="flex justify-between items-start mb-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="text-lg font-bold text-amber-100">{gateway.name}</h3>
+                    {gateway.isActive ? (
+                      <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    ) : (
+                      <XCircle className="h-4 w-4 text-slate-500" />
+                    )}
                   </div>
-                  <PermissionGuard permission="can_manage_payment_settings">
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={() => handleEdit(gateway)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDelete(gateway.id, gateway.name)}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </PermissionGuard>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {gateway.instructions && (
-                  <div className="bg-gray-50 p-3 rounded-md mb-3">
-                    <p className="text-xs font-semibold text-gray-700 mb-1">Instructions:</p>
-                    <p className="text-sm text-gray-600 whitespace-pre-wrap">{gateway.instructions}</p>
+                  <div className="text-xs text-amber-200/60 font-mono">
+                    {gateway.accountType} • {gateway.accountNumber}
                   </div>
-                )}
-                <div className="flex items-center gap-2 text-sm">
-                  <span className={`px-2 py-1 rounded text-xs font-medium ${gateway.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
-                    {gateway.isActive ? 'Active' : 'Inactive'}
-                  </span>
                 </div>
-              </CardContent>
-            </Card>
+                <PermissionGuard permission="can_manage_payment_settings">
+                  <div className="flex gap-1">
+                    <Button variant="ghost" size="icon" onClick={() => handleEdit(gateway)} className="h-8 w-8 text-amber-500/50 hover:text-amber-500 hover:bg-amber-500/10">
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDelete(gateway.id, gateway.name)}
+                      className="h-8 w-8 text-red-500/50 hover:text-red-500 hover:bg-red-500/10"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </PermissionGuard>
+              </div>
+
+              {gateway.instructions && (
+                <div className="bg-slate-900/50 border border-amber-500/5 p-3 rounded-lg mb-4">
+                  <p className="text-[10px] font-bold text-amber-500/40 uppercase tracking-widest mb-1">Instructions</p>
+                  <p className="text-xs text-amber-200/70 whitespace-pre-wrap leading-relaxed">{gateway.instructions}</p>
+                </div>
+              )}
+
+              <div className="flex items-center gap-2">
+                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${
+                  gateway.isActive 
+                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+                    : 'bg-slate-500/10 text-slate-400 border-slate-500/20'
+                }`}>
+                  {gateway.isActive ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+            </DashboardWidgetCard>
           ))}
         </div>
       )}
 
       {/* Create/Edit Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <Card className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>{editingGateway ? 'Edit Payment Gateway' : 'Add Payment Gateway'}</CardTitle>
-                <Button variant="ghost" size="icon" onClick={handleCloseModal}>
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                <div>
-                  <Label htmlFor="name">Gateway Name *</Label>
-                  <Input
-                    id="name"
-                    {...register('name')}
-                    placeholder="e.g., Bkash, Nagad, Rocket"
-                  />
-                  {errors.name && <p className="text-sm text-red-600 mt-1">{errors.name.message}</p>}
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <DashboardWidgetCard index={0} className="w-full max-w-lg max-h-[90vh] overflow-y-auto animate-game-item-reveal">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                  <ShieldCheck className="w-5 h-5 text-amber-500" />
                 </div>
+                <h2 className="text-2xl font-bold text-amber-100">{editingGateway ? 'Edit Gateway' : 'Add Gateway'}</h2>
+              </div>
+              <Button variant="ghost" size="icon" onClick={handleCloseModal} className="text-amber-500 hover:text-amber-400 hover:bg-amber-500/10">
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
 
-                <div>
-                  <Label htmlFor="accountType">Account Type *</Label>
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="name" className="text-amber-200/80 font-bold uppercase tracking-wider text-[10px]">Gateway Name *</Label>
+                <Input
+                  id="name"
+                  {...register('name')}
+                  placeholder="e.g., Bkash, Nagad, Rocket"
+                  className="bg-slate-900/50 border-amber-500/20 text-amber-100 placeholder:text-amber-900/40"
+                />
+                {errors.name && <p className="text-xs text-red-400 mt-1">{errors.name.message}</p>}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="accountType" className="text-amber-200/80 font-bold uppercase tracking-wider text-[10px]">Account Type *</Label>
+                <div className="relative">
                   <select
                     id="accountType"
                     {...register('accountType')}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-4 py-2 bg-slate-900/50 border border-amber-500/20 rounded-lg text-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-500/50 appearance-none cursor-pointer text-sm"
                   >
-                    <option value="Personal">Personal</option>
-                    <option value="Payment">Payment</option>
-                    <option value="Agent">Agent</option>
+                    <option value="Personal" className="bg-slate-900">Personal</option>
+                    <option value="Payment" className="bg-slate-900">Payment</option>
+                    <option value="Agent" className="bg-slate-900">Agent</option>
                   </select>
-                  {errors.accountType && (
-                    <p className="text-sm text-red-600 mt-1">{errors.accountType.message}</p>
-                  )}
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-500/50 pointer-events-none" />
                 </div>
+                {errors.accountType && (
+                  <p className="text-xs text-red-400 mt-1">{errors.accountType.message}</p>
+                )}
+              </div>
 
-                <div>
-                  <Label htmlFor="accountNumber">Account Number *</Label>
-                  <Input
-                    id="accountNumber"
-                    {...register('accountNumber')}
-                    placeholder="01XXXXXXXXX (11 digits)"
-                    maxLength={11}
-                  />
-                  {errors.accountNumber && (
-                    <p className="text-sm text-red-600 mt-1">{errors.accountNumber.message}</p>
-                  )}
-                  <p className="text-xs text-gray-500 mt-1">Bangladesh mobile number format</p>
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="accountNumber" className="text-amber-200/80 font-bold uppercase tracking-wider text-[10px]">Account Number *</Label>
+                <Input
+                  id="accountNumber"
+                  {...register('accountNumber')}
+                  placeholder="01XXXXXXXXX (11 digits)"
+                  maxLength={11}
+                  className="bg-slate-900/50 border-amber-500/20 text-amber-100 placeholder:text-amber-900/40"
+                />
+                {errors.accountNumber && (
+                  <p className="text-xs text-red-400 mt-1">{errors.accountNumber.message}</p>
+                )}
+                <p className="text-[10px] text-amber-500/40">Bangladesh mobile number format</p>
+              </div>
 
-                <div>
-                  <Label htmlFor="instructions">Payment Instructions</Label>
-                  <textarea
-                    id="instructions"
-                    {...register('instructions')}
-                    rows={6}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="Enter payment instructions for clients (e.g., Send money to this number and provide transaction ID)"
-                  />
-                  {errors.instructions && (
-                    <p className="text-sm text-red-600 mt-1">{errors.instructions.message}</p>
-                  )}
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="instructions" className="text-amber-200/80 font-bold uppercase tracking-wider text-[10px]">Payment Instructions</Label>
+                <textarea
+                  id="instructions"
+                  {...register('instructions')}
+                  rows={4}
+                  className="w-full px-4 py-3 bg-slate-900 border border-amber-500/20 rounded-lg text-amber-100 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-all resize-none"
+                  placeholder="Enter payment instructions for clients..."
+                />
+                {errors.instructions && (
+                  <p className="text-xs text-red-400 mt-1">{errors.instructions.message}</p>
+                )}
+              </div>
 
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="isActive"
-                    {...register('isActive')}
-                    className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-                  />
-                  <Label htmlFor="isActive" className="cursor-pointer">
-                    Active (visible to clients)
-                  </Label>
-                </div>
+              <div className="flex items-center gap-3 p-3 bg-slate-900/50 border border-amber-500/10 rounded-lg">
+                <input
+                  type="checkbox"
+                  id="isActive"
+                  {...register('isActive')}
+                  className="w-4 h-4 text-amber-500 bg-slate-900 border-amber-500/30 rounded focus:ring-amber-500/50"
+                />
+                <Label htmlFor="isActive" className="text-sm text-amber-100 cursor-pointer">
+                  Active (visible to clients)
+                </Label>
+              </div>
 
-                <div className="flex gap-2 justify-end pt-4">
-                  <Button type="button" variant="outline" onClick={handleCloseModal}>
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={createMutation.isPending || updateMutation.isPending}
-                  >
-                    {editingGateway ? 'Update' : 'Create'}
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
+              <div className="flex gap-4 pt-4">
+                <Button type="button" variant="outline" onClick={handleCloseModal} className="flex-1 bg-slate-800 border-amber-500/20 text-amber-200/60 hover:text-amber-100">
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={createMutation.isPending || updateMutation.isPending}
+                  className="flex-1 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold shadow-[0_0_20px_rgba(245,158,11,0.2)]"
+                >
+                  {editingGateway ? 'Update Gateway' : 'Create Gateway'}
+                </Button>
+              </div>
+            </form>
+          </DashboardWidgetCard>
         </div>
       )}
     </div>
@@ -439,8 +496,8 @@ function PaymentSettingsContent() {
 export default function PaymentSettings() {
   return (
     <PermissionGuard permission="can_manage_payment_settings">
-      <PaymentSettingsContent />
-      <div className="container mx-auto px-6 pb-6">
+      <div className="container mx-auto">
+        <PaymentSettingsContent />
         <BkashSettings />
       </div>
     </PermissionGuard>

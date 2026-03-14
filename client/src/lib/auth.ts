@@ -43,11 +43,11 @@ export const authApi = {
   /**
    * Register new client
    */
-  async registerClient(email: string, password: string): Promise<AuthResponse> {
+  async registerClient(email: string, password: string, phone: string): Promise<AuthResponse> {
     try {
       const response = await apiClient.post<ApiResponse<AuthResponse>>(
         '/auth/register-client',
-        { email, password }
+        { email, password, phone }
       );
       
       if (response.data.success && response.data.data) {

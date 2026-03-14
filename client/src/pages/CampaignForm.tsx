@@ -3,12 +3,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import { campaignApi, projectApi } from '@/lib/api';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { DashboardWidgetCard } from '@/components/DashboardWidgetCard';
 import { useAuth } from '@/contexts/AuthContext';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Save, Megaphone, ChevronDown, CheckCircle2 } from 'lucide-react';
 import { ProductSearch } from '@/components/ProductSearch';
 import { GroupSelector } from '@/components/GroupSelector';
 import {
@@ -275,91 +275,94 @@ export default function CampaignForm() {
 
   if (campaignLoading || projectsLoading) {
     return (
-      <div className="p-6">
-        <div className="text-center">Loading...</div>
-      </div>
+      <div className="p-12 text-center text-amber-200/60 animate-pulse">লোড হচ্ছে...</div>
     );
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <div className="mb-6">
-        <Button
-          variant="ghost"
-          onClick={() => navigate('/campaigns')}
-          className="mb-4"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Campaigns
-        </Button>
-        <h1 className="text-3xl font-bold">
-          {isEditMode ? 'Edit Campaign' : 'Create New Campaign'}
-        </h1>
-        <p className="text-muted-foreground mt-2">
-          {isEditMode
-            ? 'Update campaign details and settings'
-            : 'Create a new campaign and assign it to a project'}
-        </p>
+    <div className="max-w-4xl mx-auto space-y-6">
+      <div className="p-4 rounded-xl border border-amber-500/20 bg-slate-800/40 backdrop-blur-sm flex flex-col md:flex-row justify-between items-center gap-4">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate('/campaigns')}
+            className="text-amber-500 hover:text-amber-400 hover:bg-amber-500/10"
+          >
+            <ArrowLeft className="h-6 w-6" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold text-amber-100 drop-shadow-sm flex items-center gap-2">
+              <Megaphone className="h-8 w-8 text-amber-500" />
+              {isEditMode ? 'Edit Campaign' : 'Create Campaign'}
+            </h1>
+            <p className="text-amber-200/80 mt-1">
+              {isEditMode ? 'Update campaign details' : 'Launch a new marketing campaign'}
+            </p>
+          </div>
+        </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Campaign Details</CardTitle>
-          <CardDescription>
+      <DashboardWidgetCard index={0}>
+        <div className="mb-8">
+          <h2 className="text-xl font-bold text-amber-100">Campaign Details</h2>
+          <p className="text-amber-200/40 text-xs mt-1">
             {isEditMode
-              ? 'Update the campaign information below'
-              : 'Fill in the campaign information below. The client and invoices will be automatically assigned from the selected project.'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Project Selection (Required) */}
-            <div className="space-y-2">
-              <Label htmlFor="projectId">
-                Project <span className="text-red-500">*</span>
-              </Label>
-              <Select
-                value={formData.projectId}
-                onValueChange={handleProjectChange}
-                disabled={isEditMode}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a project" />
-                </SelectTrigger>
-                <SelectContent>
-                  {projects.map((project) => (
-                    <SelectItem key={project.id} value={String(project.id)}>
-                      {project.title} {project.client?.name ? `(${project.client.name})` : ''}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {selectedProject && (
-                <div className="text-sm text-muted-foreground mt-2 p-3 bg-slate-50 rounded-md">
-                  <p>
-                    <strong>Client:</strong> {selectedProject.client?.name || selectedProject.client?.email || 'N/A'}
-                  </p>
-                  <p className="mt-1">
-                    <strong>Client Email:</strong> {selectedProject.client?.email || 'N/A'}
-                  </p>
-                  {selectedProject.invoices && selectedProject.invoices.length > 0 && (
-                    <p className="mt-1">
-                      <strong>Total Invoice Amount:</strong> ${selectedProject.invoices.reduce((sum, inv) => sum + Number(inv.totalAmount || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </p>
-                  )}
-                  <p className="mt-1 text-blue-600">
-                    ✓ Client and invoices from this project will be automatically assigned to the campaign
-                    {selectedProject.invoices && selectedProject.invoices.length > 0 && (
-                      <span className="block mt-1">✓ Budget has been auto-filled from project invoices</span>
-                    )}
-                  </p>
-                </div>
-              )}
-            </div>
+              ? 'Update the campaign information'
+              : 'Complete the form to initialize your campaign'}
+          </p>
+        </div>
 
-            {/* Campaign Name */}
+        <form onSubmit={handleSubmit} className="space-y-8">
+          {/* Project Selection */}
+          <div className="space-y-4">
+            <Label htmlFor="projectId" className="text-amber-200/80 font-bold uppercase tracking-wider text-[10px]">
+              Target Project <span className="text-red-500">*</span>
+            </Label>
+            <Select
+              value={formData.projectId}
+              onValueChange={handleProjectChange}
+              disabled={isEditMode}
+            >
+              <SelectTrigger className="bg-slate-900/50 border-amber-500/20 text-amber-100 h-12">
+                <SelectValue placeholder="Select a project" />
+              </SelectTrigger>
+              <SelectContent className="bg-slate-900 border-amber-500/20 text-amber-100">
+                {projects.map((project) => (
+                  <SelectItem key={project.id} value={String(project.id)} className="hover:bg-amber-500/10 focus:bg-amber-500/10">
+                    {project.title} {project.client?.name ? `(${project.client.name})` : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            {selectedProject && (
+              <div className="text-xs p-4 bg-amber-500/5 border border-amber-500/10 rounded-xl space-y-2 animate-in fade-in slide-in-from-top-2">
+                <div className="flex justify-between items-center text-amber-200/60">
+                  <span className="uppercase tracking-widest font-bold">Client</span>
+                  <span className="text-amber-100 font-bold">{selectedProject.client?.name || 'N/A'}</span>
+                </div>
+                <div className="flex justify-between items-center text-amber-200/60">
+                  <span className="uppercase tracking-widest font-bold">Client Email</span>
+                  <span className="text-amber-100 font-mono">{selectedProject.client?.email || 'N/A'}</span>
+                </div>
+                {selectedProject.invoices && selectedProject.invoices.length > 0 && (
+                  <div className="flex justify-between items-center text-amber-200/60">
+                    <span className="uppercase tracking-widest font-bold">Total Invoice Amount</span>
+                    <span className="text-emerald-400 font-bold">৳{selectedProject.invoices.reduce((sum, inv) => sum + Number(inv.totalAmount || 0), 0).toLocaleString()}</span>
+                  </div>
+                )}
+                <div className="pt-2 flex items-center gap-2 text-blue-400 font-bold">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Project details synchronized</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-8">
             <div className="space-y-2">
-              <Label htmlFor="name">
+              <Label htmlFor="name" className="text-amber-200/80 font-bold uppercase tracking-wider text-[10px]">
                 Campaign Name <span className="text-red-500">*</span>
               </Label>
               <Input
@@ -368,91 +371,94 @@ export default function CampaignForm() {
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Enter campaign name"
                 required
+                className="bg-slate-900/50 border-amber-500/20 text-amber-100 placeholder:text-amber-900/40 h-10"
               />
             </div>
 
-            {/* Description */}
             <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Enter campaign description"
-                rows={4}
+              <Label htmlFor="type" className="text-amber-200/80 font-bold uppercase tracking-wider text-[10px]">
+                Campaign Type <span className="text-red-500">*</span>
+              </Label>
+              <Select
+                value={formData.type}
+                onValueChange={(value: 'reach' | 'sale' | 'research') =>
+                  setFormData({ ...formData, type: value })
+                }
+              >
+                <SelectTrigger className="bg-slate-900/50 border-amber-500/20 text-amber-100 h-10">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-900 border-amber-500/20 text-amber-100">
+                  <SelectItem value="sale" className="focus:bg-amber-500/10">Sale</SelectItem>
+                  <SelectItem value="reach" className="focus:bg-amber-500/10">Reach</SelectItem>
+                  <SelectItem value="research" className="focus:bg-amber-500/10">Research</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="description" className="text-amber-200/80 font-bold uppercase tracking-wider text-[10px]">Description</Label>
+            <Textarea
+              id="description"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="Enter campaign objectives..."
+              rows={4}
+              className="bg-slate-900/50 border-amber-500/20 text-amber-100 placeholder:text-amber-900/40 transition-all resize-none"
+            />
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="space-y-2">
+              <Label htmlFor="startDate" className="text-amber-200/80 font-bold uppercase tracking-wider text-[10px]">
+                Start Date <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="startDate"
+                type="date"
+                value={formData.startDate}
+                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                required
+                className="bg-slate-900/50 border-amber-500/20 text-amber-100 h-10 [color-scheme:dark]"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="endDate" className="text-amber-200/80 font-bold uppercase tracking-wider text-[10px]">
+                End Date <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="endDate"
+                type="date"
+                value={formData.endDate}
+                onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                required
+                className="bg-slate-900/50 border-amber-500/20 text-amber-100 h-10 [color-scheme:dark]"
               />
             </div>
 
-            {/* Date Range */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="startDate">
-                  Start Date <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="startDate"
-                  type="date"
-                  value={formData.startDate}
-                  onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="endDate">
-                  End Date <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="endDate"
-                  type="date"
-                  value={formData.endDate}
-                  onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                  required
-                />
-              </div>
-            </div>
-
-            {/* Budget and Type */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="budget">
-                  Budget <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="budget"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.budget}
-                  onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
-                  placeholder="Enter budget"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="type">
-                  Campaign Type <span className="text-red-500">*</span>
-                </Label>
-                <Select
-                  value={formData.type}
-                  onValueChange={(value: 'reach' | 'sale' | 'research') =>
-                    setFormData({ ...formData, type: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="sale">Sale</SelectItem>
-                    <SelectItem value="reach">Reach</SelectItem>
-                    <SelectItem value="research">Research</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Product Selection */}
             <div className="space-y-2">
-              <Label>Products (Optional)</Label>
+              <Label htmlFor="budget" className="text-amber-200/80 font-bold uppercase tracking-wider text-[10px]">
+                Budget (৳) <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="budget"
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.budget}
+                onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
+                placeholder="Enter budget"
+                required
+                className="bg-slate-900/50 border-amber-500/20 text-emerald-400 placeholder:text-amber-900/40 h-10 font-bold"
+              />
+            </div>
+          </div>
+
+          <div className="border-t border-amber-500/10 pt-8 space-y-8">
+            <div className="space-y-2">
+              <Label className="text-amber-200/80 font-bold uppercase tracking-wider text-[10px]">Products (Optional)</Label>
               <ProductSearch
                 companyId={user?.companyId || 0}
                 selectedProductIds={formData.productIds}
@@ -462,10 +468,9 @@ export default function CampaignForm() {
               />
             </div>
 
-            {/* Employee Group Selection (Optional) */}
             {user?.companyId && (
               <div className="space-y-2">
-                <Label>Employee Groups (Optional)</Label>
+                <Label className="text-amber-200/80 font-bold uppercase tracking-wider text-[10px]">Employee Groups (Optional)</Label>
                 <GroupSelector
                   companyId={user.companyId}
                   selectedGroupIds={formData.groupIds}
@@ -475,44 +480,51 @@ export default function CampaignForm() {
                 />
               </div>
             )}
+          </div>
 
-            {/* Display assigned invoices if editing */}
-            {isEditMode && campaignData?.invoices && campaignData.invoices.length > 0 && (
-              <div className="space-y-2">
-                <Label>Assigned Invoices</Label>
-                <div className="p-3 bg-slate-50 rounded-md">
-                  {campaignData.invoices.map((ci) => (
-                    <div key={ci.invoice.id} className="text-sm mb-2">
-                      <strong>{ci.invoice.invoiceNumber}</strong> - ${ci.invoice.totalAmount} (
-                      {ci.invoice.status})
+          {isEditMode && campaignData?.invoices && campaignData.invoices.length > 0 && (
+            <div className="space-y-2 pt-6 border-t border-amber-500/10">
+              <Label className="text-amber-200/80 font-bold uppercase tracking-wider text-[10px]">Assigned Invoices</Label>
+              <div className="p-4 bg-slate-900/50 border border-amber-500/5 rounded-xl space-y-3">
+                {campaignData.invoices.map((ci) => (
+                  <div key={ci.invoice.id} className="flex justify-between items-center text-xs">
+                    <span className="text-amber-100 font-mono tracking-wider">{ci.invoice.invoiceNumber}</span>
+                    <div className="flex gap-4 items-center">
+                      <span className="text-emerald-400 font-bold">৳{Number(ci.invoice.totalAmount).toLocaleString()}</span>
+                      <span className="px-1.5 py-0.5 rounded-full bg-slate-500/10 text-slate-400 border border-slate-500/20 uppercase text-[8px] font-bold">
+                        {ci.invoice.status}
+                      </span>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
-            )}
-
-            {/* Submit Button */}
-            <div className="flex justify-end gap-4 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => navigate('/campaigns')}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={saveCampaignMutation.isPending}>
-                <Save className="mr-2 h-4 w-4" />
-                {saveCampaignMutation.isPending
-                  ? 'Saving...'
-                  : isEditMode
-                  ? 'Update Campaign'
-                  : 'Create Campaign'}
-              </Button>
             </div>
-          </form>
-        </CardContent>
-      </Card>
+          )}
+
+          <div className="flex justify-end gap-4 pt-8 border-t border-amber-500/10">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => navigate('/campaigns')}
+              className="px-8 bg-slate-800 border-amber-500/20 text-amber-200/60 hover:text-amber-100 font-bold"
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              disabled={saveCampaignMutation.isPending}
+              className="px-8 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold shadow-[0_0_20px_rgba(245,158,11,0.2)]"
+            >
+              <Save className="mr-2 h-4 w-4" />
+              {saveCampaignMutation.isPending
+                ? 'Saving...'
+                : isEditMode
+                ? 'Update Campaign'
+                : 'Create Campaign'}
+            </Button>
+          </div>
+        </form>
+      </DashboardWidgetCard>
     </div>
   );
 }
-

@@ -12,10 +12,11 @@ import { getImageUrl } from '@/lib/imageUtils';
 import { AuthBanner } from '@/components/ui/AuthBanner';
 import { SocialLoginButtons } from '@/components/ui/SocialLoginButtons';
 import { PasswordStrengthIndicator } from '@/components/ui/PasswordStrengthIndicator';
-import { Mail, Lock, Loader2, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, Loader2, Eye, EyeOff, Phone } from 'lucide-react';
 
 const registerSchema = z.object({
   email: z.string().email('Invalid email address'),
+  phone: z.string().min(11, 'Phone number must be at least 11 digits').max(15, 'Phone number is too long'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
   confirmPassword: z.string().min(6, 'Password must be at least 6 characters'),
 }).refine((data) => data.password === data.confirmPassword, {
@@ -83,7 +84,7 @@ export function Register() {
     try {
       setError(null);
       setIsLoading(true);
-      await authApi.registerClient(data.email, data.password);
+      await authApi.registerClient(data.email, data.password, data.phone);
       navigate('/client/dashboard');
     } catch (err: any) {
       setError(err.message || 'Registration failed. Please try again.');
@@ -186,6 +187,31 @@ export function Register() {
               {errors.email && (
                 <p className="text-sm text-red-600 flex items-center gap-1 animate-in fade-in duration-200">
                   <span>•</span> {errors.email.message}
+                </p>
+              )}
+            </div>
+
+            {/* Phone Field */}
+            <div className="space-y-2">
+              <label htmlFor="phone" className="text-sm font-semibold text-slate-900 block">
+                Phone Number
+              </label>
+              <div className="relative group">
+                <Phone className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:transition-colors duration-200" />
+                <Input
+                  id="phone"
+                  type="text"
+                  placeholder="01XXXXXXXXX"
+                  className="pl-12 h-11 border-slate-200 rounded-lg transition-all duration-200"
+                  style={{
+                    '--tw-ring-color': primaryColor,
+                  } as any}
+                  {...register('phone')}
+                />
+              </div>
+              {errors.phone && (
+                <p className="text-sm text-red-600 flex items-center gap-1 animate-in fade-in duration-200">
+                  <span>•</span> {errors.phone.message}
                 </p>
               )}
             </div>

@@ -2,10 +2,21 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { paymentApi } from '@/lib/api';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { CreditCard, CheckCircle2, XCircle, Clock, DollarSign, FileText, User, Calendar } from 'lucide-react';
+import { DashboardWidgetCard } from '@/components/DashboardWidgetCard';
+import { 
+  CreditCard, 
+  CheckCircle2, 
+  XCircle, 
+  Clock, 
+  DollarSign, 
+  FileText, 
+  User, 
+  Calendar,
+  Search,
+  ChevronDown
+} from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -90,7 +101,7 @@ export default function PaymentManagement() {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
       queryClient.invalidateQueries({ queryKey: ['projects'] });
       setSelectedPayment(null);
-      alert('Payment approved successfully! Project status updated if applicable.');
+      alert('Payment approved successfully!');
     },
     onError: (error: any) => {
       alert(error.response?.data?.message || 'Failed to approve payment');
@@ -114,7 +125,7 @@ export default function PaymentManagement() {
   });
 
   const handleApprove = (payment: Payment) => {
-    if (confirm(`Approve payment of $${Number(payment.amount).toLocaleString()}?`)) {
+    if (confirm(`Approve payment of ৳${Number(payment.amount).toLocaleString()}?`)) {
       approveMutation.mutate({ id: payment.id });
     }
   };
@@ -130,254 +141,251 @@ export default function PaymentManagement() {
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusStyle = (status: string) => {
     switch (status) {
       case 'Approved':
-        return 'bg-green-100 text-green-700';
+        return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
       case 'Pending':
-        return 'bg-yellow-100 text-yellow-700';
+        return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
       case 'Rejected':
-        return 'bg-red-100 text-red-700';
-      case 'Cancelled':
-        return 'bg-gray-100 text-gray-700';
+        return 'bg-red-500/10 text-red-400 border-red-500/20';
       default:
-        return 'bg-gray-100 text-gray-700';
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'Approved':
-        return <CheckCircle2 className="w-4 h-4" />;
-      case 'Pending':
-        return <Clock className="w-4 h-4" />;
-      case 'Rejected':
-        return <XCircle className="w-4 h-4" />;
-      default:
-        return null;
+        return 'bg-slate-500/10 text-slate-400 border-slate-500/20';
     }
   };
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="flex justify-between items-center mb-6">
+    <div className="space-y-6">
+      <div className="p-4 rounded-xl border border-amber-500/20 bg-slate-800/40 backdrop-blur-sm flex flex-col md:flex-row justify-between items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <CreditCard className="h-8 w-8" />
+          <h1 className="text-3xl font-bold text-amber-100 drop-shadow-sm flex items-center gap-2">
+            <CreditCard className="h-8 w-8 text-amber-500" />
             Payment Management
           </h1>
-          <p className="text-gray-600 mt-1">Review and manage client payments</p>
+          <p className="text-amber-200/80 mt-1">Review and manage client payments</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="relative w-full md:w-auto">
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full md:w-48 px-4 py-2 bg-slate-900/50 border border-amber-500/20 rounded-lg text-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-500/50 appearance-none cursor-pointer"
           >
-            <option value="">All Status</option>
-            <option value="Pending">Pending</option>
-            <option value="Approved">Approved</option>
-            <option value="Rejected">Rejected</option>
-            <option value="Cancelled">Cancelled</option>
+            <option value="" className="bg-slate-900">All Status</option>
+            <option value="Pending" className="bg-slate-900">Pending</option>
+            <option value="Approved" className="bg-slate-900">Approved</option>
+            <option value="Rejected" className="bg-slate-900">Rejected</option>
+            <option value="Cancelled" className="bg-slate-900">Cancelled</option>
           </select>
+          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-500/50 pointer-events-none" />
         </div>
       </div>
 
       {/* Pending Payments Alert */}
       {pendingPayments.length > 0 && !filterStatus && (
-        <Card className="mb-6 border-yellow-200 bg-yellow-50">
-          <CardContent className="py-4">
-            <div className="flex items-center gap-2">
-              <Clock className="w-5 h-5 text-yellow-600" />
-              <span className="font-semibold text-yellow-800">
-                {pendingPayments.length} payment(s) pending approval
-              </span>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/5 animate-pulse">
+          <div className="flex items-center gap-2 text-amber-400">
+            <Clock className="w-5 h-5" />
+            <span className="font-bold">
+              {pendingPayments.length} payment(s) pending approval
+            </span>
+          </div>
+        </div>
       )}
 
       {isLoading ? (
-        <div className="text-center py-12">Loading payments...</div>
+        <div className="text-center py-12 text-amber-200/60 animate-pulse">Loading payments...</div>
       ) : payments.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center text-gray-500">
-            No payments found
-          </CardContent>
-        </Card>
+        <DashboardWidgetCard index={0} className="py-12 text-center text-amber-200/40">
+          No payments found
+        </DashboardWidgetCard>
       ) : (
-        <div className="grid gap-4">
-          {payments.map((payment) => (
-            <Card key={payment.id} className="shadow-sm border-gray-200">
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <CardTitle className="text-lg">
-                        {payment.paymentGateway?.name || payment.paymentMethod}
-                      </CardTitle>
-                      <span className={`px-2 py-1 rounded text-xs font-medium flex items-center gap-1 ${getStatusColor(payment.status)}`}>
-                        {getStatusIcon(payment.status)}
-                        {payment.status}
+        <div className="grid gap-6">
+          {payments.map((payment, idx) => (
+            <DashboardWidgetCard key={payment.id} index={idx} className="group">
+              <div className="flex flex-col md:flex-row justify-between items-start gap-4">
+                <div className="flex-1 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <h3 className="text-xl font-bold text-amber-100">
+                      {payment.paymentGateway?.name || payment.paymentMethod}
+                    </h3>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold border ${getStatusStyle(payment.status)} animate-game-score-pop`}>
+                      {payment.status}
+                    </span>
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-4 text-sm text-amber-200/60">
+                    <div className="flex items-center gap-1.5">
+                      <FileText className="w-4 h-4 text-amber-500/50" />
+                      <span className="text-amber-100/40 uppercase tracking-wider text-[10px] font-bold">Invoice:</span>
+                      <span className="text-amber-400 font-mono">
+                        {payment.invoice?.invoiceNumber || `#${payment.invoiceId}`}
                       </span>
                     </div>
-                    <CardDescription>
-                      Invoice: {payment.invoice?.invoiceNumber || `#${payment.invoiceId}`} | 
-                      Amount: ${Number(payment.amount).toLocaleString()}
-                    </CardDescription>
+                    <div className="flex items-center gap-1.5">
+                      <DollarSign className="w-4 h-4 text-emerald-500/50" />
+                      <span className="text-amber-100/40 uppercase tracking-wider text-[10px] font-bold">Amount:</span>
+                      <span className="text-emerald-400 font-bold">
+                        ৳{Number(payment.amount).toLocaleString()}
+                      </span>
+                    </div>
                   </div>
-                  {payment.status === 'Pending' && (
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => handleApprove(payment)}
-                        disabled={approveMutation.isPending}
-                        className="bg-green-600 hover:bg-green-700"
-                      >
-                        <CheckCircle2 className="w-4 h-4 mr-1" />
-                        Approve
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleReject(payment)}
-                        disabled={rejectMutation.isPending}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <XCircle className="w-4 h-4 mr-1" />
-                        Reject
-                      </Button>
+                </div>
+
+                {payment.status === 'Pending' && (
+                  <div className="flex gap-2 w-full md:w-auto">
+                    <Button
+                      size="sm"
+                      onClick={() => handleApprove(payment)}
+                      disabled={approveMutation.isPending}
+                      className="flex-1 md:flex-none bg-emerald-500/20 hover:bg-emerald-500 text-emerald-400 hover:text-white border border-emerald-500/30 transition-all font-bold"
+                    >
+                      <CheckCircle2 className="w-4 h-4 mr-1.5" />
+                      Approve
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleReject(payment)}
+                      disabled={rejectMutation.isPending}
+                      className="flex-1 md:flex-none bg-red-500/10 hover:bg-red-500 border-red-500/30 text-red-400 hover:text-white transition-all font-bold"
+                    >
+                      <XCircle className="w-4 h-4 mr-1.5" />
+                      Reject
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-6 pt-6 border-t border-amber-500/10 grid md:grid-cols-2 gap-6 text-sm">
+                <div className="space-y-3">
+                  {payment.transactionId && (
+                    <div className="flex items-center justify-between p-2 rounded bg-slate-900/40 border border-amber-500/5">
+                      <span className="text-amber-200/40">Transaction ID</span>
+                      <span className="text-amber-100 font-mono">{payment.transactionId}</span>
+                    </div>
+                  )}
+                  {payment.paidBy && (
+                    <div className="flex items-center justify-between p-2 rounded bg-slate-900/40 border border-amber-500/5">
+                      <span className="text-amber-200/40">Paid From</span>
+                      <span className="text-amber-100">{payment.paidBy}</span>
+                    </div>
+                  )}
+                  {payment.paymentGateway && (
+                    <div className="flex items-center justify-between p-2 rounded bg-slate-900/40 border border-amber-500/5">
+                      <span className="text-amber-200/40">Gateway Account</span>
+                      <span className="text-amber-100">{payment.paymentGateway.accountNumber}</span>
                     </div>
                   )}
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid md:grid-cols-2 gap-4 text-sm">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <DollarSign className="w-4 h-4 text-slate-500" />
-                      <span className="font-semibold">Amount:</span>
-                      <span>${Number(payment.amount).toLocaleString()}</span>
-                    </div>
-                    {payment.transactionId && (
-                      <div className="flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-slate-500" />
-                        <span className="font-semibold">Transaction ID:</span>
-                        <span>{payment.transactionId}</span>
-                      </div>
-                    )}
-                    {payment.paidBy && (
-                      <div className="flex items-center gap-2">
-                        <User className="w-4 h-4 text-slate-500" />
-                        <span className="font-semibold">Paid From:</span>
-                        <span>{payment.paidBy}</span>
-                      </div>
-                    )}
-                    {payment.paymentGateway && (
-                      <div>
-                        <span className="font-semibold">Gateway Account:</span>
-                        <span className="ml-2">{payment.paymentGateway.accountNumber}</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    {payment.client && (
-                      <div>
-                        <span className="font-semibold">Client:</span>
-                        <span className="ml-2">{payment.client.name}</span>
+
+                <div className="space-y-3">
+                  {payment.client && (
+                    <div className="flex items-center justify-between p-2 rounded bg-slate-900/40 border border-amber-500/5">
+                      <span className="text-amber-200/40">Client</span>
+                      <div className="text-right text-amber-100">
+                        <div>{payment.client.name}</div>
                         {payment.client.contactInfo?.email && (
-                          <span className="ml-2 text-slate-600">({payment.client.contactInfo.email})</span>
+                          <div className="text-[10px] text-amber-500/50">{payment.client.contactInfo.email}</div>
                         )}
                       </div>
-                    )}
-                    {payment.project && (
-                      <div>
-                        <span className="font-semibold">Project:</span>
-                        <span className="ml-2">{payment.project.title}</span>
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-slate-500" />
-                      <span className="font-semibold">Submitted:</span>
-                      <span>{new Date(payment.createdAt).toLocaleString()}</span>
                     </div>
-                    {payment.verifiedAt && (
-                      <div>
-                        <span className="font-semibold">Verified:</span>
-                        <span className="ml-2">{new Date(payment.verifiedAt).toLocaleString()}</span>
-                      </div>
-                    )}
+                  )}
+                  {payment.project && (
+                    <div className="flex items-center justify-between p-2 rounded bg-slate-900/40 border border-amber-500/5">
+                      <span className="text-amber-200/40">Project</span>
+                      <span className="text-amber-100">{payment.project.title}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between p-2 rounded bg-slate-900/40 border border-amber-500/5">
+                    <span className="text-amber-200/40">Submitted</span>
+                    <span className="text-amber-100">{new Date(payment.createdAt).toLocaleString()}</span>
                   </div>
                 </div>
-                {payment.notes && (
-                  <div className="mt-4 p-3 bg-gray-50 rounded-md">
-                    <p className="text-xs font-semibold text-gray-700 mb-1">Client Notes:</p>
-                    <p className="text-sm text-gray-600">{payment.notes}</p>
-                  </div>
-                )}
-                {payment.adminNotes && (
-                  <div className="mt-2 p-3 bg-blue-50 rounded-md">
-                    <p className="text-xs font-semibold text-blue-700 mb-1">Admin Notes:</p>
-                    <p className="text-sm text-blue-600">{payment.adminNotes}</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+              </div>
+
+              {(payment.notes || payment.adminNotes) && (
+                <div className="mt-4 grid gap-3">
+                  {payment.notes && (
+                    <div className="p-3 bg-amber-500/5 border border-amber-500/10 rounded-lg text-xs leading-relaxed">
+                      <span className="text-amber-500/60 font-bold uppercase tracking-wider block mb-1">Client Notes</span>
+                      <p className="text-amber-200/80">{payment.notes}</p>
+                    </div>
+                  )}
+                  {payment.adminNotes && (
+                    <div className="p-3 bg-blue-500/5 border border-blue-500/10 rounded-lg text-xs leading-relaxed">
+                      <span className="text-blue-400/60 font-bold uppercase tracking-wider block mb-1">Admin Notes</span>
+                      <p className="text-blue-200/80">{payment.adminNotes}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </DashboardWidgetCard>
           ))}
         </div>
       )}
 
       {/* Reject Payment Modal */}
       {showRejectModal && selectedPayment && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <Card className="w-full max-w-md">
-            <CardHeader>
-              <CardTitle>Reject Payment</CardTitle>
-              <CardDescription>
-                Reject payment of ${Number(selectedPayment.amount).toLocaleString()} from {selectedPayment.client?.name}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmitReject(onSubmitReject)} className="space-y-4">
-                <div>
-                  <Label htmlFor="adminNotes">Admin Notes *</Label>
-                  <textarea
-                    id="adminNotes"
-                    {...registerReject('adminNotes')}
-                    rows={4}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="Explain why this payment is being rejected..."
-                  />
-                  {rejectErrors.adminNotes && (
-                    <p className="text-sm text-red-600 mt-1">{rejectErrors.adminNotes.message}</p>
-                  )}
-                </div>
-                <div className="flex gap-2 justify-end">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setShowRejectModal(false);
-                      setSelectedPayment(null);
-                      resetReject();
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={rejectMutation.isPending}
-                    className="bg-red-600 hover:bg-red-700"
-                  >
-                    Reject Payment
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <DashboardWidgetCard index={0} className="w-full max-w-md animate-game-item-reveal">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-amber-100">Reject Payment</h2>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => setShowRejectModal(false)}
+                className="text-amber-500 hover:text-amber-400 hover:bg-amber-500/10"
+              >
+                <XCircle className="w-6 h-6" />
+              </Button>
+            </div>
+            
+            <p className="text-amber-200/60 text-sm mb-6">
+              Confirming rejection of <span className="text-amber-100 font-bold">৳{Number(selectedPayment.amount).toLocaleString()}</span> from {selectedPayment.client?.name}.
+            </p>
+
+            <form onSubmit={handleSubmitReject(onSubmitReject)} className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="adminNotes" className="text-amber-200/80 font-bold uppercase tracking-wider text-[10px]">
+                  Reason for Rejection <span className="text-red-500">*</span>
+                </Label>
+                <textarea
+                  id="adminNotes"
+                  {...registerReject('adminNotes')}
+                  rows={4}
+                  className="w-full px-4 py-3 bg-slate-900 border border-amber-500/20 rounded-lg text-amber-100 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-all resize-none"
+                  placeholder="Explain why this payment is being rejected..."
+                />
+                {rejectErrors.adminNotes && (
+                  <p className="text-xs text-red-400 mt-1">{rejectErrors.adminNotes.message}</p>
+                )}
+              </div>
+              
+              <div className="flex gap-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowRejectModal(false);
+                    setSelectedPayment(null);
+                    resetReject();
+                  }}
+                  className="flex-1 bg-slate-800 border-amber-500/20 text-amber-200/60 hover:text-amber-100"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={rejectMutation.isPending}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold"
+                >
+                  {rejectMutation.isPending ? 'Processing...' : 'Reject Payment'}
+                </Button>
+              </div>
+            </form>
+          </DashboardWidgetCard>
         </div>
       )}
     </div>
   );
 }
-

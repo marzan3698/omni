@@ -21,6 +21,7 @@ const loginSchema = z.object({
 const registerClientSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
+  phone: z.string().nonempty('Phone number is required'),
 });
 
 export const authController = {
@@ -91,7 +92,11 @@ export const authController = {
       // Validate request body
       const validatedData = registerClientSchema.parse(req.body);
 
-      const result = await authService.registerClient(validatedData);
+      const result = await authService.registerClient({
+        email: validatedData.email,
+        password: validatedData.password,
+        phone: validatedData.phone,
+      });
 
       return sendSuccess(res, result, 'Client registered successfully', 201);
     } catch (error) {

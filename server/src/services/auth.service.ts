@@ -13,6 +13,7 @@ interface RegisterData {
 interface RegisterClientData {
   email: string;
   password: string;
+  phone: string;
 }
 
 interface LoginData {
@@ -26,6 +27,8 @@ interface TokenPayload {
   roleId: number;
   companyId: number;
 }
+
+import { smsService } from './sms.service.js';
 
 export const authService = {
   /**
@@ -108,7 +111,7 @@ export const authService = {
    * Register a new client
    */
   async registerClient(data: RegisterClientData) {
-    const { email, password } = data;
+    const { email, password, phone } = data;
 
     // Get default company (companyId = 1)
     const defaultCompany = await prisma.company.findUnique({
@@ -178,6 +181,7 @@ export const authService = {
     const user = await prisma.user.create({
       data: {
         email: email.toLowerCase(),
+        phone,
         passwordHash,
         roleId: clientRole.id,
         companyId: defaultCompany.id,
@@ -205,9 +209,32 @@ export const authService = {
           name: name,
           contactInfo: {
             email: email.toLowerCase(),
+            phone: phone,
           },
         },
       });
+    }
+
+    // Fetch Dynamic Welcome SMS Template
+    try {
+      const smsSetting = await prisma.systemSetting.findFirst({
+        where: { companyId: defaultCompany.id, key: 'registration_welcome_sms' }
+      });
+
+      let welcomeMessage = smsSetting?.value || `Welcome to Omni CRM! Your login info:
+Email: {{email}}
+Password: {{password}}
+Login at: ${process.env.FRONTEND_URL || 'https://omnicrm.io'}/login`;
+
+      // Replace placeholders
+      welcomeMessage = welcomeMessage
+        .replace(/{{email}}/g, email)
+        .replace(/{{password}}/g, password);
+
+      await smsService.sendSms(defaultCompany.id, phone, welcomeMessage);
+    } catch (smsError) {
+      console.error('Failed to send welcome SMS:', smsError);
+      // We don't throw here as registration was successful
     }
 
     // Generate JWT token
@@ -396,7 +423,7 @@ export const authService = {
       throw new AppError('JWT_SECRET is not configured', 500);
     }
 
-    return jwt.sign(payload, secret, { expiresIn });
+    return jwt.sign(payload, secret as string, { expiresIn: expiresIn as any });
   },
 
   /**

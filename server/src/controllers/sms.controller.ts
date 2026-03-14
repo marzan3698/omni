@@ -14,19 +14,33 @@ export const smsController = {
             const companyId = req.user?.companyId;
             if (!companyId) return sendError(res, 'Company ID is required', 400);
 
-            const { token } = req.body;
-            if (!token) return sendError(res, 'SMS Token is required', 400);
+            const { token, registrationWelcomeSms } = req.body;
+            
+            if (token) {
+                await prisma.systemSetting.upsert({
+                    where: { companyId_key: { companyId, key: 'sms_greenweb_token' } },
+                    update: { value: token },
+                    create: {
+                        companyId,
+                        key: 'sms_greenweb_token',
+                        value: token,
+                        description: 'GreenWeb SMS API Token'
+                    }
+                });
+            }
 
-            await prisma.systemSetting.upsert({
-                where: { companyId_key: { companyId, key: 'sms_greenweb_token' } },
-                update: { value: token },
-                create: {
-                    companyId,
-                    key: 'sms_greenweb_token',
-                    value: token,
-                    description: 'GreenWeb SMS API Token'
-                }
-            });
+            if (registrationWelcomeSms) {
+                await prisma.systemSetting.upsert({
+                    where: { companyId_key: { companyId, key: 'registration_welcome_sms' } },
+                    update: { value: registrationWelcomeSms },
+                    create: {
+                        companyId,
+                        key: 'registration_welcome_sms',
+                        value: registrationWelcomeSms,
+                        description: 'Welcome SMS template for new registrations'
+                    }
+                });
+            }
 
             return sendSuccess(res, null, 'SMS settings saved successfully');
         } catch (error: any) {
@@ -44,11 +58,19 @@ export const smsController = {
             const companyId = req.user?.companyId;
             if (!companyId) return sendError(res, 'Company ID is required', 400);
 
-            const setting = await prisma.systemSetting.findFirst({
-                where: { companyId, key: 'sms_greenweb_token' }
+            const settings = await prisma.systemSetting.findMany({
+                where: { 
+                    companyId, 
+                    key: { in: ['sms_greenweb_token', 'registration_welcome_sms'] } 
+                }
             });
 
-            return sendSuccess(res, { token: setting?.value || '' }, 'SMS settings retrieved');
+            const result = {
+                token: settings.find(s => s.key === 'sms_greenweb_token')?.value || '',
+                registrationWelcomeSms: settings.find(s => s.key === 'registration_welcome_sms')?.value || ''
+            };
+
+            return sendSuccess(res, result, 'SMS settings retrieved');
         } catch (error: any) {
             return sendError(res, 'Failed to retrieve SMS settings', 500);
         }

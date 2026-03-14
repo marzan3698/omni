@@ -1,9 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { DashboardWidgetCard } from '@/components/DashboardWidgetCard';
 import { Button } from '@/components/ui/button';
 import { clientApprovalApi } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { CheckCircle, Loader2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface PendingRequest {
   id: number;
@@ -70,55 +71,59 @@ export function PendingClients() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900">ক্লায়েন্ট সেটাপ (Client Setup)</h1>
-        <p className="text-slate-600 mt-1">
+      <div className="p-4 rounded-xl border border-amber-500/20 bg-slate-800/40 backdrop-blur-sm">
+        <h1 className="text-3xl font-bold text-amber-100 drop-shadow-sm">ক্লায়েন্ট সেটাপ (Client Setup)</h1>
+        <p className="text-amber-200/80 mt-1">
           লিড ম্যানেজার থেকে আসা পেন্ডিং ক্লায়েন্ট রিকোয়েস্ট একটিভ করুন। অ্যাপ্রুভের পর ক্লায়েন্ট লগইন করতে পারবে।
         </p>
       </div>
 
-      <Card className="shadow-sm border-gray-200">
-        <CardHeader>
-          <CardTitle className="text-lg">Pending client requests ({list.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <DashboardWidgetCard>
+        <div className="flex flex-col gap-6">
+          <h2 className="text-xl font-bold text-amber-100">Pending client requests ({list.length})</h2>
+          
           {isLoading ? (
-            <div className="flex items-center justify-center py-12 text-slate-500">
+            <div className="flex items-center justify-center py-12 text-amber-500/50">
               <Loader2 className="w-8 h-8 animate-spin" />
             </div>
           ) : list.length === 0 ? (
-            <div className="text-center py-12 text-slate-500">No pending client requests</div>
+            <div className="text-center py-12 text-amber-500/50">No pending client requests</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-4 font-semibold text-slate-700">Client</th>
-                    <th className="text-left py-3 px-4 font-semibold text-slate-700">Email</th>
-                    <th className="text-left py-3 px-4 font-semibold text-slate-700">Lead</th>
-                    <th className="text-left py-3 px-4 font-semibold text-slate-700">Product</th>
-                    <th className="text-left py-3 px-4 font-semibold text-slate-700">Points</th>
-                    <th className="text-left py-3 px-4 font-semibold text-slate-700">Requested by</th>
-                    <th className="text-left py-3 px-4 font-semibold text-slate-700">Date</th>
-                    <th className="text-left py-3 px-4 font-semibold text-slate-700">Action</th>
+                  <tr className="border-b border-amber-500/10">
+                    <th className="text-left py-4 px-4 font-bold text-amber-200/90 uppercase tracking-wider">Client</th>
+                    <th className="text-left py-4 px-4 font-bold text-amber-200/90 uppercase tracking-wider">Email</th>
+                    <th className="text-left py-4 px-4 font-bold text-amber-200/90 uppercase tracking-wider">Lead</th>
+                    <th className="text-left py-4 px-4 font-bold text-amber-200/90 uppercase tracking-wider">Product</th>
+                    <th className="text-left py-4 px-4 font-bold text-amber-200/90 uppercase tracking-wider text-center">Points</th>
+                    <th className="text-left py-4 px-4 font-bold text-amber-200/90 uppercase tracking-wider">Requested by</th>
+                    <th className="text-left py-4 px-4 font-bold text-amber-200/90 uppercase tracking-wider">Date</th>
+                    <th className="text-right py-4 px-4 font-bold text-amber-200/90 uppercase tracking-wider">Action</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-amber-500/10">
                   {list.map((req: PendingRequest) => (
-                    <tr key={req.id} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="py-3 px-4 font-medium text-slate-900">{req.client?.name ?? '-'}</td>
-                      <td className="py-3 px-4 text-slate-700">{req.email ?? (req.client?.contactInfo as any)?.email ?? '-'}</td>
-                      <td className="py-3 px-4 text-slate-700">{req.lead?.title ?? '-'}</td>
-                      <td className="py-3 px-4 text-slate-700">{req.lead?.product?.name ?? '-'}</td>
-                      <td className="py-3 px-4 text-slate-700">{Number(req.customerPoints) ?? 0}</td>
-                      <td className="py-3 px-4 text-slate-700">
+                    <tr key={req.id} className="group hover:bg-amber-500/5 transition-colors">
+                      <td className="py-4 px-4 font-bold text-white">{req.client?.name ?? '-'}</td>
+                      <td className="py-4 px-4 text-amber-100/80">{req.email ?? (req.client?.contactInfo as any)?.email ?? '-'}</td>
+                      <td className="py-4 px-4 text-amber-100/80">{req.lead?.title ?? '-'}</td>
+                      <td className="py-4 px-4 text-amber-500 font-medium">{req.lead?.product?.name ?? '-'}</td>
+                      <td className="py-4 px-4 text-center">
+                        <span className="bg-amber-500/10 text-amber-400 px-2 py-1 rounded border border-amber-500/20 font-bold">
+                          {Number(req.customerPoints) ?? 0}
+                        </span>
+                      </td>
+                      <td className="py-4 px-4 text-amber-100/80">
+                        <span className="text-xs opacity-60 block">By:</span>
                         {req.requestedByUser?.name || req.requestedByUser?.email || '-'}
                       </td>
-                      <td className="py-3 px-4 text-slate-600 text-sm">{formatDate(req.createdAt)}</td>
-                      <td className="py-3 px-4">
+                      <td className="py-4 px-4 text-amber-100/60 whitespace-nowrap">{formatDate(req.createdAt)}</td>
+                      <td className="py-4 px-4 text-right">
                         <Button
                           size="sm"
-                          className="bg-green-600 hover:bg-green-700"
+                          className="bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/20"
                           disabled={approveMutation.isPending}
                           onClick={() => approveMutation.mutate(req.id)}
                         >
@@ -138,8 +143,8 @@ export function PendingClients() {
               </table>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </DashboardWidgetCard>
     </div>
   );
 }

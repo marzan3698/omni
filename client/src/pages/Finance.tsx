@@ -1,144 +1,146 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { useQuery } from '@tanstack/react-query';
 import { financeApi } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { DollarSign, Receipt, TrendingUp, TrendingDown } from 'lucide-react';
+import { DashboardWidgetCard } from '@/components/DashboardWidgetCard';
+import { 
+  DollarSign, 
+  TrendingUp, 
+  Receipt, 
+  FileText, 
+  ArrowRight,
+  PieChart
+} from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { PermissionGuard } from '@/components/PermissionGuard';
 
 export function Finance() {
-  const navigate = useNavigate();
-  const { user, hasPermission } = useAuth();
-  const [summary, setSummary] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
-  useEffect(() => {
-    if (user?.companyId) {
-      loadSummary();
-    }
-  }, [user]);
+  const { data: statsResponse, isLoading } = useQuery({
+    queryKey: ['finance-stats', user?.companyId],
+    queryFn: async () => {
+      const response = await financeApi.getStatistics(user!.companyId!);
+      return response.data.data;
+    },
+    enabled: !!user?.companyId,
+  });
 
-  const loadSummary = async () => {
-    try {
-      setLoading(true);
-      const response = await financeApi.summary(user!.companyId!);
-      if (response.data.success) {
-        setSummary(response.data.data);
-      }
-    } catch (error) {
-      console.error('Failed to load financial summary:', error);
-    } finally {
-      setLoading(false);
-    }
+  const stats = statsResponse || {
+    totalInvoiced: 0,
+    paidAmount: 0,
+    unpaidAmount: 0,
+    invoiceCount: 0,
   };
 
-  if (loading) {
-    return <div className="flex items-center justify-center h-64">Loading...</div>;
+  const menuItems = [
+    {
+      title: 'Invoice List',
+      description: 'View and manage all customer invoices',
+      icon: FileText,
+      link: '/finance/invoices',
+      color: 'text-blue-400',
+      bgColor: 'bg-blue-500/10',
+    },
+    {
+      title: 'Pending Approvals',
+      description: 'Review and approve pending finance requests',
+      icon: Receipt,
+      link: '/finance/pending-clients',
+      color: 'text-amber-400',
+      bgColor: 'bg-amber-500/10',
+    },
+    {
+      title: 'Reports',
+      description: 'Financial performance and analytics',
+      icon: PieChart,
+      link: '/finance/reports',
+      color: 'text-emerald-400',
+      bgColor: 'bg-emerald-500/10',
+    },
+  ];
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-amber-200/60 animate-pulse">লোড হচ্ছে...</div>
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900">Finance</h1>
-        <p className="text-slate-600 mt-1">Financial overview and management</p>
-      </div>
-
-      {summary && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="shadow-sm border-gray-200">
-            <CardHeader>
-              <CardTitle className="text-sm font-medium text-slate-600">Total Income</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-green-600" />
-                <div className="text-2xl font-bold text-slate-900">
-                  ৳{summary.income?.toLocaleString() || '0'}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-sm border-gray-200">
-            <CardHeader>
-              <CardTitle className="text-sm font-medium text-slate-600">Total Expenses</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2">
-                <TrendingDown className="w-5 h-5 text-red-600" />
-                <div className="text-2xl font-bold text-slate-900">
-                  ৳{summary.expenses?.toLocaleString() || '0'}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-sm border-gray-200">
-            <CardHeader>
-              <CardTitle className="text-sm font-medium text-slate-600">Net Profit</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2">
-                <DollarSign className="w-5 h-5 text-indigo-600" />
-                <div className={`text-2xl font-bold ${
-                  (summary.profit || 0) >= 0 ? 'text-green-600' : 'text-red-600'
-                }`}>
-                  ৳{summary.profit?.toLocaleString() || '0'}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+    <PermissionGuard permission="can_manage_finance">
+      <div className="space-y-6">
+        <div className="p-4 rounded-xl border border-amber-500/20 bg-slate-800/40 backdrop-blur-sm">
+          <h1 className="text-3xl font-bold text-amber-100 drop-shadow-sm">Finance Overview</h1>
+          <p className="text-amber-200/80 mt-1">Monitor your company's financial performance</p>
         </div>
-      )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="shadow-sm border-gray-200">
-          <CardHeader>
-            <CardTitle>Invoices</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => navigate('/invoice')}
-            >
-              <Receipt className="w-4 h-4 mr-2" />
-              Manage Invoices
-            </Button>
-          </CardContent>
-        </Card>
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <DashboardWidgetCard index={0}>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-amber-200/90">Total Invoiced</span>
+              <DollarSign className="w-4 h-4 text-amber-500" />
+            </div>
+            <div className="text-2xl font-bold text-white">৳{stats.totalInvoiced.toLocaleString()}</div>
+            <p className="text-xs text-amber-500/60 mt-1">Total billing amount</p>
+          </DashboardWidgetCard>
 
-        <Card className="shadow-sm border-gray-200">
-          <CardHeader>
-            <CardTitle>Transactions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Button variant="outline" className="w-full">
-              <DollarSign className="w-4 h-4 mr-2" />
-              View Transactions
-            </Button>
-          </CardContent>
-        </Card>
+          <DashboardWidgetCard index={1}>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-emerald-200/90">Total Paid</span>
+              <TrendingUp className="w-4 h-4 text-emerald-500" />
+            </div>
+            <div className="text-2xl font-bold text-emerald-400">৳{stats.paidAmount.toLocaleString()}</div>
+            <p className="text-xs text-emerald-500/60 mt-1">Successfully collected</p>
+          </DashboardWidgetCard>
 
-        {hasPermission?.('can_approve_clients') && (
-          <Card className="shadow-sm border-gray-200">
-            <CardHeader>
-              <CardTitle>Pending Clients</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => navigate('/finance/pending-clients')}
-              >
-                <DollarSign className="w-4 h-4 mr-2" />
-                Approve Pending Clients
-              </Button>
-            </CardContent>
-          </Card>
-        )}
+          <DashboardWidgetCard index={2}>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-red-200/90">Outstanding</span>
+              <Receipt className="w-4 h-4 text-red-500" />
+            </div>
+            <div className="text-2xl font-bold text-red-400">৳{stats.unpaidAmount.toLocaleString()}</div>
+            <p className="text-xs text-red-500/60 mt-1">Pending payments</p>
+          </DashboardWidgetCard>
+
+          <DashboardWidgetCard index={3}>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-blue-200/90">Invoices</span>
+              <FileText className="w-4 h-4 text-blue-500" />
+            </div>
+            <div className="text-2xl font-bold text-blue-400">{stats.invoiceCount}</div>
+            <p className="text-xs text-blue-500/60 mt-1">Total count</p>
+          </DashboardWidgetCard>
+        </div>
+
+        {/* Action Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {menuItems.map((item, idx) => {
+            const Icon = item.icon;
+            return (
+              <Link key={item.title} to={item.link}>
+                <DashboardWidgetCard index={idx + 4} className="h-full group">
+                  <div className="flex items-start gap-4">
+                    <div className={`p-3 rounded-lg ${item.bgColor} border border-amber-500/10 group-hover:border-amber-500/30 transition-colors`}>
+                      <Icon className={`w-6 h-6 ${item.color}`} />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-bold text-amber-100 group-hover:text-white transition-colors">
+                        {item.title}
+                      </h3>
+                      <p className="text-sm text-amber-200/60 mt-1">
+                        {item.description}
+                      </p>
+                    </div>
+                    <ArrowRight className="w-5 h-5 text-amber-500/30 group-hover:text-amber-500 transition-colors" />
+                  </div>
+                </DashboardWidgetCard>
+              </Link>
+            );
+          })}
+        </div>
       </div>
-    </div>
+    </PermissionGuard>
   );
 }
-
