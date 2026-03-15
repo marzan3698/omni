@@ -38,9 +38,20 @@ export const initializeSocketIO = (httpServer: HTTPServer): SocketIOServer => {
 
   // Handle connections
   io.on('connection', (socket) => {
-    console.log(`Socket connected: ${socket.id} (User: ${(socket as any).userId})`);
+    const userId = (socket as any).userId;
+    const companyId = (socket as any).companyId;
 
-    // Setup task conversation handlers
+    console.log(`Socket connected: ${socket.id} (User: ${userId}, Company: ${companyId})`);
+
+    // Join rooms for targeted notifications
+    if (userId) {
+      socket.join(`user:${userId}`);
+    }
+    if (companyId) {
+      socket.join(`company:${companyId}`);
+    }
+
+    // Setup handlers
     setupTaskConversationHandlers(io, socket);
     setupWhatsAppHandlers(io, socket);
 

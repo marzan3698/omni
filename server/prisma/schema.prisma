@@ -75,6 +75,7 @@ model Company {
   activityLogs         ActivityLog[]
   screenCaptures       ScreenCapture[]
   facebookAppConfigs   FacebookAppConfig[]
+  notifications        Notification[]
 
   @@index([name])
   @@index([isActive])
@@ -132,6 +133,7 @@ model User {
   activityLogs                    ActivityLog[]
   screenCaptures                  ScreenCapture[]
   leadImports                     LeadImport[]
+  notifications                   Notification[]
 
   @@unique([email, companyId])
   @@index([email])
@@ -989,6 +991,25 @@ model Payment {
   @@index([status])
   @@index([paymentGatewayId])
   @@map("payments")
+}
+
+model Notification {
+  id          Int      @id @default(autoincrement())
+  companyId   Int      @map("company_id")
+  userId      String?  @map("user_id") @db.VarChar(36) // Nullable for global/broadcast
+  title       String   @db.VarChar(255)
+  message     String   @db.Text
+  type        String   @db.VarChar(50) @default("info") // info, success, warning, error, payment
+  isRead      Boolean  @default(false) @map("is_read")
+  link        String?  @db.VarChar(255)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([userId])
+  @@map("notifications")
 }
 
 enum TransactionType {

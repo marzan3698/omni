@@ -1,6 +1,7 @@
 import { prisma } from '../lib/prisma.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { Prisma } from '@prisma/client';
+import { notificationService } from './notification.service.js';
 
 interface CreatePaymentData {
   companyId: number;
@@ -58,6 +59,9 @@ export const paymentService = {
       return sum + Number(payment.amount);
     }, 0);
 
+    const trxId = data.transactionId?.trim();
+    const paidByClean = data.paidBy?.trim();
+
     const paymentAmount = new Prisma.Decimal(data.amount);
     const invoiceTotal = invoice.totalAmount;
     const remainingAmount = new Prisma.Decimal(invoiceTotal).minus(new Prisma.Decimal(totalPaid));
@@ -72,10 +76,11 @@ export const paymentService = {
     }
 
     // Validate paidBy format if provided (Bangladesh mobile number)
-    if (data.paidBy) {
-      const accountNumberRegex = /^01[3-9]\d{8}$/;
-      if (!accountNumberRegex.test(data.paidBy)) {
-        throw new AppError('Invalid paid by account number format. Must be a valid Bangladesh mobile number (01XXXXXXXXX)', 400);
+    if (paidByClean) {
+      // Relaxed regex: allow +880 or 01, and allow spaces or hyphens (though we trim spaces)
+      const accountNumberRegex = /^(\+88)?01[3-9]\d{8}$/;
+      if (!accountNumberRegex.test(paidByClean)) {
+        throw new AppError('Invalid paid by account number format. Must be a valid Bangladesh mobile number', 400);
       }
     }
 
@@ -88,10 +93,10 @@ export const paymentService = {
         clientId: invoice.clientId,
         paymentGatewayId: data.paymentGatewayId,
         amount: paymentAmount,
-        transactionId: data.transactionId,
+        transactionId: trxId,
         paymentMethod: gateway.name,
         status: 'Pending',
-        paidBy: data.paidBy || null,
+        paidBy: paidByClean || null,
         notes: data.notes || null,
         paidAt: new Date(),
       },
@@ -102,6 +107,20 @@ export const paymentService = {
         paymentGateway: true,
       },
     });
+
+    // Create notification for admin
+    try {
+      await notificationService.createNotification({
+        companyId: data.companyId,
+        title: 'New Payment Submitted',
+        message: `A new payment of ৳${paymentAmount} has been submitted for invoice #${invoice.invoiceNumber}${invoice.client ? ' by ' + invoice.client.name : ''}.`,
+        type: 'payment',
+        link: `/finance/payments`, // Link to the payments page
+      });
+    } catch (error) {
+      console.error('Failed to create notification:', error);
+      // Don't fail the whole payment if notification fails
+    }
 
     return payment;
   },

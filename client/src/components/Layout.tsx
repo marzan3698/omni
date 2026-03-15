@@ -3,8 +3,10 @@ import { useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Sidebar } from './Sidebar';
 import { MeetingAlert } from './MeetingAlert';
-import { Menu, Bell, Search, User, LogOut, Maximize2, Minimize2, Circle, Wallet, X } from 'lucide-react';
+import { Menu, Bell, Search, User, LogOut, Maximize2, Minimize2, Circle, Wallet, X, CheckCircle2, AlertCircle, Info, Clock } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNotifications } from '@/hooks/useNotifications';
+import { formatDistanceToNow } from 'date-fns';
 import { useSidebar } from '@/contexts/SidebarContext';
 import { useInboxView } from '@/contexts/InboxViewContext';
 import { meetingApi, employeeApi } from '@/lib/api';
@@ -21,10 +23,12 @@ export function Layout({ children }: LayoutProps) {
   const { isOpen, setIsOpen } = useSidebar();
   const { hideMainSidebar } = useInboxView();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [notificationMenuOpen, setNotificationMenuOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showBalancePopup, setShowBalancePopup] = useState(false);
   const [showActivationPopup, setShowActivationPopup] = useState(false);
   const { user, logout } = useAuth();
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
 
   const queryClient = useQueryClient();
 
@@ -255,13 +259,118 @@ export function Layout({ children }: LayoutProps) {
               </button>
 
               {/* Notifications */}
-              <button
-                className="relative p-2 hover:bg-amber-500/20 rounded-lg transition-colors text-amber-200/90 hover:text-white"
-                aria-label="Notifications"
-              >
-                <Bell className="w-5 h-5" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-              </button>
+              <div className="relative">
+                <button
+                  onClick={() => setNotificationMenuOpen(!notificationMenuOpen)}
+                  className="relative p-2 hover:bg-amber-500/20 rounded-lg transition-colors text-amber-200/90 hover:text-white"
+                  aria-label="Notifications"
+                >
+                  <Bell className="w-5 h-5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1.5 right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white shadow-sm ring-1 ring-white/20 animate-in zoom-in duration-300">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {/* Notifications Dropdown */}
+                {notificationMenuOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-10"
+                      onClick={() => setNotificationMenuOpen(false)}
+                    />
+                    <div
+                      className="absolute right-0 mt-2 w-80 md:w-96 rounded-xl border border-amber-500/30 z-20 overflow-hidden animate-in slide-in-from-top-2 duration-200"
+                      style={{
+                        background: 'linear-gradient(180deg, #1e293b 0%, #0f172a 100%)',
+                        boxShadow: '0 10px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(217,119,6,0.2)',
+                      }}
+                    >
+                      <div className="flex items-center justify-between px-4 py-3 border-b border-amber-500/20 bg-amber-500/5">
+                        <h3 className="text-sm font-semibold text-amber-100 flex items-center gap-2">
+                          <Bell className="w-4 h-4 text-amber-500" />
+                          Notifications
+                        </h3>
+                        {unreadCount > 0 && (
+                          <button
+                            onClick={markAllAsRead}
+                            className="text-xs text-amber-500 hover:text-amber-400 font-medium transition-colors"
+                          >
+                            Mark all as read
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="max-h-[70vh] overflow-y-auto custom-scrollbar">
+                        {notifications.length > 0 ? (
+                          <div className="divide-y divide-amber-500/10">
+                            {notifications.map((notification) => (
+                              <div
+                                key={notification.id}
+                                onClick={() => {
+                                  if (!notification.isRead) markAsRead(notification.id);
+                                  if (notification.link) window.location.href = notification.link;
+                                  setNotificationMenuOpen(false);
+                                }}
+                                className={`group p-4 flex gap-3 cursor-pointer hover:bg-amber-500/10 transition-all ${
+                                  !notification.isRead ? 'bg-amber-500/5' : ''
+                                }`}
+                              >
+                                <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
+                                  notification.type === 'payment' ? 'bg-green-500/20 text-green-500' : 
+                                  notification.type === 'warning' ? 'bg-amber-500/20 text-amber-500' : 
+                                  'bg-blue-500/20 text-blue-500'
+                                }`}>
+                                  {notification.type === 'payment' ? <CheckCircle2 className="w-5 h-5" /> : 
+                                   notification.type === 'warning' ? <AlertCircle className="w-5 h-5" /> : 
+                                   <Info className="w-5 h-5" />}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex justify-between items-start gap-2 mb-1">
+                                    <h4 className={`text-sm font-medium transition-colors ${
+                                      !notification.isRead ? 'text-white' : 'text-amber-100/70 group-hover:text-amber-100'
+                                    }`}>
+                                      {notification.title}
+                                    </h4>
+                                    {!notification.isRead && (
+                                      <span className="w-2 h-2 bg-amber-500 rounded-full flex-shrink-0" />
+                                    )}
+                                  </div>
+                                  <p className="text-xs text-amber-200/60 line-clamp-2 mb-2 leading-relaxed">
+                                    {notification.message}
+                                  </p>
+                                  <div className="flex items-center gap-1.5 text-[10px] text-amber-500/50 uppercase tracking-wider font-semibold">
+                                    <Clock className="w-3 h-3" />
+                                    {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center py-10 px-6 text-center">
+                            <div className="w-16 h-16 bg-amber-500/10 rounded-full flex items-center justify-center mb-4">
+                              <Bell className="w-8 h-8 text-amber-500/30" />
+                            </div>
+                            <p className="text-sm text-amber-200/50 font-medium">No notifications yet</p>
+                            <p className="text-xs text-amber-500/30 mt-1">We'll notify you when something happens</p>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="p-2 border-t border-amber-500/20 bg-amber-500/5 text-center">
+                        <button 
+                          className="text-xs text-amber-200/40 hover:text-amber-100 transition-colors py-1"
+                          onClick={() => setNotificationMenuOpen(false)}
+                        >
+                          Close Panel
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
 
               {/* User menu */}
               <div className="relative">

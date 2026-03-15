@@ -725,3 +725,13 @@ export const smsApi = {
     apiClientInstance.post<ApiResponse>('/sms/bulk', data),
 };
 
+// Notification API
+export const notificationApi = {
+  getMy: (limit?: number) => 
+    apiClientInstance.get<ApiResponse<{ notifications: any[], unreadCount: number }>>('/notifications/my', { params: { limit } }),
+  markAsRead: (id: number) => 
+    apiClientInstance.patch<ApiResponse>(`/notifications/${id}/read`),
+  markAllAsRead: () => 
+    apiClientInstance.patch<ApiResponse>('/notifications/read-all'),
+};
+

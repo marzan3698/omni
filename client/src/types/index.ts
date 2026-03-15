@@ -16,6 +16,7 @@ export interface User {
   companyName?: string | null;
   roleId: number;
   roleName?: string;
+  role?: { id: number; name: string };
   profileImage?: string;
   permissions?: Record<string, boolean>;
   companyId?: number;
@@ -302,5 +303,18 @@ export interface LeadCall {
     id: number;
     name: string;
   };
+}
+
+// Notification types
+export interface Notification {
+  id: number;
+  companyId: number;
+  userId?: string | null;
+  title: string;
+  message: string;
+  type: string;
+  isRead: boolean;
+  link?: string | null;
+  createdAt: string;
 }
 

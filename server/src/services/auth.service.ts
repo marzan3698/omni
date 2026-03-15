@@ -325,6 +325,10 @@ Login at: ${process.env.FRONTEND_URL || 'https://omnicrm.io'}/login`;
         roleId: user.roleId,
         companyId: user.companyId,
         roleName: user.role.name,
+        role: {
+          id: user.role.id,
+          name: user.role.name,
+        },
         permissions: user.role.permissions,
         profileImage: user.profileImage,
         createdAt: user.createdAt,
@@ -377,6 +381,10 @@ Login at: ${process.env.FRONTEND_URL || 'https://omnicrm.io'}/login`;
         roleId: user.roleId,
         companyId: user.companyId,
         roleName: user.role.name,
+        role: {
+          id: user.role.id,
+          name: user.role.name,
+        },
         permissions: (user.role.permissions as Record<string, boolean>) || {},
         profileImage: user.profileImage,
         createdAt: user.createdAt,
@@ -425,6 +433,10 @@ Login at: ${process.env.FRONTEND_URL || 'https://omnicrm.io'}/login`;
       roleId: user.roleId,
       companyId: user.companyId,
       roleName: user.role.name,
+      role: {
+        id: user.role.id,
+        name: user.role.name,
+      },
       permissions: (user.role.permissions as Record<string, boolean>) || {},
       profileImage: user.profileImage,
       employee: employee,

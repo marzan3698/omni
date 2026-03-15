@@ -16,7 +16,7 @@ const paymentSchema = z.object({
     paymentGatewayId: z.number().int().positive('Payment gateway is required'),
     amount: z.number().positive('Amount must be greater than 0'),
     transactionId: z.string().min(1, 'Transaction ID is required').max(100, 'Transaction ID must be less than 100 characters'),
-    paidBy: z.string().regex(/^01[3-9]\d{8}$/, 'Invalid Bangladesh mobile number format (01XXXXXXXXX)').optional().or(z.literal('')),
+    paidBy: z.string().regex(/^(\+88)?01[3-9]\d{8}$/, 'Invalid Bangladesh mobile number format').optional().or(z.literal('')),
     notes: z.string().max(5000).optional(),
 });
 

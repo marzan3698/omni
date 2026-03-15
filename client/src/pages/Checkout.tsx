@@ -101,9 +101,19 @@ export function Checkout() {
     }
 
     // Optional Payment validation if a manual gateway is selected
-    if (selectedGatewayId && !isAutomatic && !transactionId.trim()) {
-      alert('Please enter the Transaction ID for your payment');
-      return;
+    if (selectedGatewayId && !isAutomatic) {
+      if (!transactionId.trim()) {
+        alert('Please enter the Transaction ID for your payment');
+        return;
+      }
+      
+      if (paidBy.trim()) {
+        const accountNumberRegex = /^(\+88)?01[3-9]\d{8}$/;
+        if (!accountNumberRegex.test(paidBy.trim())) {
+          alert('Invalid "Paid From" number. Must be a valid Bangladesh mobile number.');
+          return;
+        }
+      }
     }
 
     try {
@@ -121,9 +131,9 @@ export function Checkout() {
       if (selectedGatewayId && !isAutomatic) {
         payload.payment = {
           gatewayId: parseInt(selectedGatewayId),
-          transactionId,
+          transactionId: transactionId.trim(),
           amount: total,
-          paidBy,
+          paidBy: paidBy.trim() || undefined,
         };
       }
 
@@ -131,9 +141,12 @@ export function Checkout() {
       const checkoutData = response.data;
 
       if (checkoutData.success) {
+        const { results = [], errors = [] } = checkoutData.data || {};
+        const successResults = Array.isArray(checkoutData.data) ? checkoutData.data : results;
+
         // If automatic payment is selected and we have at least one invoice
-        if (isAutomatic && checkoutData.data && checkoutData.data.length > 0) {
-          const firstResult = checkoutData.data[0];
+        if (isAutomatic && successResults.length > 0) {
+          const firstResult = successResults[0];
           const invoiceId = firstResult.invoice?.id;
 
           if (invoiceId) {
@@ -158,11 +171,17 @@ export function Checkout() {
           }
         }
 
+        // If there were any errors during payment recording for manual payment
+        if (errors.length > 0) {
+          const errorMsg = errors.map((e: any) => e.message).join('\n');
+          alert(`Order placed, but there were issues: \n${errorMsg}\n\nPlease contact support or check your invoices.`);
+        }
+
         // For manual gateways or if automatic payment redirect failed, refresh profile and go to success
         await refreshProfile();
         clearCart();
-        // Assuming checkoutData.data is an array of results, and the first one contains the invoice ID
-        const firstInvoiceId = checkoutData.data && checkoutData.data.length > 0 ? checkoutData.data[0].invoice?.id : undefined;
+        
+        const firstInvoiceId = successResults.length > 0 ? successResults[0].invoice?.id : undefined;
         navigate(firstInvoiceId ? `/client/invoices/success/${firstInvoiceId}` : '/client/checkout/success');
       }
     } catch (error: any) {

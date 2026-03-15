@@ -321,33 +321,52 @@ export const projectController = {
 
       // 3. Generate invoices and record payment
       const results = [];
-      let paymentRecorded = false;
+      const errors = [];
+      let remainingPaymentAmount = validatedData.payment?.amount || 0;
 
       for (const project of projects) {
         let invoice = null;
         try {
           invoice = await invoiceService.generateInvoiceFromProject(project.id);
           
-          // Record payment for the first successful invoice if provided
-          if (validatedData.payment && !paymentRecorded && invoice) {
-            await paymentService.createPayment({
-              companyId,
-              invoiceId: invoice.id,
-              paymentGatewayId: validatedData.payment.gatewayId,
-              amount: validatedData.payment.amount,
-              transactionId: validatedData.payment.transactionId,
-              paidBy: validatedData.payment.paidBy,
-              notes: validatedData.payment.notes,
-            });
-            paymentRecorded = true;
+          // Record payment if provided and we have remaining amount
+          if (validatedData.payment && remainingPaymentAmount > 0 && invoice) {
+            const invoiceTotal = Number(invoice.totalAmount);
+            const amountToApply = Math.min(remainingPaymentAmount, invoiceTotal);
+            const paidByValue = validatedData.payment.paidBy?.trim() || undefined;
+            
+            try {
+              await paymentService.createPayment({
+                companyId,
+                invoiceId: invoice.id,
+                paymentGatewayId: validatedData.payment.gatewayId,
+                amount: amountToApply,
+                transactionId: validatedData.payment.transactionId,
+                paidBy: paidByValue,
+                notes: validatedData.payment.notes || `Checkout payment for project ${project.id}`,
+              });
+              remainingPaymentAmount -= amountToApply;
+            } catch (paymentError: any) {
+              console.error(`Failed to record payment for project ${project.id}:`, paymentError.message);
+              errors.push({
+                type: 'Payment',
+                projectId: project.id,
+                message: paymentError.message || 'Failed to record payment'
+              });
+            }
           }
-        } catch (error) {
-          console.error(`Failed to generate invoice or record payment for project ${project.id}:`, error);
+        } catch (error: any) {
+          console.error(`Failed to generate invoice for project ${project.id}:`, error.message);
+          errors.push({
+            type: 'Invoice',
+            projectId: project.id,
+            message: error.message || 'Failed to generate invoice'
+          });
         }
         results.push({ project, invoice });
       }
 
-      return sendSuccess(res, results, 'Checkout completed successfully', 201);
+      return sendSuccess(res, { results, errors }, 'Checkout completed successfully', 201);
     } catch (error) {
       if (error instanceof z.ZodError) {
         return sendError(res, error.errors[0].message, 400);

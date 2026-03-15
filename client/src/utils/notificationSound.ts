@@ -34,3 +34,34 @@ export function playNotificationSound(): void {
     // Ignore errors (e.g. autoplay policy)
   }
 }
+
+/**
+ * Play a longer, more noticeable notification sound (e.g. for new payment).
+ */
+export function playLongNotificationSound(): void {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  try {
+    const playNote = (freq: number, start: number, duration: number) => {
+      const oscillator = ctx.createOscillator();
+      const gain = ctx.createGain();
+      oscillator.connect(gain);
+      gain.connect(ctx.destination);
+      oscillator.frequency.value = freq;
+      oscillator.type = 'sine';
+      gain.gain.setValueAtTime(0, ctx.currentTime + start);
+      gain.gain.linearRampToValueAtTime(0.15, ctx.currentTime + start + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + start + duration);
+      oscillator.start(ctx.currentTime + start);
+      oscillator.stop(ctx.currentTime + start + duration);
+    };
+
+    // Play a sequence of notes
+    playNote(880, 0, 0.4);
+    playNote(1100, 0.5, 0.4);
+    playNote(880, 1.0, 0.4);
+    playNote(1100, 1.5, 0.4);
+  } catch {
+    // Ignore
+  }
+}
