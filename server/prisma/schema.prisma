@@ -108,8 +108,8 @@ model User {
   education    String?  @db.Text
   roleId       Int      @map("role_id")
   companyId    Int      @map("company_id")
-  profileImage String?  @map("profile_image") @db.VarChar(500)
-  eSignature   String?  @map("e_signature") @db.Text
+  profileImage String?  @map("profile_image") @db.LongText
+  eSignature   String?  @map("e_signature") @db.LongText
   isOnline     Boolean  @default(false) @map("is_online")
   lastOnlineAt DateTime? @map("last_online_at") @db.DateTime
   createdAt    DateTime @default(now()) @map("created_at")
