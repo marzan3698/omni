@@ -926,8 +926,10 @@ export function Landing() {
                       <div key={day.date} className="flex-1 flex flex-col items-center gap-2">
                         <div
                           className="w-full rounded-md transition-all"
-                          style={{ backgroundColor: primaryColor }}
-                          style={{ height: `${Math.max(6, height)}%` }}
+                          style={{ 
+                            backgroundColor: primaryColor,
+                            height: `${Math.max(6, height)}%`
+                          }}
                           title={`${day.messages} messages on ${day.date}`}
                         />
                         <span className="text-[11px] text-slate-500">

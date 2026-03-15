@@ -65,6 +65,7 @@ export interface ConversationAnalytics {
   platformBreakdown: {
     facebook: number;
     whatsapp: number;
+    chatwoot: number;
     other: number;
   };
   daily: Array<{
