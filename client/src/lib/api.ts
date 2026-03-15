@@ -367,7 +367,7 @@ export const heroApi = {
     title?: string;
     subtitle?: string;
     trustIndicator?: string;
-    backgroundType?: 'image' | 'video_youtube' | 'video_local' | 'gradient';
+    backgroundType?: 'image' | 'video_youtube' | 'video_local' | 'gradient' | 'slider';
     backgroundVideoYoutube?: string;
     ctaPrimaryText?: string;
     ctaSecondaryText?: string;
@@ -391,6 +391,7 @@ export const heroApi = {
     buttonSecondaryIcon?: string;
     addonImage?: string;
     addonImageAlignment?: 'left' | 'center' | 'right';
+    heroSlides?: string;
   }) => apiClientInstance.post<ApiResponse>('/theme/hero/settings', data),
   uploadHeroImage: (file: File) => {
     const formData = new FormData();
@@ -419,6 +420,17 @@ export const heroApi = {
       },
     });
   },
+  uploadHeroSlideImage: (file: File) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    return apiClientInstance.post<ApiResponse>('/theme/hero/slides/image', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+  updateHeroSliderSettings: (slides: any[]) => 
+    apiClientInstance.post<ApiResponse>('/theme/hero/slides/settings', { slides }),
 };
 
 // Header API
@@ -582,6 +594,9 @@ export const projectApi = {
   sign: (id: number, signature: string) =>
     apiClientInstance.post<ApiResponse>(`/projects/${id}/sign`, { signature }),
   getStats: () => apiClientInstance.get<ApiResponse>('/projects/stats'),
+  checkout: (data: { serviceIds: number[]; clientName?: string; payment?: any }) => 
+    apiClientInstance.post<ApiResponse>('/projects/checkout', data),
+  getPublicFeed: () => apiClientInstance.get<ApiResponse>('/projects/public-feed'),
 };
 
 // Client Leads API
@@ -607,6 +622,16 @@ export const serviceApi = {
   create: (data: any) => apiClientInstance.post<ApiResponse>('/services', data),
   update: (id: number, data: any) => apiClientInstance.put<ApiResponse>(`/services/${id}`, data),
   delete: (id: number) => apiClientInstance.delete<ApiResponse>(`/services/${id}`),
+  uploadThumbnail: (file: File) => {
+    const formData = new FormData();
+    formData.append('thumbnail', file);
+    return apiClientInstance.post<ApiResponse>('/services/thumbnail', formData);
+  },
+  uploadGallery: (files: File[]) => {
+    const formData = new FormData();
+    files.forEach((file) => formData.append('gallery', file));
+    return apiClientInstance.post<ApiResponse>('/services/gallery', formData);
+  },
 };
 
 // Admin API

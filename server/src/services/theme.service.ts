@@ -191,6 +191,7 @@ export const themeService = {
             'hero_button_secondary_icon',
             'hero_addon_image',
             'hero_addon_image_alignment',
+            'hero_slides',
           ],
         },
       },
@@ -241,6 +242,7 @@ export const themeService = {
       addonImageAlignment: settingsMap['hero_addon_image_alignment'] && settingsMap['hero_addon_image_alignment'] !== '' 
         ? settingsMap['hero_addon_image_alignment'] 
         : 'center',
+      hero_slides: settingsMap['hero_slides'] || '[]',
     };
   },
 
@@ -938,6 +940,26 @@ export const themeService = {
     });
 
     return setting;
+  },
+
+  async updateHeroSliderSettings(companyId: number, slides: any[]) {
+    return await prisma.systemSetting.upsert({
+      where: {
+        companyId_key: {
+          companyId,
+          key: 'hero_slides',
+        },
+      },
+      update: {
+        value: JSON.stringify(slides),
+      },
+      create: {
+        companyId,
+        key: 'hero_slides',
+        value: JSON.stringify(slides),
+        description: 'Hero slider configuration',
+      },
+    });
   },
 
   /**

@@ -1,6 +1,8 @@
 import { prisma } from '../lib/prisma.js';
 import { AppError } from '../middleware/errorHandler.js';
 
+import { PriceType, RenewalInterval, ThumbnailType } from '@prisma/client';
+
 interface ServiceAttributes {
   keyValuePairs?: { [key: string]: string };
   tags?: string[];
@@ -10,28 +12,33 @@ interface CreateServiceData {
   companyId: number;
   categoryId: number;
   title: string;
+  shortDescription?: string;
   details: string;
+  priceType: PriceType;
   pricing: number;
-  useDeliveryDate?: boolean;
-  durationDays?: number;
-  deliveryStartDate?: Date;
-  deliveryEndDate?: Date;
-  currency?: string;
+  renewalInterval?: RenewalInterval;
+  thumbnailType: ThumbnailType;
+  thumbnailUrl?: string;
+  gallery?: string[];
   attributes: ServiceAttributes;
+  currency?: string;
+  isActive?: boolean;
 }
 
 interface UpdateServiceData {
   categoryId?: number;
   title?: string;
+  shortDescription?: string;
   details?: string;
+  priceType?: PriceType;
   pricing?: number;
-  useDeliveryDate?: boolean;
-  durationDays?: number | null;
-  deliveryStartDate?: Date | null;
-  deliveryEndDate?: Date | null;
-  currency?: string;
+  renewalInterval?: RenewalInterval | null;
+  thumbnailType?: ThumbnailType;
+  thumbnailUrl?: string;
+  gallery?: string[];
   attributes?: ServiceAttributes;
   isActive?: boolean;
+  currency?: string;
 }
 
 export const serviceService = {
@@ -39,16 +46,6 @@ export const serviceService = {
    * Create a new service
    */
   async createService(data: CreateServiceData) {
-    const useDelivery = data.useDeliveryDate !== false;
-
-    if (useDelivery && data.deliveryStartDate && data.deliveryEndDate) {
-      if (data.deliveryStartDate >= data.deliveryEndDate) {
-        throw new AppError('Delivery end date must be after start date', 400);
-      }
-    } else if (!useDelivery && (!data.durationDays || data.durationDays < 1)) {
-      throw new AppError('Duration (days) is required when delivery date is disabled', 400);
-    }
-
     if (data.attributes) {
       if (data.attributes.keyValuePairs && typeof data.attributes.keyValuePairs !== 'object') {
         throw new AppError('Invalid attributes format: keyValuePairs must be an object', 400);
@@ -63,28 +60,25 @@ export const serviceService = {
     });
     if (!category) throw new AppError('Service category not found', 404);
 
-    const createData: Record<string, unknown> = {
-      companyId: data.companyId,
-      categoryId: data.categoryId,
-      title: data.title,
-      details: data.details,
-      pricing: data.pricing,
-      useDeliveryDate: useDelivery,
-      currency: data.currency || 'BDT',
-      attributes: data.attributes || { keyValuePairs: {}, tags: [] },
-    };
-    if (useDelivery) {
-      createData.deliveryStartDate = data.deliveryStartDate;
-      createData.deliveryEndDate = data.deliveryEndDate;
-      createData.durationDays = null;
-    } else {
-      createData.durationDays = data.durationDays;
-      createData.deliveryStartDate = null;
-      createData.deliveryEndDate = null;
-    }
-
     const service = await prisma.service.create({
-      data: createData as any,
+      data: {
+        companyId: data.companyId,
+        categoryId: data.categoryId,
+        title: data.title,
+        shortDescription: data.shortDescription,
+        details: data.details,
+        priceType: data.priceType,
+        pricing: data.pricing,
+        renewalInterval: data.renewalInterval,
+        thumbnailType: data.thumbnailType,
+        thumbnailUrl: data.thumbnailUrl,
+        gallery: data.gallery || [],
+        currency: data.currency || 'BDT',
+        attributes: (data.attributes as any) || { keyValuePairs: {}, tags: [] },
+        isActive: data.isActive !== false,
+        // Legacy fields set to defaults/optional
+        useDeliveryDate: false,
+      },
     });
     return service;
   },
@@ -99,7 +93,7 @@ export const serviceService = {
         ...(filters?.isActive !== undefined && { isActive: filters.isActive }),
       },
       include: {
-        category: { select: { id: true, name: true, iconName: true, iconUrl: true } },
+        category: { select: { id: true, name: true, iconName: true, iconUrl: true, parentId: true } },
         _count: { select: { projects: true } },
       },
       orderBy: { createdAt: 'desc' },
@@ -116,7 +110,7 @@ export const serviceService = {
         companyId,
       },
       include: {
-        category: { select: { id: true, name: true, iconName: true, iconUrl: true } },
+        category: { select: { id: true, name: true, iconName: true, iconUrl: true, parentId: true } },
         projects: {
           select: { id: true, title: true, status: true, createdAt: true },
         },
@@ -140,15 +134,6 @@ export const serviceService = {
     });
     if (!service) throw new AppError('Service not found', 404);
 
-    const useDelivery = data.useDeliveryDate ?? service.useDeliveryDate;
-    if (useDelivery && data.deliveryStartDate && data.deliveryEndDate) {
-      if (data.deliveryStartDate >= data.deliveryEndDate) {
-        throw new AppError('Delivery end date must be after start date', 400);
-      }
-    } else if (!useDelivery && data.durationDays !== undefined && data.durationDays !== null && data.durationDays < 1) {
-      throw new AppError('Duration (days) must be at least 1 when delivery date is disabled', 400);
-    }
-
     if (data.attributes) {
       if (data.attributes.keyValuePairs && typeof data.attributes.keyValuePairs !== 'object') {
         throw new AppError('Invalid attributes format: keyValuePairs must be an object', 400);
@@ -165,56 +150,40 @@ export const serviceService = {
       if (!category) throw new AppError('Service category not found', 404);
     }
 
-    const updateData: Record<string, unknown> = {
+    const updateData: any = {
       categoryId: data.categoryId,
       title: data.title,
+      shortDescription: data.shortDescription,
       details: data.details,
+      priceType: data.priceType,
       pricing: data.pricing,
-      useDeliveryDate: useDelivery,
+      renewalInterval: data.renewalInterval,
+      thumbnailType: data.thumbnailType,
+      thumbnailUrl: data.thumbnailUrl,
+      gallery: data.gallery,
       currency: data.currency,
       attributes: data.attributes,
       isActive: data.isActive,
     };
-    if (useDelivery) {
-      updateData.deliveryStartDate = data.deliveryStartDate ?? service.deliveryStartDate;
-      updateData.deliveryEndDate = data.deliveryEndDate ?? service.deliveryEndDate;
-      updateData.durationDays = null;
-    } else if (data.durationDays !== undefined) {
-      updateData.durationDays = data.durationDays;
-      updateData.deliveryStartDate = null;
-      updateData.deliveryEndDate = null;
-    }
 
     const updatedService = await prisma.service.update({
       where: { id },
-      data: Object.fromEntries(Object.entries(updateData).filter(([, v]) => v !== undefined)) as any,
+      data: Object.fromEntries(Object.entries(updateData).filter(([, v]) => v !== undefined)),
     });
     return updatedService;
   },
 
   /**
-   * Delete service (soft delete if has projects, hard delete otherwise)
+   * Delete service
    */
   async deleteService(id: number, companyId: number) {
     const service = await prisma.service.findFirst({
-      where: {
-        id,
-        companyId,
-      },
-      include: {
-        _count: {
-          select: {
-            projects: true,
-          },
-        },
-      },
+      where: { id, companyId },
+      include: { _count: { select: { projects: true } } },
     });
 
-    if (!service) {
-      throw new AppError('Service not found', 404);
-    }
+    if (!service) throw new AppError('Service not found', 404);
 
-    // If service has projects, soft delete (set isActive=false)
     if (service._count.projects > 0) {
       return await prisma.service.update({
         where: { id },
@@ -222,10 +191,7 @@ export const serviceService = {
       });
     }
 
-    // Otherwise, hard delete
-    return await prisma.service.delete({
-      where: { id },
-    });
+    return await prisma.service.delete({ where: { id } });
   },
 };
 

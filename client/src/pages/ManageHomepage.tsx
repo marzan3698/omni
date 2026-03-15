@@ -17,7 +17,7 @@ const heroSettingsSchema = z.object({
   title: z.string().min(1, 'Title is required').max(100, 'Title must be 100 characters or less'),
   subtitle: z.string().max(200, 'Subtitle must be 200 characters or less').optional().or(z.literal('')),
   trustIndicator: z.string().max(100, 'Trust indicator must be 100 characters or less').optional().or(z.literal('')),
-  backgroundType: z.enum(['image', 'video_youtube', 'video_local', 'gradient']),
+  backgroundType: z.enum(['image', 'video_youtube', 'video_local', 'gradient', 'slider']),
   backgroundVideoYoutube: z.string().url('Invalid YouTube URL').optional().or(z.literal('')),
   ctaPrimaryText: z.string().max(50, 'Primary CTA text must be 50 characters or less').optional().or(z.literal('')),
   ctaSecondaryText: z.string().max(50, 'Secondary CTA text must be 50 characters or less').optional().or(z.literal('')),
@@ -41,6 +41,8 @@ const heroSettingsSchema = z.object({
   buttonPrimaryIcon: z.string().max(50, 'Icon name must be 50 characters or less').optional().or(z.literal('')),
   buttonSecondaryIcon: z.string().max(50, 'Icon name must be 50 characters or less').optional().or(z.literal('')),
   addonImageAlignment: z.enum(['left', 'center', 'right']).optional(),
+  addonImage: z.string().optional().or(z.literal('')),
+  heroSlides: z.string().optional().or(z.literal('')),
 });
 
 type HeroSettingsFormData = z.infer<typeof heroSettingsSchema>;
@@ -49,7 +51,7 @@ interface HeroSettings {
   title: string;
   subtitle: string;
   trustIndicator: string;
-  backgroundType: 'image' | 'video_youtube' | 'video_local' | 'gradient';
+  backgroundType: 'image' | 'video_youtube' | 'video_local' | 'gradient' | 'slider';
   backgroundImage: string | null;
   backgroundVideoYoutube: string | null;
   backgroundVideoLocal: string | null;
@@ -75,6 +77,14 @@ interface HeroSettings {
   buttonSecondaryIcon?: string;
   addonImage?: string | null;
   addonImageAlignment?: 'left' | 'center' | 'right';
+  heroSlides?: string;
+}
+
+interface HeroSlide {
+  id: string;
+  image: string;
+  width: number;
+  height: number;
 }
 
 // Helper function to extract YouTube video ID from URL
@@ -254,7 +264,7 @@ export default function ManageHomepage() {
       buttonSize: settings.buttonSize || 'lg',
       buttonPrimaryIcon: settings.buttonPrimaryIcon || '',
       buttonSecondaryIcon: settings.buttonSecondaryIcon || '',
-      addonImageAlignment: (settings.addonImageAlignment && settings.addonImageAlignment !== '') 
+      addonImageAlignment: (settings.addonImageAlignment && (settings.addonImageAlignment as string) !== '') 
         ? settings.addonImageAlignment 
         : 'center',
     },
@@ -291,7 +301,7 @@ export default function ManageHomepage() {
         buttonSize: settingsResponse.buttonSize || 'lg',
         buttonPrimaryIcon: settingsResponse.buttonPrimaryIcon || '',
         buttonSecondaryIcon: settingsResponse.buttonSecondaryIcon || '',
-        addonImageAlignment: (settingsResponse.addonImageAlignment && settingsResponse.addonImageAlignment !== '') 
+        addonImageAlignment: (settingsResponse.addonImageAlignment && (settingsResponse.addonImageAlignment as string) !== '') 
           ? settingsResponse.addonImageAlignment 
           : 'center',
       });
@@ -514,18 +524,6 @@ export default function ManageHomepage() {
   };
 
   const onSubmit = (data: HeroSettingsFormData) => {
-    // Validate YouTube URL if background type is video_youtube
-    if (data.backgroundType === 'video_youtube' && data.backgroundVideoYoutube) {
-      const videoId = extractYouTubeId(data.backgroundVideoYoutube);
-      if (!videoId) {
-        alert('Invalid YouTube URL. Please provide a valid YouTube video URL.');
-        return;
-      }
-    }
-
-    // Log the data being submitted (including addonImageAlignment)
-    console.log('Submitting hero settings:', data);
-    console.log('Addon image alignment:', data.addonImageAlignment);
     updateSettingsMutation.mutate(data);
   };
 
@@ -1227,6 +1225,7 @@ export default function ManageHomepage() {
                   >
                     <option value="gradient">Gradient (Default)</option>
                     <option value="image">Background Image</option>
+                    <option value="slider">Image Slider</option>
                     <option value="video_youtube">YouTube Video</option>
                     <option value="video_local">Local Video Upload</option>
                   </select>

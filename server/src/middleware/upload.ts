@@ -487,3 +487,59 @@ export const uploadExcelFile = multer({
 });
 
 export const singleExcelFile = uploadExcelFile.single('file');
+// ============================================
+// Service Media Upload (Thumbnail & Gallery)
+// ============================================
+
+const servicesUploadDir = path.join(rootUploadsDir, 'services');
+if (!fs.existsSync(servicesUploadDir)) {
+  fs.mkdirSync(servicesUploadDir, { recursive: true });
+}
+
+const serviceMediaStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, servicesUploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    const ext = path.extname(file.originalname);
+    const name = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9]/g, '_');
+    cb(null, `service-${name}-${uniqueSuffix}${ext}`);
+  },
+});
+
+const serviceThumbnailFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  const allowedMimes = [
+    'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
+    'video/mp4', 'video/webm', 'video/quicktime'
+  ];
+  if (allowedMimes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Invalid thumbnail type. Allowed: JPEG, PNG, GIF, WebP, MP4, WebM, MOV.'));
+  }
+};
+
+const serviceGalleryFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+  if (allowedMimes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Gallery only supports images (JPEG, PNG, WebP).'));
+  }
+};
+
+export const uploadServiceThumbnail = multer({
+  storage: serviceMediaStorage,
+  fileFilter: serviceThumbnailFilter,
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB for video
+});
+
+export const uploadServiceGallery = multer({
+  storage: serviceMediaStorage,
+  fileFilter: serviceGalleryFilter,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB per image
+});
+
+export const singleServiceThumbnail = uploadServiceThumbnail.single('thumbnail');
+export const multipleServiceGallery = uploadServiceGallery.array('gallery', 10);

@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { projectService } from '../services/project.service.js';
 import { invoiceService } from '../services/invoice.service.js';
+import { userService } from '../services/user.service.js';
+import { paymentService } from '../services/payment.service.js';
 import { sendSuccess, sendError } from '../utils/response.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { AuthRequest } from '../types/index.js';
@@ -28,6 +30,20 @@ const updateProjectSchema = z.object({
 
 const signProjectSchema = z.object({
   signature: z.string().min(1, 'Signature is required'),
+});
+
+const checkoutSchema = z.object({
+  serviceIds: z.array(z.number().int().positive()).min(1, 'At least one service is required'),
+  clientName: z.string().min(1).optional(),
+  companyName: z.string().optional(),
+  address: z.string().optional(),
+  payment: z.object({
+    gatewayId: z.number().int().positive(),
+    transactionId: z.string().min(1),
+    amount: z.number(),
+    paidBy: z.string().optional(),
+    notes: z.string().optional(),
+  }).optional(),
 });
 
 export const projectController = {
@@ -108,7 +124,7 @@ export const projectController = {
       const validatedData = createProjectSchema.parse(req.body);
 
       const project = await projectService.createProject({
-        ...validatedData,
+        ...(validatedData as any),
         companyId,
         clientId,
       });
@@ -179,7 +195,7 @@ export const projectController = {
 
       const validatedData = signProjectSchema.parse(req.body);
 
-      const project = await projectService.signProject(id, clientId, validatedData);
+      const project = await projectService.signProject(id, clientId, validatedData as any);
 
       // Generate invoice when project is submitted
       let invoice = null;
@@ -262,6 +278,97 @@ export const projectController = {
         return sendError(res, error.message, error.statusCode);
       }
       return sendError(res, 'Failed to retrieve project statistics', 500);
+    }
+  },
+
+  /**
+   * Checkout multiple services
+   * POST /api/projects/checkout
+   */
+  checkout: async (req: AuthRequest, res: Response) => {
+    try {
+      const clientId = req.user?.id;
+      const companyId = req.user?.companyId;
+
+      if (!clientId) {
+        return sendError(res, 'User not authenticated', 401);
+      }
+
+      if (!companyId) {
+        return sendError(res, 'Company ID is required', 400);
+      }
+
+      const validatedData = checkoutSchema.parse(req.body);
+
+      // 1. Update client info if provided
+      if (req.user) {
+        const updateData: any = {};
+        if (validatedData.clientName) updateData.name = validatedData.clientName;
+        if (validatedData.companyName) updateData.companyName = validatedData.companyName;
+        if (validatedData.address) updateData.address = validatedData.address;
+
+        if (Object.keys(updateData).length > 0) {
+          await userService.updateUser(req.user.id, updateData);
+        }
+      }
+
+      // 2. Process checkout projects
+      const projects = await projectService.checkout({
+        companyId,
+        clientId,
+        serviceIds: validatedData.serviceIds,
+      });
+
+      // 3. Generate invoices and record payment
+      const results = [];
+      let paymentRecorded = false;
+
+      for (const project of projects) {
+        let invoice = null;
+        try {
+          invoice = await invoiceService.generateInvoiceFromProject(project.id);
+          
+          // Record payment for the first successful invoice if provided
+          if (validatedData.payment && !paymentRecorded && invoice) {
+            await paymentService.createPayment({
+              companyId,
+              invoiceId: invoice.id,
+              paymentGatewayId: validatedData.payment.gatewayId,
+              amount: validatedData.payment.amount,
+              transactionId: validatedData.payment.transactionId,
+              paidBy: validatedData.payment.paidBy,
+              notes: validatedData.payment.notes,
+            });
+            paymentRecorded = true;
+          }
+        } catch (error) {
+          console.error(`Failed to generate invoice or record payment for project ${project.id}:`, error);
+        }
+        results.push({ project, invoice });
+      }
+
+      return sendSuccess(res, results, 'Checkout completed successfully', 201);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return sendError(res, error.errors[0].message, 400);
+      }
+      if (error instanceof AppError) {
+        return sendError(res, error.message, error.statusCode);
+      }
+      return sendError(res, 'Failed to complete checkout', 500);
+    }
+  },
+
+  /**
+   * Get public project activity feed
+   * GET /api/projects/public-feed
+   */
+  getPublicFeed: async (req: Request, res: Response) => {
+    try {
+      const feed = await projectService.getPublicProjectFeed();
+      return sendSuccess(res, feed, 'Activity feed retrieved successfully');
+    } catch (error) {
+      return sendError(res, 'Failed to retrieve activity feed', 500);
     }
   },
 };

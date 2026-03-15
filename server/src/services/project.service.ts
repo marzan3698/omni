@@ -26,6 +26,12 @@ interface SignProjectData {
   signature: string;
 }
 
+interface CheckoutData {
+  companyId: number;
+  clientId: string;
+  serviceIds: number[];
+}
+
 export const projectService = {
   /**
    * Get all projects for a client
@@ -125,26 +131,63 @@ export const projectService = {
         id,
         clientId,
       },
-      include: {
-        service: {
-          select: {
-            id: true,
-            title: true,
-            pricing: true,
-            attributes: true,
+        include: {
+          client: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              phone: true,
+              address: true,
+              companyName: true,
+            },
+          },
+          service: {
+            select: {
+              id: true,
+              title: true,
+              pricing: true,
+              attributes: true,
+            },
+          },
+          invoices: {
+            orderBy: { createdAt: 'desc' },
+            select: {
+              id: true,
+              invoiceNumber: true,
+              status: true,
+              totalAmount: true,
+              dueDate: true,
+              createdAt: true,
+            },
+          },
+          payments: {
+            orderBy: { createdAt: 'desc' },
+            select: {
+              id: true,
+              amount: true,
+              status: true,
+              paymentMethod: true,
+              createdAt: true,
+              paidAt: true,
+              verifiedAt: true,
+            },
+          },
+          tasks: {
+            orderBy: { createdAt: 'desc' },
+            select: {
+              id: true,
+              title: true,
+              description: true,
+              status: true,
+              priority: true,
+              progress: true,
+              dueDate: true,
+              startedAt: true,
+              createdAt: true,
+            },
           },
         },
-        invoices: {
-          orderBy: { createdAt: 'desc' },
-          select: {
-            id: true,
-            invoiceNumber: true,
-            status: true,
-            totalAmount: true,
-            dueDate: true,
-          },
-        },
-      },
     });
 
     if (!project) {
@@ -326,5 +369,92 @@ export const projectService = {
       throw new AppError('Failed to fetch project statistics', 500);
     }
   },
+
+  /**
+   * Checkout multiple services and create projects
+   */
+  async checkout(data: CheckoutData) {
+    const { companyId, clientId, serviceIds } = data;
+    
+    try {
+      // Use a transaction for consistency
+      return await prisma.$transaction(async (tx) => {
+        const results = [];
+
+        for (const serviceId of serviceIds) {
+          const service = await tx.service.findFirst({
+            where: { id: serviceId, companyId, isActive: true }
+          });
+
+          if (!service) continue;
+
+          // Delivery dates fallback
+          const start = service.deliveryStartDate || new Date();
+          const end = service.deliveryEndDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+          const days = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
+
+          const project = await tx.project.create({
+            data: {
+              companyId,
+              clientId,
+              serviceId,
+              title: service.title,
+              description: service.details,
+              budget: service.pricing,
+              deliveryStartDate: start,
+              deliveryEndDate: end,
+              time: `${days} days`,
+              status: 'Submitted',
+              signedAt: new Date(),
+              signature: 'Ecommerce Checkout' // Placeholder for automated checkout
+            }
+          });
+
+          results.push(project);
+        }
+
+        return results;
+      });
+    } catch (error: any) {
+      console.error('Error during checkout:', error);
+      throw new AppError(error.message || 'Failed to complete checkout', 500);
+    }
+  },
+
+  /**
+   * Get public project feed for tickers
+   */
+  async getPublicProjectFeed() {
+    try {
+      const projects = await prisma.project.findMany({
+        take: 10,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          client: {
+            select: {
+              name: true,
+              companyName: true,
+            },
+          },
+          service: {
+            select: {
+              title: true,
+            },
+          },
+        },
+      });
+
+      return projects.map((p) => ({
+        id: p.id,
+        clientName: p.client?.name || 'A Client',
+        companyName: p.client?.companyName || 'Confidential',
+        serviceTitle: p.service?.title || 'Premium Service',
+        createdAt: p.createdAt,
+      }));
+    } catch (error) {
+      console.error('Error fetching public project feed:', error);
+      throw new AppError('Failed to fetch activity feed', 500);
+    }
+  }
 };
 

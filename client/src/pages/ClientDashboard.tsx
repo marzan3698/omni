@@ -1,15 +1,19 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { projectApi, serviceApi, productApi } from '@/lib/api';
+import { projectApi, serviceApi, productApi, serviceCategoryApi } from '@/lib/api';
 import { WelcomePresentationModal } from '@/components/WelcomePresentationModal';
 import { ClientDashboardHero } from '@/components/ClientDashboardHero';
 import { ClientServicesByCategory } from '@/components/ClientServicesByCategory';
+import { TechStackTicker } from '@/components/TechStackTicker';
+import { RecentClientsTicker } from '@/components/RecentClientsTicker';
 import { useAuth } from '@/contexts/AuthContext';
+import { useShop } from '@/contexts/ShopContext';
 
 export function ClientDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { searchTerm, selectedCategoryId, setSelectedCategoryId, addToCart } = useShop();
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [hasUserDismissedWelcome, setHasUserDismissedWelcome] = useState(false);
 
@@ -21,7 +25,17 @@ export function ClientDashboard() {
     },
   });
 
+  const { data: categoriesResponse } = useQuery({
+    queryKey: ['service-categories-client', user?.companyId],
+    queryFn: async () => {
+      const response = await serviceCategoryApi.getListForClient();
+      return response.data.data || [];
+    },
+    enabled: !!user?.companyId,
+  });
+
   const stats = statsResponse || { total: 0, active: 0, completed: 0 };
+  const categories = categoriesResponse || [];
 
   // Check if we should show welcome modal (when stats are loaded and total is 0)
   const shouldShowWelcome = stats.total === 0 && statsResponse !== undefined;
@@ -41,7 +55,7 @@ export function ClientDashboard() {
     queryKey: ['products', user?.companyId],
     queryFn: async () => {
       if (!user?.companyId) return [];
-      const response = await productApi.getAll(user.companyId);
+      const response = await productApi.list(user.companyId);
       return response.data.data || [];
     },
     enabled: shouldShowWelcome && !!user?.companyId,
@@ -62,19 +76,25 @@ export function ClientDashboard() {
     setShowWelcomeModal(false);
   };
 
-  const handleStartProject = (preSelectService?: unknown) => {
+  const handleStartProject = (preSelectService?: any) => {
     setHasUserDismissedWelcome(true);
     setShowWelcomeModal(false);
-    navigate('/client/projects');
-    setTimeout(() => {
-      window.dispatchEvent(
-        new CustomEvent('open-project-form', preSelectService ? { detail: { preSelectService } } : {})
-      );
-    }, 100);
+    
+    if (preSelectService) {
+      addToCart(preSelectService);
+      navigate('/client/checkout');
+    } else {
+      navigate('/client/projects');
+      setTimeout(() => {
+        window.dispatchEvent(
+          new CustomEvent('open-project-form', {})
+        );
+      }, 100);
+    }
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 min-h-screen">
       {/* Welcome Presentation Modal */}
       {shouldShowWelcome && (
         <WelcomePresentationModal
@@ -86,16 +106,27 @@ export function ClientDashboard() {
         />
       )}
 
-      {/* Hero Section */}
+      {/* Hero Section - Banner Style */}
       <ClientDashboardHero onStartProject={handleStartProject} />
 
-      {/* Services by Category */}
-      {user?.companyId && (
-        <ClientServicesByCategory
-          companyId={user.companyId}
-          onStartProject={handleStartProject}
-        />
-      )}
+      {/* Activity Feeds */}
+      <RecentClientsTicker />
+      <TechStackTicker />
+
+      <div className="relative">
+        {/* Main Product/Service Display */}
+        {user?.companyId && (
+          <div id="shop-content">
+            <ClientServicesByCategory
+              companyId={user.companyId}
+              onStartProject={handleStartProject}
+              selectedCategoryId={selectedCategoryId}
+              onCategoryChange={setSelectedCategoryId}
+              searchTerm={searchTerm}
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

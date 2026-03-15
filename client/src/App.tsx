@@ -11,8 +11,10 @@ import { Login } from './pages/Login';
 import { Landing } from './pages/Landing';
 import { Register } from './pages/Register';
 import { ClientLayout } from './components/ClientLayout';
+import { ShopProvider } from './contexts/ShopContext';
 import { ClientDashboard } from './pages/ClientDashboard';
 import { ClientProjects } from './pages/ClientProjects';
+import { ClientProjectDetail } from './pages/ClientProjectDetail';
 import { ClientCampaigns } from './pages/ClientCampaigns';
 import { ClientLeads } from './pages/ClientLeads';
 import { ProjectSign } from './pages/ProjectSign';
@@ -49,6 +51,7 @@ import ThemeDesign from './pages/ThemeDesign';
 import ManageHomepage from './pages/ManageHomepage';
 import ManageHeader from './pages/ManageHeader';
 import ManageColors from './pages/ManageColors';
+import ClientSliderManagement from './pages/ClientSliderManagement';
 import PaymentSettings from './pages/PaymentSettings';
 import PaymentManagement from './pages/PaymentManagement';
 import Roles from './pages/Roles';
@@ -85,6 +88,9 @@ import Terms from './pages/public/Terms';
 import Privacy from './pages/public/Privacy';
 import ServicesPage from './pages/public/ServicesPage';
 import Sitemap from './pages/public/Sitemap';
+import ServiceView from './pages/ServiceView';
+import { Checkout } from './pages/Checkout';
+import { CheckoutSuccess } from './pages/CheckoutSuccess';
 
 function App() {
   // Redirect /install to home immediately on mount
@@ -550,6 +556,18 @@ function App() {
                 }
               />
               <Route
+                path="/theme-design/client-sliders"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <PermissionGuard permission="can_manage_root_items">
+                        <ClientSliderManagement />
+                      </PermissionGuard>
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/payment-settings"
                 element={
                   <ProtectedRoute>
@@ -832,72 +850,28 @@ function App() {
 
               {/* Client routes */}
               <Route
-                path="/client/dashboard"
+                path="/client/*"
                 element={
                   <ProtectedRoute>
-                    <ClientLayout>
-                      <ClientDashboard />
-                    </ClientLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/client/projects"
-                element={
-                  <ProtectedRoute>
-                    <ClientLayout>
-                      <ClientProjects />
-                    </ClientLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/client/campaigns"
-                element={
-                  <ProtectedRoute>
-                    <ClientLayout>
-                      <ClientCampaigns />
-                    </ClientLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/client/leads"
-                element={
-                  <ProtectedRoute>
-                    <ClientLayout>
-                      <ClientLeads />
-                    </ClientLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/client/projects/:id/sign"
-                element={
-                  <ProtectedRoute>
-                    <ClientLayout>
-                      <ProjectSign />
-                    </ClientLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/client/invoices"
-                element={
-                  <ProtectedRoute>
-                    <ClientLayout>
-                      <ClientInvoices />
-                    </ClientLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/client/invoices/:id"
-                element={
-                  <ProtectedRoute>
-                    <ClientLayout>
-                      <InvoiceView />
-                    </ClientLayout>
+                    <ShopProvider>
+                      <ClientLayout>
+                        <Routes>
+                          <Route path="dashboard" element={<ClientDashboard />} />
+                          <Route path="services/:id" element={<ServiceView />} />
+                          <Route path="projects" element={<ClientProjects />} />
+                <Route path="projects/:id" element={<ClientProjectDetail />} />
+                          <Route path="campaigns" element={<ClientCampaigns />} />
+                          <Route path="leads" element={<ClientLeads />} />
+                          <Route path="checkout" element={<Checkout />} />
+                          <Route path="checkout/success" element={<CheckoutSuccess />} />
+                          <Route path="invoices/success/:id" element={<CheckoutSuccess />} />
+                          <Route path="projects/:id/sign" element={<ProjectSign />} />
+                          <Route path="invoices" element={<ClientInvoices />} />
+                          <Route path="invoices/:id" element={<InvoiceView />} />
+                          <Route path="journey" element={<ClientJourneyPage />} />
+                        </Routes>
+                      </ClientLayout>
+                    </ShopProvider>
                   </ProtectedRoute>
                 }
               />

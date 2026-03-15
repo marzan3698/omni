@@ -1,5 +1,6 @@
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Briefcase } from 'lucide-react';
+import { Briefcase, ChevronLeft, ChevronRight } from 'lucide-react';
 import { heroApi } from '@/lib/api';
 import { getImageUrl } from '@/lib/imageUtils';
 
@@ -23,11 +24,22 @@ function extractYouTubeId(url: string | null): string | null {
   return null;
 }
 
+interface HeroSlide {
+  id: string;
+  image: string;
+  width: number;
+  height: number;
+}
+
 interface ClientDashboardHeroProps {
   onStartProject: () => void;
 }
 
 export function ClientDashboardHero({ onStartProject }: ClientDashboardHeroProps) {
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [progress, setProgress] = useState(0);
+  const slideDuration = 5000; // 5 seconds for each slide as requested
+  
   const { data: heroSettings } = useQuery({
     queryKey: ['hero-settings-client'],
     queryFn: async () => {
@@ -42,94 +54,128 @@ export function ClientDashboardHero({ onStartProject }: ClientDashboardHeroProps
     staleTime: 5 * 60 * 1000,
   });
 
-  const heroTitle = heroSettings?.title || 'Your Projects, Simplified';
-  const heroSubtitle =
-    heroSettings?.subtitle ||
-    'Start a new project and collaborate with us. Browse our services below.';
-  const backgroundType = heroSettings?.backgroundType || 'gradient';
-  const backgroundImage = heroSettings?.backgroundImage;
-  const backgroundVideoYoutube = heroSettings?.backgroundVideoYoutube;
-  const backgroundVideoLocal = heroSettings?.backgroundVideoLocal;
-  const youtubeVideoId = extractYouTubeId(backgroundVideoYoutube);
   const overlayColor = heroSettings?.overlayColor || '#0f172a';
-  const overlayOpacity = heroSettings?.overlayOpacity ?? 0.7;
+  const overlayOpacity = heroSettings?.overlayOpacity ?? 0.3; // Default lower for pure image focus
+  
+  const heroSlides: HeroSlide[] = heroSettings?.hero_slides 
+    ? JSON.parse(heroSettings.hero_slides) 
+    : [];
 
+  useEffect(() => {
+    if (heroSlides.length > 1) {
+      setProgress(0);
+      const startTime = Date.now();
+      
+      const interval = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        const newProgress = Math.min((elapsed / slideDuration) * 100, 100);
+        setProgress(newProgress);
+        
+        if (newProgress >= 100) {
+          handleNext();
+        }
+      }, 50);
+      
+      return () => clearInterval(interval);
+    }
+  }, [heroSlides.length, currentSlide]);
+
+  const handleNext = () => {
+    if (heroSlides.length <= 1) return;
+    setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
+    setProgress(0);
+  };
+  
+  const handlePrev = () => {
+    if (heroSlides.length <= 1) return;
+    setCurrentSlide((prev) => (prev - 1 + heroSlides.length) % heroSlides.length);
+    setProgress(0);
+  };
+
+  const goToSlide = (index: number) => {
+    if (index === currentSlide || heroSlides.length <= 1) return;
+    setCurrentSlide(index);
+    setProgress(0);
+  };
+  
   return (
     <section
-      className="relative overflow-hidden min-h-[280px] md:min-h-[360px] rounded-xl"
-      style={
-        backgroundType === 'gradient'
-          ? {
-              background:
-                'linear-gradient(135deg, #0f172a 0%, #1e293b 40%, #0c0a1a 80%, #1e1b4b 100%)',
-            }
-          : undefined
-      }
+      className="relative overflow-hidden aspect-[1920/600] w-full rounded-[3rem] group shadow-2xl shadow-indigo-500/10 bg-slate-900 border border-white/5"
     >
-      {backgroundType === 'image' && backgroundImage && (
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url(${getImageUrl(backgroundImage)})` }}
-        />
-      )}
-      {backgroundType === 'video_youtube' && youtubeVideoId && (
-        <div className="absolute inset-0 overflow-hidden">
-          <iframe
-            className="absolute pointer-events-none"
-            style={{
-              top: '50%',
-              left: '50%',
-              width: '100vw',
-              height: '56.25vw',
-              minHeight: '100%',
-              minWidth: '177.78vh',
-              transform: 'translate(-50%, -50%)',
-              border: 'none',
-              zIndex: 0,
-            }}
-            src={`https://www.youtube.com/embed/${youtubeVideoId}?autoplay=1&loop=1&mute=1&controls=0&playlist=${youtubeVideoId}&modestbranding=1&rel=0`}
-            allow="autoplay; encrypted-media"
-          />
-        </div>
-      )}
-      {backgroundType === 'video_local' && backgroundVideoLocal && (
-        <video
-          className="absolute inset-0 w-full h-full object-cover"
-          src={getImageUrl(backgroundVideoLocal)}
-          autoPlay
-          loop
-          muted
-          playsInline
-        />
-      )}
-
-      <div
-        className="absolute inset-0 z-[1]"
-        style={{ backgroundColor: hexToRgba(overlayColor, overlayOpacity) }}
-      />
-
-      <div className="relative z-10 flex flex-col justify-center px-6 py-12 md:px-12 md:py-20 text-center">
-        <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-amber-100 mb-3">
-          {heroTitle}
-        </h1>
-        {heroSubtitle && (
-          <p className="text-lg md:text-xl text-slate-300 max-w-2xl mx-auto mb-8">
-            {heroSubtitle}
-          </p>
-        )}
-        <div className="flex justify-center">
-          <button
-            type="button"
-            onClick={onStartProject}
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all
-              border-2 border-amber-500/50 bg-amber-500/30 text-amber-100
-              hover:bg-amber-500/50 hover:border-amber-500/70"
+      {/* Background Slider */}
+      <div className="absolute inset-0 overflow-hidden">
+        {heroSlides.length > 0 ? (
+          <div 
+            className="flex w-full h-full transition-transform duration-1000 cubic-bezier(0.4, 0, 0.2, 1)"
+            style={{ transform: `translateX(-${currentSlide * 100}%)` }}
           >
-            <Briefcase className="w-5 h-5" />
-            Start New Project
-          </button>
-        </div>
+            {heroSlides.map((slide, index) => (
+              <div
+                key={slide.id}
+                className="relative min-w-full h-full overflow-hidden"
+              >
+                <div
+                  className="w-full h-full bg-cover bg-center transition-all duration-700"
+                  style={{ 
+                    backgroundImage: `url(${getImageUrl(slide.image)})`,
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div 
+            className="absolute inset-0"
+            style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #1e293b 50%, #0f172a 100%)' }}
+          />
+        )}
+        
+        {/* Slider Navigation Controls */}
+        {heroSlides.length > 1 && (
+          <>
+            <button
+              onClick={handlePrev}
+              className="absolute left-8 top-1/2 -translate-y-1/2 z-[15] p-5 rounded-full bg-black/20 hover:bg-amber-500 text-white backdrop-blur-3xl transition-all opacity-0 group-hover:opacity-100 border border-white/10 hover:scale-110 active:scale-90 shadow-2xl"
+            >
+              <ChevronLeft className="w-8 h-8" />
+            </button>
+            <button
+              onClick={handleNext}
+              className="absolute right-8 top-1/2 -translate-y-1/2 z-[15] p-5 rounded-full bg-black/20 hover:bg-amber-500 text-white backdrop-blur-3xl transition-all opacity-0 group-hover:opacity-100 border border-white/10 hover:scale-110 active:scale-90 shadow-2xl"
+            >
+              <ChevronRight className="w-8 h-8" />
+            </button>
+            
+            <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-[15] flex gap-6">
+              {heroSlides.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => goToSlide(index)}
+                  className={`h-2 rounded-full transition-all duration-500 overflow-hidden bg-white/20 relative ${
+                    index === currentSlide ? 'w-24' : 'w-6 hover:bg-white/40'
+                  }`}
+                >
+                  {index === currentSlide && (
+                    <div 
+                      className="absolute inset-0 bg-amber-500 transition-all duration-75 ease-linear"
+                      style={{ width: `${progress}%` }}
+                    />
+                  )}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
       </div>
+
+      {/* Slide Counter Indicator */}
+      {heroSlides.length > 0 && (
+        <div className="absolute top-10 right-10 z-20 hidden md:flex items-center gap-4 px-6 py-3 rounded-full bg-black/30 border border-white/10 backdrop-blur-3xl transition-all hover:bg-black/50 group shadow-2xl">
+          <span className="text-white font-black text-sm tracking-widest">
+            {currentSlide + 1} <span className="text-white/40 font-medium">/ {heroSlides.length}</span>
+          </span>
+        </div>
+      )}
     </section>
   );
 }

@@ -29,6 +29,7 @@ import {
   Calendar,
   Phone,
   Layout,
+  Image as ImageIcon,
   Menu,
   FileCode,
   FileEdit,
@@ -257,20 +258,21 @@ const menuSections: MenuSection[] = [
         permission: 'can_manage_root_items',
         submenu: [
           { label: 'General Settings', path: '/system-settings', icon: Cog },
-          {
-            label: 'Theme Design',
-            icon: Palette,
-            permission: 'can_manage_root_items',
-            submenu: [
-              { label: 'Theme Settings', path: '/theme-design', icon: Palette },
-              { label: 'Hero Design', path: '/theme-design/homepage/hero', icon: Layout },
-              { label: 'Header Design', path: '/theme-design/homepage/header', icon: Menu },
-              { label: 'Color Change', path: '/theme-design/homepage/colors', icon: Palette },
-            ]
-          },
           { label: 'Integrations', path: '/integrations', icon: Plug },
           { label: 'Task Configuration', path: '/task-config', icon: ListChecks },
           { label: 'Settings', path: '/settings', icon: Settings },
+        ]
+      },
+      {
+        label: 'Theme Design',
+        icon: Palette,
+        permission: 'can_manage_root_items',
+        submenu: [
+          { label: 'Theme Settings', path: '/theme-design', icon: Palette },
+          { label: 'Hero Design', path: '/theme-design/homepage/hero', icon: Layout },
+          { label: 'Client Sliders', path: '/theme-design/client-sliders', icon: ImageIcon },
+          { label: 'Header Design', path: '/theme-design/homepage/header', icon: Menu },
+          { label: 'Color Change', path: '/theme-design/homepage/colors', icon: Palette },
         ]
       },
     ]

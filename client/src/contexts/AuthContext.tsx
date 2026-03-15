@@ -13,6 +13,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   hasPermission: (permission: string) => boolean;
   isClient: boolean;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -88,7 +89,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const isClient = user?.roleName === 'Client';
-
+  
+  const refreshProfile = async () => {
+    if (authApi.isAuthenticated()) {
+      try {
+        const profile = await authApi.getProfile();
+        setUser(profile);
+      } catch (error) {
+        console.error('Failed to refresh profile:', error);
+      }
+    }
+  };
+  
   return (
     <AuthContext.Provider
       value={{
@@ -100,6 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: !!user,
         hasPermission,
         isClient,
+        refreshProfile,
       }}
     >
       {children}

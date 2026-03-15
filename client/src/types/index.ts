@@ -9,7 +9,11 @@ export interface ApiResponse<T = any> {
 // User types
 export interface User {
   id: string;
+  name?: string | null;
   email: string;
+  phone?: string | null;
+  address?: string | null;
+  companyName?: string | null;
   roleId: number;
   roleName?: string;
   profileImage?: string;

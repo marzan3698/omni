@@ -111,6 +111,7 @@ export const userService = {
     name?: string | null;
     phone?: string | null;
     address?: string | null;
+    companyName?: string | null;
     education?: string | null;
     profileImage?: string | null;
     eSignature?: string | null;
@@ -157,6 +158,7 @@ export const userService = {
         name: data.name || null,
         phone: data.phone || null,
         address: data.address || null,
+        companyName: data.companyName || null,
         education: data.education || null,
         profileImage: data.profileImage || null,
         eSignature: data.eSignature || null,
@@ -191,6 +193,7 @@ export const userService = {
     phone?: string | null;
     password?: string;
     address?: string | null;
+    companyName?: string | null;
     education?: string | null;
     roleId?: number;
     companyId?: number;
@@ -249,6 +252,7 @@ export const userService = {
       updateData.passwordHash = await bcrypt.hash(data.password, 10);
     }
     if (data.address !== undefined) updateData.address = data.address || null;
+    if (data.companyName !== undefined) updateData.companyName = data.companyName || null;
     if (data.education !== undefined) updateData.education = data.education || null;
     if (data.roleId) updateData.roleId = data.roleId;
     if (data.companyId) updateData.companyId = data.companyId;

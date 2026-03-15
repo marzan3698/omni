@@ -21,6 +21,8 @@ router.post('/hero/settings', authMiddleware, verifyPermission('can_manage_root_
 router.post('/hero/image', authMiddleware, verifyPermission('can_manage_root_items'), singleHeroImage, themeController.uploadHeroImage);
 router.post('/hero/video', authMiddleware, verifyPermission('can_manage_root_items'), singleHeroVideo, themeController.uploadHeroVideo);
 router.post('/hero/addon-image', authMiddleware, verifyPermission('can_manage_root_items'), singleHeroAddonImage, themeController.uploadHeroAddonImage);
+router.post('/hero/slides/image', authMiddleware, verifyPermission('can_manage_root_items'), singleHeroImage, themeController.uploadHeroSlideImage); // Assuming singleHeroImage can be reused or a new one like singleHeroSlideImage would be defined
+router.post('/hero/slides/settings', authMiddleware, verifyPermission('can_manage_root_items'), themeController.updateHeroSliderSettings);
 
 // Header settings routes
 // Public route for getting header settings (no auth required)

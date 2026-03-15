@@ -199,19 +199,61 @@ export const themeController = {
    */
   uploadHeroAddonImage: async (req: AuthRequest, res: Response) => {
     try {
-      const companyId = req.user!.companyId;
-
       if (!req.file) {
-        return sendError(res, 'No file uploaded', 400);
+        return res.status(400).json({ status: 'error', message: 'No file uploaded' });
       }
 
-      // File path relative to uploads directory
-      const filePath = `/uploads/theme/hero/${req.file.filename}`;
-      const setting = await themeService.uploadHeroAddonImage(companyId, filePath);
-
-      return sendSuccess(res, { imagePath: setting.value }, 'Hero addon image uploaded successfully');
+      const imagePath = `/uploads/theme/hero/${req.file.filename}`;
+      
+      // Update the addon image in system settings if needed, 
+      // but usually the frontend will send it in updateHeroSettings
+      
+      return res.status(200).json({
+        status: 'success',
+        data: { imagePath }
+      });
     } catch (error: any) {
-      return sendError(res, error.message || 'Failed to upload hero addon image', error.statusCode || 500);
+      console.error('Error uploading hero addon image:', error);
+      return res.status(500).json({ status: 'error', message: error.message });
+    }
+  },
+
+  uploadHeroSlideImage: async (req: AuthRequest, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ status: 'error', message: 'No file uploaded' });
+      }
+
+      const imagePath = `/uploads/theme/hero/${req.file.filename}`;
+      
+      return res.status(200).json({
+        status: 'success',
+        data: { imagePath }
+      });
+    } catch (error: any) {
+      console.error('Error uploading hero slide image:', error);
+      return res.status(500).json({ status: 'error', message: error.message });
+    }
+  },
+
+  updateHeroSliderSettings: async (req: AuthRequest, res: Response) => {
+    try {
+      const { slides } = req.body;
+      const companyId = req.user?.companyId;
+
+      if (!companyId) {
+        return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+      }
+
+      await themeService.updateHeroSliderSettings(companyId, slides);
+
+      return res.status(200).json({
+        status: 'success',
+        message: 'Hero slider settings updated successfully'
+      });
+    } catch (error: any) {
+      console.error('Error updating hero slider settings:', error);
+      return res.status(500).json({ status: 'error', message: error.message });
     }
   },
 

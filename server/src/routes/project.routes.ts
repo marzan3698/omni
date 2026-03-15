@@ -4,13 +4,17 @@ import { authMiddleware } from '../middleware/authMiddleware.js';
 
 const router = Router();
 
-// All routes require authentication
+// Public routes
+router.get('/public-feed', projectController.getPublicFeed);
+
+// All routes below require authentication
 router.use(authMiddleware);
 
 // Client routes
 router.get('/', projectController.getClientProjects);
 router.get('/stats', projectController.getClientProjectStats);
 router.get('/:id', projectController.getProjectById);
+router.post('/checkout', projectController.checkout);
 router.post('/', projectController.createProject);
 router.put('/:id', projectController.updateProject);
 router.post('/:id/sign', projectController.signProject);
