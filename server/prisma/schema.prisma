@@ -492,7 +492,7 @@ enum Currency {
 model Lead {
   id             Int        @id @default(autoincrement())
   companyId      Int        @map("company_id")
-  createdBy      String     @map("created_by") // User ID who created the lead
+  createdBy      String     @map("created_by") @db.VarChar(36) // User ID who created the lead
   title          String     @db.VarChar(255)
   description    String?    @db.Text
   source         LeadSource @default(Website)
