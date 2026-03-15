@@ -19,6 +19,7 @@
     "axios": "^1.6.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
     "framer-motion": "^12.36.0",
     "html2canvas": "^1.4.1",
     "lucide-react": "^0.400.0",
@@ -27,6 +28,7 @@
     "react-hook-form": "^7.0.0",
     "react-router-dom": "^7.9.6",
     "socket.io-client": "^4.8.3",
+    "sweetalert2": "^11.26.22",
     "tailwind-merge": "^3.4.0",
     "tailwindcss-animate": "^1.0.7",
     "zod": "^3.22.0"
