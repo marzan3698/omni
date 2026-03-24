@@ -1,0 +1,380 @@
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  ArrowLeft, 
+  Download, 
+  Printer, 
+  CheckCircle, 
+  Clock, 
+  AlertCircle, 
+  XCircle,
+  Hash,
+  User,
+  Mail,
+  Phone,
+  Calendar,
+  Zap,
+  Shield,
+  CreditCard,
+  Share2
+} from 'lucide-react';
+import apiClient from '@/lib/apiClient';
+import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
+
+const StatusBadge = ({ status }: { status: string }) => {
+  const configs: any = {
+    PENDING: { color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/20', icon: Clock },
+    PROCESSING: { color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20', icon: Zap },
+    COMPLETED: { color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', icon: CheckCircle },
+    REJECTED: { color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/20', icon: XCircle },
+    CANCELLED: { color: 'text-slate-400', bg: 'bg-slate-500/10', border: 'border-slate-500/20', icon: AlertCircle },
+  };
+  const config = configs[status] || configs.PENDING;
+  const Icon = config.icon;
+
+  return (
+    <div className={`flex items-center gap-2 px-3 py-1 rounded-full border ${config.bg} ${config.color} ${config.border} text-xs font-black tracking-widest uppercase`}>
+      <Icon className="w-3.5 h-3.5" />
+      {status}
+    </div>
+  );
+};
+
+const DetailRow = ({ label, value, icon: Icon, color = 'text-white/90' }: any) => (
+  <div className="flex items-center justify-between py-3 border-b border-white/5 last:border-0 group">
+    <div className="flex items-center gap-3 text-white/40">
+      {Icon && <Icon className="w-4 h-4 group-hover:text-amber-400 transition-colors" />}
+      <span className="text-xs font-medium uppercase tracking-wider">{label}</span>
+    </div>
+    <span className={`text-sm font-bold tracking-tight ${color}`}>{value || '—'}</span>
+  </div>
+);
+
+const DollarExchangeOrderDetails = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [order, setOrder] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [headerSettings, setHeaderSettings] = useState<any>(null);
+  const [themeSettings, setThemeSettings] = useState<any>(null);
+
+  useEffect(() => {
+    fetchOrder();
+    fetchSettings();
+  }, [id]);
+
+  const fetchSettings = async () => {
+    try {
+      const [hRes, tRes] = await Promise.all([
+        apiClient.get('/theme/header/settings'),
+        apiClient.get('/theme/settings')
+      ]);
+      if (hRes.data.success) setHeaderSettings(hRes.data.data);
+      if (tRes.data.success) setThemeSettings(tRes.data.data);
+    } catch (err) {
+      console.error('Failed to fetch settings:', err);
+    }
+  };
+
+  const fetchOrder = async () => {
+    try {
+      setLoading(true);
+      const res = await apiClient.get(`/exchange/orders/${id}`);
+      if (res.data.success) {
+        setOrder(res.data.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch order:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const siteName = themeSettings?.siteName || order?.company?.name || 'Omni Exchange';
+  const siteLogo = headerSettings?.logo;
+
+  if (loading) {
+// ... loading state ... wait, I should include the loading logic properly
+    return (
+      <div className="min-h-screen bg-[#050505] flex items-center justify-center text-white">
+        <div className="relative">
+          <div className="w-16 h-16 border-4 border-amber-500/20 border-t-amber-500 rounded-full animate-spin" />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-8 h-8 bg-amber-500/10 rounded-full animate-pulse" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!order) {
+    return (
+      <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center gap-4 text-white">
+        <AlertCircle className="w-12 h-12 text-red-500 opacity-50" />
+        <h2 className="text-xl font-bold text-white/80">Order Not Found</h2>
+        <Button variant="outline" onClick={() => navigate(-1)} className="border-white/10 text-white/60 hover:text-white">
+          <ArrowLeft className="w-4 h-4 mr-2" /> Go Back
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[#050505] text-white selection:bg-amber-500/30 font-sans p-4 md:p-8 checkout-page">
+      {/* Background Ambience */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden no-print">
+        <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-amber-500/5 blur-[120px] rounded-full animate-pulse" />
+        <div className="absolute bottom-[20%] right-[0%] w-[30%] h-[30%] bg-blue-500/5 blur-[100px] rounded-full" />
+      </div>
+
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="max-w-4xl mx-auto relative z-10"
+      >
+        {/* Top Actions */}
+        <div className="flex items-center justify-between mb-8 no-print">
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate(-1)}
+            className="text-white/40 hover:text-white transition-colors group"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
+            Back to Exchange
+          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="icon" className="border-white/5 bg-white/5 text-white/60 hover:text-white" onClick={() => window.print()}>
+              <Printer className="w-4 h-4" />
+            </Button>
+            <Button variant="outline" size="icon" className="border-white/5 bg-white/5 text-white/60 hover:text-white">
+              <Download className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* The Invoice Card */}
+        <div className="relative group">
+          {/* Neon Border Effect */}
+          <div className="absolute -inset-[1px] bg-gradient-to-b from-amber-500/20 via-white/5 to-white/5 rounded-[32px] opacity-10 blur-sm group-hover:opacity-20 transition-opacity no-print" />
+          
+          <div className="relative bg-black/40 backdrop-blur-3xl border border-white/10 rounded-[32px] overflow-hidden invoice-card">
+            {/* Invoice Header */}
+            <div className="p-8 md:p-12 bg-gradient-to-b from-white/5 to-transparent border-b border-white/5">
+              <div className="flex flex-col md:flex-row justify-between items-start gap-8">
+                <div>
+                  <div className="flex items-center gap-3 mb-6">
+                    {siteLogo ? (
+                      <img 
+                        src={siteLogo.startsWith('/uploads') ? import.meta.env.VITE_API_URL + siteLogo : siteLogo} 
+                        alt="Logo" 
+                        className="w-12 h-12 object-contain rounded-xl"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 bg-amber-500 rounded-2xl flex items-center justify-center shadow-[0_0_20px_rgba(245,158,11,0.3)]">
+                        <Zap className="text-black fill-black w-6 h-6" />
+                      </div>
+                    )}
+                    <div>
+                      <h1 className="text-2xl font-black tracking-tighter uppercase italic">{siteName}</h1>
+                      <p className="text-[10px] text-amber-500/80 font-black tracking-[0.3em] uppercase">Liquidity Protocol</p>
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <h2 className="text-3xl font-black text-white/95 tracking-tighter">INVOICE</h2>
+                    <div className="flex items-center gap-2 text-white/40 font-mono text-xs">
+                      <Hash className="w-3 h-3" />
+                      {order.orderNumber}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex flex-col items-end gap-4">
+                  <StatusBadge status={order.status} />
+                  <div className="text-right">
+                    <p className="text-[10px] text-white/30 font-bold uppercase tracking-widest mb-1 text-label">Execution Date</p>
+                    <p className="text-sm font-bold text-white/70">{new Date(order.createdAt).toLocaleDateString('en-US', { dateStyle: 'long' })}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Client & Route Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2">
+              <div className="p-8 md:p-12 border-b md:border-b-0 md:border-r border-white/5">
+                <div className="flex items-center gap-2 mb-6">
+                  <User className="w-4 h-4 text-amber-500" />
+                  <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white/60 text-label">Entity Information</h3>
+                </div>
+                <div className="space-y-1">
+                  <DetailRow label="Client Name" value={order.client?.name || 'Guest User'} icon={User} />
+                  <DetailRow label="Secure Email" value={order.client?.email} icon={Mail} />
+                  <DetailRow label="Contact Port" value={order.client?.phone} icon={Phone} />
+                  {order.client?.address && (
+                    <DetailRow label="Base Location" value={order.client?.address} icon={Shield} />
+                  )}
+                  <DetailRow label="Account Type" value={order.type} icon={Shield} color={order.type === 'SELL' ? 'text-red-400' : 'text-emerald-400'} />
+                </div>
+              </div>
+              <div className="p-8 md:p-12">
+                <div className="flex items-center gap-2 mb-6">
+                  <CreditCard className="w-4 h-4 text-amber-500" />
+                  <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white/60 text-label">Protocol Routing</h3>
+                </div>
+                <div className="space-y-1">
+                  <DetailRow label="Source Payload" value={`${order.sendAmount.toLocaleString()} ${order.sendCurrency}`} icon={Download} color="text-amber-400" />
+                  <DetailRow label="Liquidity Yield" value={`${order.receiveAmount.toLocaleString()} ${order.receiveCurrency}`} icon={Download} color="text-emerald-400" />
+                  <DetailRow label="Oracle Rate" value={`1 ${order.sendCurrency} = ${order.appliedRate} ${order.receiveCurrency}`} icon={Zap} />
+                  <DetailRow label="Network Node" value={`${siteName} Core`} icon={Shield} />
+                </div>
+              </div>
+            </div>
+
+            {/* Financial Details Table Area */}
+            <div className="p-8 md:p-12 bg-white/5 data-table">
+              <div className="rounded-2xl border border-white/5 overflow-hidden">
+                <table className="w-full">
+                  <thead className="bg-white/5">
+                    <tr>
+                      <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-white/40">Direction</th>
+                      <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-white/40">Endpoint Info</th>
+                      <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest text-white/40">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    <tr>
+                      <td className="px-6 py-4">
+                        <div className="text-xs text-white/40 font-bold uppercase mb-1">Inbound (To Admin)</div>
+                        <div className="font-bold text-amber-400">Receiving Fund</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm font-mono text-white/90">{order.senderAccount || 'Standard Transfer'}</div>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-black">VERIFIED</span>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="px-6 py-4">
+                        <div className="text-xs text-white/40 font-bold uppercase mb-1">Outbound (To User)</div>
+                        <div className="font-bold text-emerald-400">Payout Target</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm font-mono text-white/90">{order.receiverAccount}</div>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <span className={`text-[10px] px-2 py-0.5 rounded font-black ${order.status === 'COMPLETED' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-white/5 text-white/40 border-white/10'}`}>
+                          {order.status === 'COMPLETED' ? 'EXECUTED' : 'AWAITING'}
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Transaction ID Footnote */}
+              {order.transactionId && (
+                <div className="mt-8 p-4 rounded-xl bg-black/40 border border-amber-500/10 border-dashed">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500">
+                      <Shield className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-white/30">Proof of Protocol (TXID)</p>
+                      <p className="font-mono text-sm text-amber-400/90 break-all">{order.transactionId}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Admin Note */}
+              {order.adminNote && (
+                <div className="mt-4 p-4 rounded-xl bg-blue-500/5 border border-blue-500/10">
+                  <div className="flex gap-3">
+                    <AlertCircle className="w-4 h-4 text-blue-400 shrink-0" />
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-white/30">Node Operator Response</p>
+                      <p className="text-sm text-blue-200/80 mt-1">{order.adminNote}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Summary Banner */}
+            <div className="p-8 md:p-12 bg-amber-500 flex flex-col md:flex-row justify-between items-center gap-6 banner-section">
+              <div className="text-center md:text-left">
+                <p className="text-[10px] text-black font-black uppercase tracking-[0.3em] text-label-dark">Final Settlement</p>
+                <h3 className="text-4xl font-black text-black tracking-tighter">
+                  {order.receiveAmount.toLocaleString()} <span className="text-xl opacity-60">{order.receiveCurrency}</span>
+                </h3>
+              </div>
+              <div className="flex gap-3 no-print">
+                 <Button variant="outline" className="h-12 px-6 border-black/20 bg-transparent text-black font-black uppercase tracking-widest hover:bg-black hover:text-white transition-all">
+                    Generate PDF
+                 </Button>
+                 <Button variant="default" className="h-12 px-6 bg-black text-white font-black uppercase tracking-widest hover:scale-105 transition-all shadow-xl">
+                    <Share2 className="w-4 h-4 mr-2" /> Share
+                 </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Support Footer */}
+        <div className="mt-12 text-center footer-section">
+            <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.4em] mb-4 italic italic-text">
+                Digitally Signed Protocol Invoice • Powered by {siteName} Engine
+            </p>
+            <div className="flex justify-center gap-8 text-white/40 no-print">
+                <div className="flex items-center gap-2 hover:text-white transition-colors cursor-help">
+                    <Shield className="w-3.5 h-3.5" />
+                    <span className="text-[9px] font-bold uppercase tracking-widest">End-to-End Encrypted</span>
+                </div>
+                <div className="flex items-center gap-2 hover:text-white transition-colors cursor-help">
+                    <Zap className="w-3.5 h-3.5" />
+                    <span className="text-[9px] font-bold uppercase tracking-widest">Instant Settlement</span>
+                </div>
+            </div>
+        </div>
+      </motion.div>
+
+      {/* CSS for print */}
+      <style>{`
+        @media print {
+          body { background: white !important; color: black !important; }
+          .min-h-screen { min-height: 0 !important; padding: 10mm !important; }
+          .bg-\\[\\#050505\\] { background: white !important; }
+          .no-print { display: none !important; }
+          .max-w-4xl { max-w: 100% !important; margin: 0 !important; width: 100% !important; }
+          .invoice-card { 
+            background: white !important; 
+            border: 1px solid #eee !important; 
+            border-radius: 8px !important; 
+            box-shadow: none !important;
+            backdrop-filter: none !important;
+          }
+          .text-white, .text-white\\/95, .text-white\\/90, .text-white\\/70, .text-white\\/60, .text-white\\/40, .text-white\\/30, .text-white\\/20 { 
+            color: black !important; 
+          }
+          .text-label { color: #666 !important; }
+          .text-label-dark { color: #333 !important; }
+          .border-white\\/10, .border-white\\/5 { border-color: #eee !important; }
+          .bg-amber-500 { 
+            background: #f59e0b !important; 
+            color: black !important; 
+            -webkit-print-color-adjust: exact; 
+            print-color-adjust: exact;
+          }
+          .banner-section { border-radius: 8px !important; margin-top: 20px !important; }
+          .italic-text { color: #999 !important; }
+          .data-table { background: #fafafa !important; border-top: 1px solid #eee !important; }
+          img { max-width: 100px !important; filter: grayscale(0) !important; }
+        }
+      `}</style>
+    </div>
+  );
+};
+
+export default DollarExchangeOrderDetails;

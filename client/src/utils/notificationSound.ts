@@ -19,6 +19,7 @@ function getAudioContext(): AudioContext | null {
 export function playNotificationSound(): void {
   const ctx = getAudioContext();
   if (!ctx) return;
+  ctx.resume(); // Ensure context is awake
   try {
     const oscillator = ctx.createOscillator();
     const gain = ctx.createGain();
@@ -41,6 +42,7 @@ export function playNotificationSound(): void {
 export function playLongNotificationSound(): void {
   const ctx = getAudioContext();
   if (!ctx) return;
+  ctx.resume(); // Ensure context is awake
   try {
     const playNote = (freq: number, start: number, duration: number) => {
       const oscillator = ctx.createOscillator();

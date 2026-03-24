@@ -41,16 +41,21 @@ export function useNotifications() {
       setUnreadCount((prev) => prev + 1);
 
       // Show SweetAlert for real-time notifications
-      if (user?.roleName === 'SuperAdmin') {
+      const isAdmin = user?.roleName === 'SuperAdmin' || user?.roleName === 'Admin';
+      
+      if (isAdmin) {
+        console.log('Playing notification sound for role:', user?.roleName);
         playLongNotificationSound();
+        const isExchange = notification.type === 'exchange';
+        
         Swal.fire({
           title: notification.title,
           text: notification.message,
-          icon: notification.type === 'payment' ? 'success' : 'info',
+          icon: isExchange ? 'info' : (notification.type === 'payment' ? 'success' : 'info'),
           toast: true,
           position: 'top-end',
           showConfirmButton: true,
-          confirmButtonText: 'View Payments',
+          confirmButtonText: isExchange ? 'View Exchange' : 'View Details',
           timer: 10000,
           timerProgressBar: true,
           customClass: {

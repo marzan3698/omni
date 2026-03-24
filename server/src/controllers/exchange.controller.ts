@@ -1,10 +1,11 @@
 import { Request, Response } from 'express';
 import { exchangeService } from '../services/exchange.service';
 import { ExchangeOrderStatus } from '@prisma/client';
+import { AuthRequest } from '../types';
 
 // ── CLIENT ENDPOINTS ─────────────────────────────────────────────────────────
 
-export const getRates = async (req: Request, res: Response) => {
+export const getRates = async (req: AuthRequest, res: Response) => {
   try {
     const companyId = req.user?.companyId;
     if (!companyId) return res.status(401).json({ success: false, message: 'Unauthorized' });
@@ -16,7 +17,33 @@ export const getRates = async (req: Request, res: Response) => {
   }
 };
 
-export const createOrder = async (req: Request, res: Response) => {
+export const getOrderDetails = async (req: AuthRequest, res: Response) => {
+  try {
+    const companyId = req.user?.companyId;
+    const userId = req.user?.id;
+    const userRole = req.user?.role?.name;
+
+    if (!companyId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+    const id = parseInt(req.params.id);
+    const order = await exchangeService.getOrderDetails(id, companyId);
+    
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    // Security: Only Admin/SuperAdmin can see any order. Clients can only see their own.
+    if (userRole !== 'Admin' && userRole !== 'SuperAdmin' && order.clientId !== userId) {
+      return res.status(403).json({ success: false, message: 'Forbidden' });
+    }
+
+    return res.json({ success: true, data: order });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export const createOrder = async (req: AuthRequest, res: Response) => {
   try {
     const companyId = req.user?.companyId;
     const userId = req.user?.id;
@@ -44,7 +71,7 @@ export const createOrder = async (req: Request, res: Response) => {
   }
 };
 
-export const getMyOrders = async (req: Request, res: Response) => {
+export const getMyOrders = async (req: AuthRequest, res: Response) => {
   try {
     const companyId = req.user?.companyId;
     const userId = req.user?.id;
@@ -59,7 +86,7 @@ export const getMyOrders = async (req: Request, res: Response) => {
 
 // ── ADMIN ENDPOINTS ───────────────────────────────────────────────────────────
 
-export const getAllOrders = async (req: Request, res: Response) => {
+export const getAllOrders = async (req: AuthRequest, res: Response) => {
   try {
     const companyId = req.user?.companyId;
     if (!companyId) return res.status(401).json({ success: false, message: 'Unauthorized' });
@@ -72,7 +99,7 @@ export const getAllOrders = async (req: Request, res: Response) => {
   }
 };
 
-export const updateOrderStatus = async (req: Request, res: Response) => {
+export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
   try {
     const companyId = req.user?.companyId;
     const userId = req.user?.id;
@@ -93,7 +120,7 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
   }
 };
 
-export const getRatesAdmin = async (req: Request, res: Response) => {
+export const getRatesAdmin = async (req: AuthRequest, res: Response) => {
   try {
     const companyId = req.user?.companyId;
     if (!companyId) return res.status(401).json({ success: false, message: 'Unauthorized' });
@@ -105,7 +132,7 @@ export const getRatesAdmin = async (req: Request, res: Response) => {
   }
 };
 
-export const createRate = async (req: Request, res: Response) => {
+export const createRate = async (req: AuthRequest, res: Response) => {
   try {
     const companyId = req.user?.companyId;
     if (!companyId) return res.status(401).json({ success: false, message: 'Unauthorized' });
@@ -130,7 +157,7 @@ export const createRate = async (req: Request, res: Response) => {
   }
 };
 
-export const updateRate = async (req: Request, res: Response) => {
+export const updateRate = async (req: AuthRequest, res: Response) => {
   try {
     const companyId = req.user?.companyId;
     if (!companyId) return res.status(401).json({ success: false, message: 'Unauthorized' });
@@ -154,7 +181,7 @@ export const updateRate = async (req: Request, res: Response) => {
   }
 };
 
-export const deleteRate = async (req: Request, res: Response) => {
+export const deleteRate = async (req: AuthRequest, res: Response) => {
   try {
     const companyId = req.user?.companyId;
     if (!companyId) return res.status(401).json({ success: false, message: 'Unauthorized' });
@@ -167,7 +194,7 @@ export const deleteRate = async (req: Request, res: Response) => {
   }
 };
 
-export const getStats = async (req: Request, res: Response) => {
+export const getStats = async (req: AuthRequest, res: Response) => {
   try {
     const companyId = req.user?.companyId;
     if (!companyId) return res.status(401).json({ success: false, message: 'Unauthorized' });

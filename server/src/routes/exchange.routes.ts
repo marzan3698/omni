@@ -6,6 +6,7 @@ import {
   getMyOrders,
   getAllOrders,
   updateOrderStatus,
+  getOrderDetails,
   getRatesAdmin,
   createRate,
   updateRate,
@@ -19,6 +20,7 @@ const router = Router();
 router.get('/rates', authMiddleware, getRates);
 router.post('/orders', authMiddleware, createOrder);
 router.get('/orders/my', authMiddleware, getMyOrders);
+router.get('/orders/:id', authMiddleware, getOrderDetails);
 
 // ── Admin Routes ────────────────────────────────────────────────────────────
 router.get('/admin/rates', authMiddleware, getRatesAdmin);

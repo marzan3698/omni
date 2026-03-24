@@ -93,6 +93,7 @@ import { Checkout } from './pages/Checkout';
 import { CheckoutSuccess } from './pages/CheckoutSuccess';
 import DollarExchangeAdmin from './pages/DollarExchangeAdmin';
 import DollarExchangeClient from './pages/DollarExchangeClient';
+import DollarExchangeOrderDetails from './pages/DollarExchangeOrderDetails';
 
 function App() {
   // Redirect /install to home immediately on mount
@@ -757,6 +758,17 @@ function App() {
                   <ProtectedRoute>
                     <Layout>
                       <DollarExchangeAdmin />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/dollar-exchange/order/:id"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <DollarExchangeOrderDetails />
                     </Layout>
                   </ProtectedRoute>
                 }

@@ -1,4 +1,5 @@
 import { PrismaClient, ExchangeOrderStatus } from '@prisma/client';
+import { notificationService } from './notification.service.js';
 
 const prisma = new PrismaClient();
 
@@ -95,7 +96,7 @@ export class ExchangeService {
     // Determine order type: if receiving BDT it's SELL, else BUY
     const type = data.receiveCurrency.toUpperCase().includes('BDT') ? 'SELL' : 'BUY';
 
-    return prisma.exchangeOrder.create({
+    const order = await prisma.exchangeOrder.create({
       data: {
         companyId,
         orderNumber: this.generateOrderNumber(),
@@ -113,6 +114,21 @@ export class ExchangeService {
       },
       include: { client: { select: { id: true, email: true } } },
     });
+
+    // Send notification to admin
+    try {
+      await notificationService.createNotification({
+        companyId,
+        title: 'New Dollar Exchange Order',
+        message: `Customer placed order ${order.orderNumber} for ${order.sendAmount} ${order.sendCurrency} → ${order.receiveCurrency}`,
+        type: 'exchange',
+        link: '/dollar-exchange',
+      });
+    } catch (err) {
+      console.error('Failed to create exchange notification:', err);
+    }
+
+    return order;
   }
 
   async getClientOrders(companyId: number, clientId: string) {
@@ -126,10 +142,22 @@ export class ExchangeService {
     return prisma.exchangeOrder.findMany({
       where: { companyId, ...(status ? { status } : {}) },
       include: {
-        client: { select: { id: true, email: true } },
+        client: { select: { id: true, email: true, name: true, phone: true, address: true, profileImage: true } },
         processor: { select: { id: true, email: true } },
+        company: { select: { id: true, name: true } },
       },
       orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async getOrderDetails(id: number, companyId: number) {
+    return prisma.exchangeOrder.findFirst({
+      where: { id, companyId },
+      include: {
+        client: { select: { id: true, email: true, name: true, phone: true, address: true, profileImage: true } },
+        processor: { select: { id: true, email: true } },
+        company: { select: { id: true, name: true } },
+      },
     });
   }
 

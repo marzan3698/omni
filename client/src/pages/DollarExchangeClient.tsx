@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
-import { ArrowLeftRight, ArrowRight, CheckCircle, Clock, XCircle, RefreshCw, Send } from 'lucide-react';
+import { ArrowLeftRight, ArrowRight, CheckCircle, Clock, XCircle, RefreshCw, Send, Copy, Check, Eye } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -31,6 +33,7 @@ const STATUS_ICONS: Record<string, React.ReactElement> = {
 
 export default function DollarExchangeClient() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const qc = useQueryClient();
 
   const [activeTab, setActiveTab] = useState<'exchange' | 'orders'>('exchange');
@@ -41,6 +44,7 @@ export default function DollarExchangeClient() {
   const [transactionId, setTransactionId] = useState('');
   const [submitError, setSubmitError] = useState('');
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const { data: ratesData, isLoading: ratesLoading } = useQuery({
     queryKey: ['exchange-rates-client'],
@@ -94,6 +98,12 @@ export default function DollarExchangeClient() {
     createOrderMutation.mutate({ sendCurrency, receiveCurrency, sendAmount: Number(sendAmount), receiverAccount, transactionId });
   };
 
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   const inputCls = 'bg-white/5 border-white/10 text-white placeholder-white/30 focus:border-blue-400/50 transition-colors';
 
   return (
@@ -101,19 +111,41 @@ export default function DollarExchangeClient() {
       <div className="max-w-4xl mx-auto space-y-6">
 
         {/* Hero */}
-        <div className="relative rounded-2xl overflow-hidden border border-blue-500/20 p-8"
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative rounded-2xl overflow-hidden border border-blue-500/20 p-8 shadow-[0_0_40px_-15px_rgba(59,130,246,0.3)]"
           style={{ background: 'linear-gradient(135deg, #0a0f2c 0%, #0c1a3e 50%, #0a0f2c 100%)' }}>
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(59,130,246,0.15)_0%,_transparent_60%)] pointer-events-none"/>
+          
+          {/* Ambient SVG Animation */}
+          <svg className="absolute top-0 right-0 w-64 h-64 text-blue-500/5 pointer-events-none" viewBox="0 0 100 100">
+            <motion.circle cx="50" cy="50" r="40" stroke="currentColor" strokeWidth="0.5" fill="none"
+              animate={{ r: [35, 45, 35], opacity: [0.1, 0.3, 0.1] }}
+              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+            />
+          </svg>
+
           <div className="relative z-10 flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center bg-blue-500/20 border border-blue-500/30">
+            <motion.div 
+              whileHover={{ rotate: 180 }}
+              transition={{ type: "spring", stiffness: 200 }}
+              className="w-14 h-14 rounded-2xl flex items-center justify-center bg-blue-500/20 border border-blue-500/30 backdrop-blur-sm">
               <ArrowLeftRight className="w-7 h-7 text-blue-400" />
-            </div>
+            </motion.div>
             <div>
-              <h1 className="text-2xl font-bold text-white">Dollar Exchange</h1>
-              <p className="text-blue-200/60 text-sm mt-0.5">Fast & secure currency exchange</p>
+              <h1 className="text-2xl font-bold text-white tracking-tight">Dollar Exchange</h1>
+              <div className="flex items-center gap-2">
+                <motion.span 
+                  animate={{ opacity: [0.4, 1, 0.4] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                  className="w-1.5 h-1.5 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.8)]"
+                />
+                <p className="text-blue-200/60 text-sm mt-0.5 font-medium leading-none">Fast & secure currency engine</p>
+              </div>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Tabs */}
         <div className="flex gap-1 p-1 rounded-xl border border-white/10 bg-white/5 w-fit">
@@ -131,32 +163,46 @@ export default function DollarExchangeClient() {
         {activeTab === 'exchange' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Rate Table */}
-            <div className="col-span-1 rounded-2xl border border-white/10 bg-white/5 p-5">
-              <h2 className="text-sm font-bold text-white/60 uppercase tracking-wider mb-4">Live Rates</h2>
+            <div className="col-span-1 rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-md">
+              <h2 className="text-xs font-bold text-blue-300 uppercase tracking-[0.2em] mb-5 flex items-center gap-2">
+                <span className="w-1 h-3 bg-blue-500 rounded-full"/>
+                Live Exchange Rates
+              </h2>
               {ratesLoading ? (
-                <div className="animate-pulse space-y-2">{[...Array(4)].map((_, i) => <div key={i} className="h-10 bg-white/5 rounded"/>)}</div>
+                <div className="animate-pulse space-y-3">{[...Array(4)].map((_, i) => <div key={i} className="h-12 bg-white/5 rounded-xl"/>)}</div>
               ) : rates.length === 0 ? (
-                <div className="text-center py-6 text-white/30 text-sm">No active rates available</div>
+                <div className="text-center py-10 text-white/20 text-sm border border-dashed border-white/10 rounded-2xl">No active protocols</div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {rates.map((rate: any) => (
-                    <div key={rate.id}
+                    <motion.div key={rate.id}
+                      whileHover={{ scale: 1.02, x: 4 }}
+                      whileTap={{ scale: 0.98 }}
                       onClick={() => { setSendCurrency(rate.sendCurrency); setReceiveCurrency(rate.receiveCurrency); }}
-                      className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all border ${
+                      className={`flex items-center justify-between p-3.5 rounded-xl cursor-pointer transition-all border group relative overflow-hidden ${
                         sendCurrency === rate.sendCurrency && receiveCurrency === rate.receiveCurrency
-                          ? 'bg-blue-500/20 border-blue-500/40 text-blue-200'
-                          : 'bg-white/5 border-white/5 hover:bg-white/10 text-white/70'
+                          ? 'bg-blue-500/20 border-blue-500/40 text-blue-100 shadow-[0_0_20px_-5px_rgba(59,130,246,0.3)]'
+                          : 'bg-white/5 border-white/5 hover:border-white/20 text-white/70'
                       }`}>
-                      <div className="text-xs">
-                        <span className="font-semibold">{rate.sendCurrency}</span>
-                        <span className="mx-1.5 text-white/30">→</span>
-                        <span className="font-semibold">{rate.receiveCurrency}</span>
+                      {sendCurrency === rate.sendCurrency && receiveCurrency === rate.receiveCurrency && (
+                        <motion.div 
+                          layoutId="active-bg"
+                          className="absolute inset-0 bg-blue-500/5 z-0"
+                          initial={false}
+                        />
+                      )}
+                      <div className="text-xs relative z-10">
+                        <span className="font-bold tracking-tight text-sm">{rate.sendCurrency}</span>
+                        <span className="mx-2 text-white/20">→</span>
+                        <span className="font-bold tracking-tight text-sm">{rate.receiveCurrency}</span>
                       </div>
-                      <div className="text-right">
-                        <div className="text-xs font-bold">{Number(rate.rate).toFixed(2)}</div>
-                        {rate.note && <div className="text-xs text-white/30">{rate.note}</div>}
+                      <div className="text-right relative z-10">
+                        <div className="text-sm font-black text-blue-400 group-hover:text-blue-300 transition-colors">
+                          {Number(rate.rate).toFixed(2)}
+                        </div>
+                        {rate.note && <div className="text-[10px] text-white/30 uppercase tracking-tighter mt-0.5">{rate.note}</div>}
                       </div>
-                    </div>
+                    </motion.div>
                   ))}
                 </div>
               )}
@@ -224,16 +270,54 @@ export default function DollarExchangeClient() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {activeRate?.adminReceiveAccount && (
-                    <div className="p-4 rounded-xl border border-blue-500/20 bg-blue-500/10">
-                      <Label className="text-blue-200/60 text-xs mb-1 block uppercase tracking-wider">Send {sendCurrency} To</Label>
-                      <div className="text-lg font-mono font-bold text-blue-300">{activeRate.adminReceiveAccount}</div>
-                    </div>
+                    <motion.div 
+                      layout
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="p-5 rounded-2xl border border-blue-500/30 bg-blue-500/10 relative overflow-hidden group shadow-[inset_0_0_20px_rgba(59,130,246,0.1)]"
+                    >
+                      {/* Scanning Line Animation */}
+                      <motion.div 
+                        animate={{ top: ['0%', '100%', '0%'] }}
+                        transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                        className="absolute left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-blue-400/30 to-transparent z-0"
+                      />
+
+                      <Label className="text-blue-300 text-[10px] mb-2 block uppercase tracking-[0.2em] font-bold">Instruction: Send {sendCurrency} To</Label>
+                      <div className="flex items-center justify-between gap-3 relative z-10">
+                        <div className="text-xl font-mono font-black text-white selection:bg-blue-500/30 tracking-tight">
+                          {activeRate.adminReceiveAccount}
+                        </div>
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={() => handleCopy(activeRate.adminReceiveAccount)}
+                          className="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-300 hover:bg-blue-500/30 hover:text-white transition-all shadow-lg"
+                        >
+                          {copied ? <Check className="w-5 h-5 text-emerald-400" /> : <Copy className="w-5 h-5" />}
+                        </motion.button>
+                      </div>
+                      
+                      {/* Success Badge */}
+                      <AnimatePresence>
+                        {copied && (
+                          <motion.div 
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute bottom-2 left-5 text-[9px] text-emerald-400 font-bold uppercase tracking-widest"
+                          >
+                            Copied to clipboard
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
                   )}
                   <div className={activeRate?.adminReceiveAccount ? "" : "md:col-span-2"}>
-                    <Label className="text-white/60 text-xs mb-2 block uppercase tracking-wider">Your Receiving Account</Label>
+                    <Label className="text-white/60 text-xs mb-2 block uppercase tracking-wider font-semibold">Your Receiving Account</Label>
                     <Input value={receiverAccount} onChange={e => setReceiverAccount(e.target.value)}
-                      placeholder={receiveCurrency ? `Your ${receiveCurrency} account/address` : 'e.g. 01XXXXXXXXX'}
-                      className={inputCls} required/>
+                      placeholder={receiveCurrency ? `Where should we send your ${receiveCurrency}?` : 'e.g. 01XXXXXXXXX'}
+                      className={`${inputCls} h-14 text-base px-5 font-medium`} required/>
                   </div>
                 </div>
 
@@ -244,14 +328,16 @@ export default function DollarExchangeClient() {
                     className={inputCls}/>
                 </div>
 
-                <Button type="submit" disabled={createOrderMutation.isPending || !sendCurrency || !receiveCurrency}
-                  className="w-full h-12 bg-blue-500 hover:bg-blue-600 text-white font-bold text-base rounded-xl transition-all disabled:opacity-50">
-                  {createOrderMutation.isPending ? (
-                    <><RefreshCw className="w-4 h-4 mr-2 animate-spin"/>Submitting...</>
-                  ) : (
-                    <><Send className="w-4 h-4 mr-2"/>Submit Exchange Order</>
-                  )}
-                </Button>
+                <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
+                  <Button type="submit" disabled={createOrderMutation.isPending || !sendCurrency || !receiveCurrency}
+                    className="w-full h-14 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold text-lg rounded-2xl transition-all disabled:opacity-50 shadow-[0_0_20px_-5px_rgba(59,130,246,0.5)] border border-blue-400/20">
+                    {createOrderMutation.isPending ? (
+                      <><RefreshCw className="w-5 h-5 mr-2 animate-spin"/>Processing...</>
+                    ) : (
+                      <><Send className="w-5 h-5 mr-2 drop-shadow-lg"/>Submit Exchange Protocol</>
+                    )}
+                  </Button>
+                </motion.div>
               </form>
             </div>
           </div>
@@ -305,6 +391,12 @@ export default function DollarExchangeClient() {
                             <strong>Admin Note:</strong> {order.adminNote}
                           </div>
                         )}
+                      </div>
+                      <div className="flex flex-col items-end gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => navigate(`/dollar-exchange/order/${order.id}`)}
+                          className="text-white/40 hover:text-blue-400 hover:bg-blue-500/10 h-10 px-4 rounded-xl border border-transparent hover:border-blue-400/30">
+                          <Eye className="w-4 h-4 mr-2" /> View Details
+                        </Button>
                       </div>
                     </div>
                   </div>
