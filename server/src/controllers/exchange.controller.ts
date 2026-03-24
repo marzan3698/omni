@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
-import { exchangeService } from '../services/exchange.service';
+import { exchangeService } from '../services/exchange.service.js';
 import { ExchangeOrderStatus } from '@prisma/client';
-import { AuthRequest } from '../types';
+import { AuthRequest } from '../types/index.js';
 
 // ── CLIENT ENDPOINTS ─────────────────────────────────────────────────────────
 

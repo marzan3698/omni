@@ -12,7 +12,7 @@ import {
   updateRate,
   deleteRate,
   getStats,
-} from '../controllers/exchange.controller';
+} from '../controllers/exchange.controller.js';
 
 const router = Router();
 
