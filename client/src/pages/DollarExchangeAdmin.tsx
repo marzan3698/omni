@@ -19,18 +19,16 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import axios from 'axios';
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+import apiClient from '@/lib/apiClient';
 
 const exchangeAdminApi = {
-  getRates: async () => (await axios.get(`${API}/api/exchange/admin/rates`, { withCredentials: true })).data,
-  createRate: async (data: any) => (await axios.post(`${API}/api/exchange/admin/rates`, data, { withCredentials: true })).data,
-  updateRate: async (id: number, data: any) => (await axios.put(`${API}/api/exchange/admin/rates/${id}`, data, { withCredentials: true })).data,
-  deleteRate: async (id: number) => (await axios.delete(`${API}/api/exchange/admin/rates/${id}`, { withCredentials: true })).data,
-  getOrders: async (status?: string) => (await axios.get(`${API}/api/exchange/admin/orders${status ? `?status=${status}` : ''}`, { withCredentials: true })).data,
-  updateOrderStatus: async (id: number, status: string, adminNote?: string) => (await axios.patch(`${API}/api/exchange/admin/orders/${id}/status`, { status, adminNote }, { withCredentials: true })).data,
-  getStats: async () => (await axios.get(`${API}/api/exchange/admin/stats`, { withCredentials: true })).data,
+  getRates: async () => (await apiClient.get('/exchange/admin/rates')).data,
+  createRate: async (data: any) => (await apiClient.post('/exchange/admin/rates', data)).data,
+  updateRate: async (id: number, data: any) => (await apiClient.put(`/exchange/admin/rates/${id}`, data)).data,
+  deleteRate: async (id: number) => (await apiClient.delete(`/exchange/admin/rates/${id}`)).data,
+  getOrders: async (status?: string) => (await apiClient.get(`/exchange/admin/orders${status ? `?status=${status}` : ''}`)).data,
+  updateOrderStatus: async (id: number, status: string, adminNote?: string) => (await apiClient.patch(`/exchange/admin/orders/${id}/status`, { status, adminNote })).data,
+  getStats: async () => (await apiClient.get('/exchange/admin/stats')).data,
 };
 
 const STATUS_COLORS: Record<string, string> = {

@@ -5,14 +5,12 @@ import { ArrowLeftRight, ArrowRight, CheckCircle, Clock, XCircle, RefreshCw, Sen
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import axios from 'axios';
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+import apiClient from '@/lib/apiClient';
 
 const exchangeClientApi = {
-  getRates: async () => (await axios.get(`${API}/api/exchange/rates`, { withCredentials: true })).data,
-  createOrder: async (data: any) => (await axios.post(`${API}/api/exchange/orders`, data, { withCredentials: true })).data,
-  getMyOrders: async () => (await axios.get(`${API}/api/exchange/orders/my`, { withCredentials: true })).data,
+  getRates: async () => (await apiClient.get('/exchange/rates')).data,
+  createOrder: async (data: any) => (await apiClient.post('/exchange/orders', data)).data,
+  getMyOrders: async () => (await apiClient.get('/exchange/orders/my')).data,
 };
 
 const STATUS_COLORS: Record<string, string> = {
