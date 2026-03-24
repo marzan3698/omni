@@ -37,7 +37,6 @@ export default function DollarExchangeClient() {
   const [sendCurrency, setSendCurrency] = useState('');
   const [receiveCurrency, setReceiveCurrency] = useState('');
   const [sendAmount, setSendAmount] = useState('');
-  const [senderAccount, setSenderAccount] = useState('');
   const [receiverAccount, setReceiverAccount] = useState('');
   const [transactionId, setTransactionId] = useState('');
   const [submitError, setSubmitError] = useState('');
@@ -60,7 +59,7 @@ export default function DollarExchangeClient() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['exchange-my-orders'] });
       setSubmitSuccess(true);
-      setSendAmount(''); setSenderAccount(''); setReceiverAccount(''); setTransactionId('');
+      setSendAmount(''); setReceiverAccount(''); setTransactionId('');
       setTimeout(() => { setSubmitSuccess(false); setActiveTab('orders'); }, 2500);
     },
     onError: (err: any) => setSubmitError(err?.response?.data?.message || 'Failed to submit order.'),
@@ -83,7 +82,7 @@ export default function DollarExchangeClient() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError('');
-    if (!sendCurrency || !receiveCurrency || !sendAmount || !senderAccount || !receiverAccount) {
+    if (!sendCurrency || !receiveCurrency || !sendAmount || !receiverAccount) {
       setSubmitError('Please fill all required fields.'); return;
     }
     if (activeRate && Number(sendAmount) < Number(activeRate.minAmount)) {
@@ -92,7 +91,7 @@ export default function DollarExchangeClient() {
     if (activeRate && Number(sendAmount) > Number(activeRate.maxAmount)) {
       setSubmitError(`Maximum amount is ${activeRate.maxAmount}`); return;
     }
-    createOrderMutation.mutate({ sendCurrency, receiveCurrency, sendAmount: Number(sendAmount), senderAccount, receiverAccount, transactionId });
+    createOrderMutation.mutate({ sendCurrency, receiveCurrency, sendAmount: Number(sendAmount), receiverAccount, transactionId });
   };
 
   const inputCls = 'bg-white/5 border-white/10 text-white placeholder-white/30 focus:border-blue-400/50 transition-colors';
@@ -224,14 +223,14 @@ export default function DollarExchangeClient() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-white/60 text-xs mb-2 block uppercase tracking-wider">Your Sending Account</Label>
-                    <Input value={senderAccount} onChange={e => setSenderAccount(e.target.value)}
-                      placeholder={sendCurrency ? `Your ${sendCurrency} account/address` : 'e.g. 01XXXXXXXXX'}
-                      className={inputCls} required/>
-                  </div>
-                  <div>
-                    <Label className="text-white/60 text-xs mb-2 block uppercase tracking-wider">Receiving Account</Label>
+                  {activeRate?.adminReceiveAccount && (
+                    <div className="p-4 rounded-xl border border-blue-500/20 bg-blue-500/10">
+                      <Label className="text-blue-200/60 text-xs mb-1 block uppercase tracking-wider">Send {sendCurrency} To</Label>
+                      <div className="text-lg font-mono font-bold text-blue-300">{activeRate.adminReceiveAccount}</div>
+                    </div>
+                  )}
+                  <div className={activeRate?.adminReceiveAccount ? "" : "md:col-span-2"}>
+                    <Label className="text-white/60 text-xs mb-2 block uppercase tracking-wider">Your Receiving Account</Label>
                     <Input value={receiverAccount} onChange={e => setReceiverAccount(e.target.value)}
                       placeholder={receiveCurrency ? `Your ${receiveCurrency} account/address` : 'e.g. 01XXXXXXXXX'}
                       className={inputCls} required/>

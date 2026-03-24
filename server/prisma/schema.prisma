@@ -1046,6 +1046,7 @@ model ExchangeRate {
   minAmount      Decimal  @default(1) @map("min_amount") @db.Decimal(18, 2)
   maxAmount      Decimal  @default(99999) @map("max_amount") @db.Decimal(18, 2)
   reserves       Decimal  @default(0) @db.Decimal(18, 2)          // Available reserves
+  adminReceiveAccount String? @map("admin_receive_account") @db.VarChar(255)
   isActive       Boolean  @default(true) @map("is_active")
   note           String?  @db.Text
   createdAt      DateTime @default(now()) @map("created_at")
@@ -1069,7 +1070,7 @@ model ExchangeOrder {
   sendAmount      Decimal             @map("send_amount") @db.Decimal(18, 2)
   receiveAmount   Decimal             @map("receive_amount") @db.Decimal(18, 2)
   appliedRate     Decimal             @map("applied_rate") @db.Decimal(18, 6)
-  senderAccount   String              @map("sender_account") @db.VarChar(255)  // Client's sending account
+  senderAccount   String?             @map("sender_account") @db.VarChar(255)  // Client's sending account
   receiverAccount String              @map("receiver_account") @db.VarChar(255) // Where client wants to receive
   transactionId   String?             @map("transaction_id") @db.VarChar(255)  // Payment proof
   status          ExchangeOrderStatus @default(PENDING)

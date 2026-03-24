@@ -20,6 +20,7 @@ export class ExchangeService {
     minAmount?: number;
     maxAmount?: number;
     reserves?: number;
+    adminReceiveAccount?: string;
     note?: string;
     isActive?: boolean;
   }) {
@@ -32,6 +33,7 @@ export class ExchangeService {
         minAmount: data.minAmount ?? 1,
         maxAmount: data.maxAmount ?? 99999,
         reserves: data.reserves ?? 0,
+        adminReceiveAccount: data.adminReceiveAccount,
         note: data.note,
         isActive: data.isActive ?? true,
       },
@@ -45,6 +47,7 @@ export class ExchangeService {
     minAmount: number;
     maxAmount: number;
     reserves: number;
+    adminReceiveAccount: string;
     note: string;
     isActive: boolean;
   }>) {
@@ -70,7 +73,7 @@ export class ExchangeService {
     sendCurrency: string;
     receiveCurrency: string;
     sendAmount: number;
-    senderAccount: string;
+    senderAccount?: string;
     receiverAccount: string;
     transactionId?: string;
   }) {

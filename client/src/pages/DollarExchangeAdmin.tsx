@@ -39,7 +39,7 @@ const STATUS_COLORS: Record<string, string> = {
   CANCELLED: 'bg-slate-500/20 text-slate-400 border-slate-500/30',
 };
 
-const emptyRate = { sendCurrency: '', receiveCurrency: '', rate: '', minAmount: '1', maxAmount: '99999', reserves: '0', note: '', isActive: true };
+const emptyRate = { sendCurrency: '', receiveCurrency: '', rate: '', minAmount: '1', maxAmount: '99999', reserves: '0', adminReceiveAccount: '', note: '', isActive: true };
 
 export default function DollarExchangeAdmin() {
   const { user } = useAuth();
@@ -98,6 +98,7 @@ export default function DollarExchangeAdmin() {
       minAmount: String(rate.minAmount),
       maxAmount: String(rate.maxAmount),
       reserves: String(rate.reserves),
+      adminReceiveAccount: rate.adminReceiveAccount || '',
       note: rate.note || '',
       isActive: rate.isActive,
     });
@@ -290,16 +291,20 @@ export default function DollarExchangeAdmin() {
                   <Input type="number" value={rateForm.reserves} onChange={e => setRateForm(f => ({...f, reserves: e.target.value}))} className={inputCls}/>
                 </div>
                 <div className="md:col-span-2">
-                  <Label className="text-amber-200/80 text-xs mb-1 block">Note (optional)</Label>
-                  <Input placeholder="Any note for clients..." value={rateForm.note} onChange={e => setRateForm(f => ({...f, note: e.target.value}))} className={inputCls}/>
+                  <Label className="text-amber-200/80 text-xs mb-1 block">Your Receiving Account (For Customers)</Label>
+                  <Input placeholder="e.g. 017XXXXXXX (Personal)" value={rateForm.adminReceiveAccount} onChange={e => setRateForm(f => ({...f, adminReceiveAccount: e.target.value}))} className={inputCls}/>
                 </div>
-                <div className="flex items-end gap-2">
-                  <label className="flex items-center gap-2 text-sm text-amber-200/80 cursor-pointer">
-                    <input type="checkbox" checked={rateForm.isActive} onChange={e => setRateForm(f => ({...f, isActive: e.target.checked}))} className="w-4 h-4 accent-amber-500"/>
-                    Active
+                <div className="md:col-span-3 flex gap-4 items-end">
+                  <div className="flex-1">
+                    <Label className="text-amber-200/80 text-xs mb-1 block">Note (optional)</Label>
+                    <Input placeholder="Any note for clients..." value={rateForm.note} onChange={e => setRateForm(f => ({...f, note: e.target.value}))} className={inputCls}/>
+                  </div>
+                  <label className="flex items-center gap-2 mb-3 text-sm text-amber-200/80 cursor-pointer whitespace-nowrap">
+                    <input type="checkbox" checked={rateForm.isActive} onChange={e => setRateForm(f => ({...f, isActive: e.target.checked}))} className="w-5 h-5 accent-amber-500 rounded focus:ring-amber-500/30"/>
+                    <span className="font-bold">Is Active</span>
                   </label>
                 </div>
-                <div className="md:col-span-3 flex gap-2">
+                <div className="md:col-span-3 flex gap-2 pt-2 border-t border-amber-500/20">
                   <Button type="submit" className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold">
                     {editingRate ? 'Update Rate' : 'Create Rate'}
                   </Button>
@@ -322,6 +327,7 @@ export default function DollarExchangeAdmin() {
                       <th className={thCls}>Rate</th>
                       <th className={thCls}>Range</th>
                       <th className={thCls}>Reserves</th>
+                      <th className={thCls}>Receive Acc.</th>
                       <th className={thCls}>Status</th>
                       <th className={thCls}>Actions</th>
                     </tr>
@@ -334,6 +340,7 @@ export default function DollarExchangeAdmin() {
                         <td className={`${tdCls} font-mono font-bold`}>{Number(rate.rate).toFixed(6)}</td>
                         <td className={`${tdCls} text-xs text-slate-400`}>{Number(rate.minAmount).toLocaleString()} – {Number(rate.maxAmount).toLocaleString()}</td>
                         <td className={tdCls}>{Number(rate.reserves).toLocaleString()}</td>
+                        <td className={`${tdCls} max-w-[120px] truncate text-xs`} title={rate.adminReceiveAccount}>{rate.adminReceiveAccount || '—'}</td>
                         <td className={tdCls}>
                           <span className={`px-2 py-0.5 rounded-full text-xs font-bold border ${rate.isActive ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-slate-500/20 text-slate-400 border-slate-500/30'}`}>
                             {rate.isActive ? 'Active' : 'Inactive'}
