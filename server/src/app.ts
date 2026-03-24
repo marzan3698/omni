@@ -121,6 +121,7 @@ import workSessionRoutes from './routes/workSession.routes.js';
 import activityRoutes from './routes/activity.routes.js';
 import smsRoutes from './routes/sms.routes.js';
 import notificationRoutes from './routes/notification.routes.js';
+import exchangeRoutes from './routes/exchange.routes.js';
 
 app.use('/api/auth', authRoutes);
 app.use('/api/work-session', workSessionRoutes);
@@ -167,6 +168,7 @@ app.use('/api/blog', blogRoutes);
 app.use('/api/payment-gateways', paymentGatewayRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/exchange', exchangeRoutes);
 app.use('/api/admin/environment', environmentRoutes);
 app.use('/api/admin/inbox-report', inboxReportRoutes);
 // app.use('/api/users', userRoutes);

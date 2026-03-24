@@ -117,12 +117,8 @@ export default function ServiceView() {
   };
 
   const handleBuyNow = () => {
-    navigate('/client/projects');
-    setTimeout(() => {
-      window.dispatchEvent(
-        new CustomEvent('open-project-form', { detail: { preSelectService: service } })
-      );
-    }, 100);
+    addToCart(service);
+    navigate('/client/checkout');
   };
 
   return (

@@ -91,6 +91,8 @@ import Sitemap from './pages/public/Sitemap';
 import ServiceView from './pages/ServiceView';
 import { Checkout } from './pages/Checkout';
 import { CheckoutSuccess } from './pages/CheckoutSuccess';
+import DollarExchangeAdmin from './pages/DollarExchangeAdmin';
+import DollarExchangeClient from './pages/DollarExchangeClient';
 
 function App() {
   // Redirect /install to home immediately on mount
@@ -748,6 +750,18 @@ function App() {
                 }
               />
 
+              {/* Dollar Exchange Admin Route */}
+              <Route
+                path="/dollar-exchange"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <DollarExchangeAdmin />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+
               {/* SMS Marketing Route */}
               <Route
                 path="/sms-marketing"
@@ -869,6 +883,7 @@ function App() {
                           <Route path="invoices" element={<ClientInvoices />} />
                           <Route path="invoices/:id" element={<InvoiceView />} />
                           <Route path="journey" element={<ClientJourneyPage />} />
+                          <Route path="exchange" element={<DollarExchangeClient />} />
                         </Routes>
                       </ClientLayout>
                     </ShopProvider>

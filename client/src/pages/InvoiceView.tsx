@@ -317,8 +317,9 @@ export function InvoiceView() {
     return (
         <div className="space-y-6">
             <Button
-                variant="ghost"
+                variant="outline"
                 onClick={() => navigate(user?.roleName === 'Client' ? '/client/invoices' : '/invoice')}
+                className="border-amber-500/30 text-amber-500 hover:bg-amber-500 hover:text-slate-900 transition-all font-medium"
             >
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to Invoices

@@ -39,6 +39,7 @@ import {
   Link2,
   Server,
   Terminal,
+  ArrowLeftRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -243,6 +244,12 @@ const menuSections: MenuSection[] = [
           { label: 'Add New Service', path: '/services/new', icon: Plus },
           { label: 'Service Categories', path: '/service-categories', icon: Eye },
         ],
+      },
+      {
+        label: 'Dollar Buy Sell',
+        icon: ArrowLeftRight,
+        path: '/dollar-exchange',
+        permission: 'can_manage_products',
       },
     ]
   },

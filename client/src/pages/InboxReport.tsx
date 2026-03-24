@@ -17,6 +17,8 @@ import {
   Tag,
   RefreshCw,
   TrendingUp,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { ErrorAlert } from '@/components/ErrorAlert';
 import { useAuth } from '@/contexts/AuthContext';
@@ -34,6 +36,9 @@ export default function InboxReport() {
       endDate: endDate.toISOString().split('T')[0],
     };
   });
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // Fetch report data
   const {
@@ -55,6 +60,7 @@ export default function InboxReport() {
       ...prev,
       [field]: value,
     }));
+    setCurrentPage(1);
   };
 
   const handleLabelChange = (labelName: string) => {
@@ -62,6 +68,7 @@ export default function InboxReport() {
       ...prev,
       labelName: labelName === '' ? undefined : labelName,
     }));
+    setCurrentPage(1);
   };
 
   const handleResetFilters = () => {
@@ -73,6 +80,7 @@ export default function InboxReport() {
       startDate: startDate.toISOString().split('T')[0],
       endDate: endDate.toISOString().split('T')[0],
     });
+    setCurrentPage(1);
   };
 
   const handleQuickDateRange = (days: number) => {
@@ -85,12 +93,13 @@ export default function InboxReport() {
       endDate: endDate.toISOString().split('T')[0],
       labelName: filters.labelName, // Preserve label filter
     });
+    setCurrentPage(1);
   };
 
   if (error) {
     return (
       <div className="p-6">
-        <ErrorAlert error={error} />
+        <ErrorAlert error={error} onClose={() => {}} />
       </div>
     );
   }
@@ -385,14 +394,42 @@ export default function InboxReport() {
         </div>
       </GamePanel>
 
-      {/* Daily Trend */}
       {reportData && reportData.dailyTrend.length > 0 && (
         <GamePanel>
           <div className="p-6">
-            <h2 className="text-lg font-semibold flex items-center gap-2 text-amber-100 mb-4">
-              <TrendingUp className="h-5 w-5 text-amber-400" />
-              Daily Trend
-            </h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold flex items-center gap-2 text-amber-100">
+                <TrendingUp className="h-5 w-5 text-amber-400" />
+                Daily Trend
+              </h2>
+              {reportData.dailyTrend.length > itemsPerPage && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-amber-200/60 uppercase tracking-widest font-black mr-2">
+                    Page {currentPage} of {Math.ceil(reportData.dailyTrend.length / itemsPerPage)}
+                  </span>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className={`h-8 w-8 ${btnOutline} p-0 disabled:opacity-30`}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setCurrentPage(p => Math.min(Math.ceil(reportData.dailyTrend.length / itemsPerPage), p + 1))}
+                      disabled={currentPage === Math.ceil(reportData.dailyTrend.length / itemsPerPage)}
+                      className={`h-8 w-8 ${btnOutline} p-0 disabled:opacity-30`}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
@@ -403,19 +440,21 @@ export default function InboxReport() {
                   </tr>
                 </thead>
                 <tbody>
-                  {reportData.dailyTrend.map((day, index) => (
-                    <tr key={index} className="border-b border-amber-500/10 hover:bg-amber-500/5">
-                      <td className="py-3 px-4 text-amber-100">
-                        {new Date(day.date).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric',
-                        })}
-                      </td>
-                      <td className="py-3 px-4 text-right font-medium text-amber-100">{day.messages}</td>
-                      <td className="py-3 px-4 text-right font-medium text-amber-100">{day.conversations}</td>
-                    </tr>
-                  ))}
+                  {reportData.dailyTrend
+                    .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                    .map((day, index) => (
+                      <tr key={index} className="border-b border-amber-500/10 hover:bg-amber-500/5 transition-colors">
+                        <td className="py-3 px-4 text-amber-100 font-medium">
+                          {new Date(day.date).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                          })}
+                        </td>
+                        <td className="py-3 px-4 text-right font-bold text-amber-100">{day.messages.toLocaleString()}</td>
+                        <td className="py-3 px-4 text-right font-bold text-amber-100">{day.conversations.toLocaleString()}</td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
             </div>

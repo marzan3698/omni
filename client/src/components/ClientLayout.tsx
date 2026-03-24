@@ -13,7 +13,8 @@ import {
   HelpCircle,
   MessageSquare,
   Package,
-  ShoppingCart
+  ShoppingCart,
+  ArrowLeftRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -171,6 +172,16 @@ export function ClientLayout({ children }: ClientLayoutProps) {
                                 )}
                             >
                                 Invoices
+                            </Link>
+                            <Link
+                                to="/client/exchange"
+                                className={cn(
+                                    'flex items-center gap-2 px-4 py-1.5 rounded-lg text-[13px] transition-all',
+                                    isCurrentPath('/client/exchange') ? 'text-amber-400 font-medium' : 'text-slate-500 hover:text-slate-300'
+                                )}
+                            >
+                                <ArrowLeftRight className="w-3 h-3" />
+                                Dollar Exchange
                             </Link>
                         </div>
                     )}
