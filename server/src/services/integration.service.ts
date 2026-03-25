@@ -136,12 +136,10 @@ export const integrationService = {
    * Get integration by provider and pageId
    */
   async getIntegrationByProvider(provider: 'facebook' | 'whatsapp', pageId: string) {
-    const integration = await prisma.integration.findUnique({
+    const integration = await prisma.integration.findFirst({
       where: {
-        provider_pageId: {
-          provider,
-          pageId,
-        },
+        provider: provider as any,
+        pageId,
       },
     });
 

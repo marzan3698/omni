@@ -338,7 +338,7 @@ export const invoiceService = {
         totalAmount,
         notes: data.notes ?? null,
         items: {
-          create: itemRecords,
+          create: itemRecords as any,
         },
       },
       include: {
@@ -476,7 +476,7 @@ export const invoiceService = {
     if (data.items) {
       totalAmount = data.items.reduce((sum, item) => {
         return sum + (item.quantity * item.unitPrice);
-      }, 0);
+      }, 0) as any;
     }
 
     // Update invoice

@@ -1432,7 +1432,7 @@ export const leadService = {
         data: {
           companyId,
           name: clientName,
-          contactInfo: Object.keys(contactInfo).length > 0 ? contactInfo : undefined,
+          contactInfo: Object.keys(contactInfo).length > 0 ? (contactInfo as any) : undefined,
           address: clientData?.address ?? null,
           status: 'Processing',
         },

@@ -287,7 +287,7 @@ export const employeeService = {
     }
 
     const [tasks, leads] = await Promise.all([
-      prisma.task.groupBy({
+      (prisma.task as any).groupBy({
         by: ['status'],
         where: {
           assignedTo: employeeId,
@@ -295,7 +295,7 @@ export const employeeService = {
         },
         _count: true,
       }),
-      prisma.lead.groupBy({
+      (prisma.lead as any).groupBy({
         by: ['status'],
         where: {
           assignments: { some: { employeeId } },

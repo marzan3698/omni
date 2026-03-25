@@ -227,7 +227,7 @@ export const companyService = {
 
     return await prisma.contract.update({
       where: { id: contractId },
-      data,
+      data: data as any,
     });
   },
 
@@ -238,9 +238,9 @@ export const companyService = {
     return await prisma.company.findMany({
       where: {
         OR: [
-          { name: { contains: query, mode: 'insensitive' } },
-          { email: { contains: query, mode: 'insensitive' } },
-          { industry: { contains: query, mode: 'insensitive' } },
+          { name: { contains: query } },
+          { email: { contains: query } },
+          { industry: { contains: query } },
         ],
       },
       orderBy: { createdAt: 'desc' },

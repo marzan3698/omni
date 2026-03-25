@@ -391,7 +391,7 @@ export const financeController = {
         invoiceNumber,
         issueDate: validatedData.issueDate instanceof Date ? validatedData.issueDate : new Date(validatedData.issueDate),
         dueDate: validatedData.dueDate instanceof Date ? validatedData.dueDate : new Date(validatedData.dueDate),
-      });
+      } as any);
       return sendSuccess(res, invoice, 'Invoice created successfully', 201);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -447,7 +447,7 @@ export const financeController = {
       if (!companyId) return sendError(res, 'Company ID is required', 400);
       const validatedData = createInvoiceFromProjectSchema.parse(req.body);
       const invoice = await invoiceService.createInvoiceFromProject(companyId, validatedData.projectId, {
-        items: validatedData.items,
+        items: validatedData.items as any,
         issueDate: validatedData.issueDate ? (validatedData.issueDate instanceof Date ? validatedData.issueDate : new Date(validatedData.issueDate)) : undefined,
         dueDate: validatedData.dueDate ? (validatedData.dueDate instanceof Date ? validatedData.dueDate : new Date(validatedData.dueDate)) : undefined,
         notes: validatedData.notes,
@@ -474,7 +474,7 @@ export const financeController = {
         ...validatedData,
         issueDate: validatedData.issueDate ? (validatedData.issueDate instanceof Date ? validatedData.issueDate : new Date(validatedData.issueDate)) : undefined,
         dueDate: validatedData.dueDate ? (validatedData.dueDate instanceof Date ? validatedData.dueDate : new Date(validatedData.dueDate)) : undefined,
-      });
+      } as any);
       return sendSuccess(res, invoice, 'Invoice updated successfully');
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -538,7 +538,7 @@ export const financeController = {
       const transaction = await transactionService.createTransaction({
         ...validatedData,
         date: validatedData.date instanceof Date ? validatedData.date : new Date(validatedData.date),
-      });
+      } as any);
       return sendSuccess(res, transaction, 'Transaction created successfully', 201);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -596,7 +596,7 @@ export const financeController = {
         ...validatedData,
         startDate: validatedData.startDate instanceof Date ? validatedData.startDate : new Date(validatedData.startDate),
         endDate: validatedData.endDate instanceof Date ? validatedData.endDate : new Date(validatedData.endDate),
-      });
+      } as any);
       return sendSuccess(res, budget, 'Budget created successfully', 201);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -630,7 +630,7 @@ export const financeController = {
   createCategory: async (req: Request, res: Response) => {
     try {
       const validatedData = createExpenseCategorySchema.parse(req.body);
-      const category = await expenseCategoryService.createCategory(validatedData);
+      const category = await expenseCategoryService.createCategory(validatedData as any);
       return sendSuccess(res, category, 'Category created successfully', 201);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -691,7 +691,7 @@ export const financeController = {
       const payable = await accountsService.createPayable({
         ...validatedData,
         dueDate: validatedData.dueDate instanceof Date ? validatedData.dueDate : new Date(validatedData.dueDate),
-      });
+      } as any);
       return sendSuccess(res, payable, 'Account payable created successfully', 201);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -710,7 +710,7 @@ export const financeController = {
       const receivable = await accountsService.createReceivable({
         ...validatedData,
         dueDate: validatedData.dueDate instanceof Date ? validatedData.dueDate : new Date(validatedData.dueDate),
-      });
+      } as any);
       return sendSuccess(res, receivable, 'Account receivable created successfully', 201);
     } catch (error) {
       if (error instanceof z.ZodError) {

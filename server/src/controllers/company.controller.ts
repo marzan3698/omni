@@ -86,7 +86,7 @@ export const companyController = {
   createCompany: async (req: Request, res: Response) => {
     try {
       const validatedData = createCompanySchema.parse(req.body);
-      const company = await companyService.createCompany(validatedData);
+      const company = await companyService.createCompany(validatedData as any);
       return sendSuccess(res, company, 'Company created successfully', 201);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -111,7 +111,7 @@ export const companyController = {
       }
 
       const validatedData = updateCompanySchema.parse(req.body);
-      const company = await companyService.updateCompany(id, validatedData);
+      const company = await companyService.updateCompany(id, validatedData as any);
       return sendSuccess(res, company, 'Company updated successfully');
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -181,7 +181,7 @@ export const companyController = {
       const contact = await companyService.addCompanyContact(companyId, {
         ...validatedData,
         date: validatedData.date instanceof Date ? validatedData.date : new Date(validatedData.date),
-      });
+      } as any);
       return sendSuccess(res, contact, 'Contact added successfully', 201);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -231,7 +231,7 @@ export const companyController = {
         ...validatedData,
         startDate: validatedData.startDate instanceof Date ? validatedData.startDate : new Date(validatedData.startDate),
         endDate: validatedData.endDate ? (validatedData.endDate instanceof Date ? validatedData.endDate : new Date(validatedData.endDate)) : undefined,
-      });
+      } as any);
       return sendSuccess(res, contract, 'Contract created successfully', 201);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -256,7 +256,7 @@ export const companyController = {
       }
 
       const validatedData = createContractSchema.partial().parse(req.body);
-      const contract = await companyService.updateContract(contractId, validatedData);
+      const contract = await companyService.updateContract(contractId, validatedData as any);
       return sendSuccess(res, contract, 'Contract updated successfully');
     } catch (error) {
       if (error instanceof z.ZodError) {

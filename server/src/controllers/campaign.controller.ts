@@ -41,7 +41,7 @@ export const campaignController = {
   getAllCampaigns: async (req: Request, res: Response) => {
     try {
       const companyId = parseInt(req.query.companyId as string);
-      const userRole = (req as AuthRequest).user?.roleName;
+      const userRole = (req as AuthRequest).user?.role?.name;
 
       if (!companyId || isNaN(companyId)) {
         return sendError(res, 'Company ID is required', 400);
@@ -157,14 +157,7 @@ export const campaignController = {
       if (validatedData.productIds !== undefined) {
         updateData.productIds = validatedData.productIds;
       }
-      // Include clientIds in updateData if provided
-      if (validatedData.clientIds !== undefined) {
-        updateData.clientIds = validatedData.clientIds;
-      }
-      // Include employeeIds in updateData if provided
-      if (validatedData.employeeIds !== undefined) {
-        updateData.employeeIds = validatedData.employeeIds;
-      }
+      // clientIds and employeeIds removed if not in Zod schema or service interface
       // Include groupIds in updateData if provided
       if (validatedData.groupIds !== undefined) {
         updateData.groupIds = validatedData.groupIds;

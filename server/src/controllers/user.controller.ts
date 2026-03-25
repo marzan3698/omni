@@ -65,7 +65,7 @@ export const userController = {
   createUser: async (req: AuthRequest, res: Response) => {
     try {
       const validatedData = createUserSchema.parse(req.body);
-      const user = await userService.createUser(validatedData);
+      const user = await userService.createUser(validatedData as any);
       return sendSuccess(res, user, 'User created successfully', 201);
     } catch (error: any) {
       if (error instanceof z.ZodError) {

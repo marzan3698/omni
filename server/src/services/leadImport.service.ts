@@ -46,7 +46,7 @@ export const leadImportService = {
     const catLastRow = categories.length > 0 ? categories.length + 1 : 2;
     const intLastRow = interests.length > 0 ? interests.length + 1 : 2;
 
-    const ws = wb.addWorksheet('Leads', { firstSheet: true });
+    const ws = wb.addWorksheet('Leads');
     const headers = ['title (অবশ্যই)', 'customer_name (অবশ্যই)', 'phone', 'description', 'value', 'status', 'category', 'interest'];
     const exampleRow = ['নতুন লিড', 'গ্রাহক এর নাম', '01712345678', 'বিবরণ বা নোট', '5000', 'New', categories[0]?.name || '', interests[0]?.name || ''];
     ws.addRow(headers);

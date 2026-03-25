@@ -410,6 +410,7 @@ export const campaignService = {
     }
 
     // If projectId is being updated, verify the new project and update client/invoices
+    const updateData: any = {};
     if (data.projectId !== undefined && data.projectId !== campaign.projectId) {
       const project = await prisma.project.findFirst({
         where: {
@@ -454,7 +455,6 @@ export const campaignService = {
       }
     }
 
-    const updateData: any = {};
     if (data.projectId !== undefined) updateData.projectId = data.projectId;
     if (data.name !== undefined) updateData.name = data.name;
     if (data.description !== undefined) {

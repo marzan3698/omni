@@ -275,11 +275,7 @@ export const facebookOAuthService = {
           isActive: true,
         },
         include: {
-          _count: {
-            select: {
-              users: true,
-            },
-          },
+          // Relational counts removed if not in schema
         },
       });
     }
@@ -294,11 +290,7 @@ export const facebookOAuthService = {
         isActive: true,
       },
       include: {
-        _count: {
-          select: {
-            users: true,
-          },
-        },
+        // Relational counts removed
       },
     });
   },
