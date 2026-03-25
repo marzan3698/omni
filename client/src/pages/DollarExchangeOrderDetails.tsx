@@ -7,6 +7,7 @@ import {
   Printer, 
   CheckCircle, 
   Clock, 
+  RefreshCw,
   AlertCircle, 
   XCircle,
   Hash,
@@ -17,7 +18,8 @@ import {
   Zap,
   Shield,
   CreditCard,
-  Share2
+  Share2,
+  ArrowRight
 } from 'lucide-react';
 import apiClient from '@/lib/apiClient';
 import { Button } from '@/components/ui/button';
@@ -51,6 +53,90 @@ const DetailRow = ({ label, value, icon: Icon, color = 'text-white/90' }: any) =
     <span className={`text-sm font-bold tracking-tight ${color}`}>{value || '—'}</span>
   </div>
 );
+
+const OrderTimeline = ({ status, createdAt, processedAt }: { status: string, createdAt: string, processedAt?: string }) => {
+  const isRejected = status === 'REJECTED' || status === 'CANCELLED';
+  const steps = ['PENDING', 'PROCESSING', isRejected ? status : 'COMPLETED'];
+  
+  let currentIndex = 0;
+  if (status === 'PROCESSING') currentIndex = 1;
+  if (status === 'COMPLETED' || isRejected) currentIndex = 2;
+
+  return (
+    <div className="p-8 md:p-12 border-b border-white/5 bg-gradient-to-r from-black/60 to-black/40 no-print overflow-hidden relative">
+      <h3 className="text-xs font-black uppercase tracking-[0.2em] text-amber-500 mb-12 flex items-center gap-2">
+        <Zap className="w-4 h-4" />
+        Transaction Lifecycle
+      </h3>
+      
+      <div className="relative flex items-center justify-between max-w-2xl mx-auto z-10">
+        {/* Animated Background Line */}
+        <div className="absolute top-1/2 left-[10%] right-[10%] h-1 bg-white/10 -translate-y-1/2 rounded-full overflow-hidden">
+           <motion.div 
+             className="h-full bg-gradient-to-r from-amber-500 via-blue-500 to-emerald-500"
+             initial={{ width: '0%' }}
+             animate={{ width: `${(currentIndex / 2) * 100}%` }}
+             transition={{ duration: 1.5, ease: "easeInOut" }}
+           />
+        </div>
+        
+        {/* SVG Pulse Animation along the line */}
+        <svg className="absolute top-1/2 left-[10%] right-[10%] h-20 -translate-y-1/2 overflow-visible pointer-events-none" preserveAspectRatio="none">
+          <defs>
+             <linearGradient id="pulseGrad" x1="0" y1="0" x2="1" y2="0">
+               <stop offset="0%" stopColor="transparent" />
+               <stop offset="50%" stopColor="#3b82f6" opacity="0.8" />
+               <stop offset="100%" stopColor="transparent" />
+             </linearGradient>
+          </defs>
+          <motion.path
+            d="M 0,40 L 1000,40"
+            stroke="url(#pulseGrad)"
+            strokeWidth="3"
+            strokeDasharray="100 900"
+            fill="none"
+            initial={{ strokeDashoffset: 1000 }}
+            animate={{ strokeDashoffset: 0 }}
+            transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+          />
+        </svg>
+
+        {steps.map((step, index) => {
+          const isActive = index <= currentIndex;
+          const isCurrent = index === currentIndex && !isRejected;
+          const colorClass = isActive 
+            ? (index === 0 ? 'bg-amber-500/20 border-amber-500 text-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.4)]' 
+               : index === 1 ? 'bg-blue-500/20 border-blue-500 text-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.4)]'
+               : isRejected ? 'bg-red-500/20 border-red-500 text-red-500 shadow-[0_0_20px_rgba(239,68,68,0.4)]' 
+               : 'bg-emerald-500/20 border-emerald-500 text-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.4)]')
+            : 'bg-white/5 border-white/10 text-white/20';
+
+          return (
+            <div key={index} className="relative z-10 flex flex-col items-center">
+              <motion.div 
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: isActive ? 1 : 0.8, opacity: isActive ? 1 : 0.5 }}
+                transition={{ delay: index * 0.3 }}
+                className={`w-12 h-12 rounded-2xl border-2 flex items-center justify-center backdrop-blur-md ${colorClass}`}
+              >
+                 {index === 0 && <Clock className="w-5 h-5" />}
+                 {index === 1 && <RefreshCw className={`w-5 h-5 ${isCurrent ? 'animate-spin' : ''}`} />}
+                 {index === 2 && (isRejected ? <XCircle className="w-5 h-5" /> : <CheckCircle className="w-5 h-5" />)}
+              </motion.div>
+              <div className="absolute top-16 w-32 -left-10 text-center">
+                <p className={`text-[10px] font-black uppercase tracking-widest ${isActive ? 'text-white/90 drop-shadow-md' : 'text-white/30'}`}>
+                  {step}
+                </p>
+                {index === 0 && <p className="text-[9px] text-white/40 mt-1">{new Date(createdAt).toLocaleDateString()}</p>}
+                {index === 2 && processedAt && <p className="text-[9px] text-white/40 mt-1">{new Date(processedAt).toLocaleDateString()}</p>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
 
 const DollarExchangeOrderDetails = () => {
   const { id } = useParams();
@@ -179,7 +265,7 @@ const DollarExchangeOrderDetails = () => {
                     )}
                     <div>
                       <h1 className="text-2xl font-black tracking-tighter uppercase italic">{siteName}</h1>
-                      <p className="text-[10px] text-amber-500/80 font-black tracking-[0.3em] uppercase">Liquidity Protocol</p>
+                      <p className="text-[10px] text-amber-500/80 font-black tracking-[0.3em] uppercase">Exchange System</p>
                     </div>
                   </div>
                   <div className="space-y-1">
@@ -193,26 +279,28 @@ const DollarExchangeOrderDetails = () => {
                 <div className="flex flex-col items-end gap-4">
                   <StatusBadge status={order.status} />
                   <div className="text-right">
-                    <p className="text-[10px] text-white/30 font-bold uppercase tracking-widest mb-1 text-label">Execution Date</p>
+                    <p className="text-[10px] text-white/30 font-bold uppercase tracking-widest mb-1 text-label">Date</p>
                     <p className="text-sm font-bold text-white/70">{new Date(order.createdAt).toLocaleDateString('en-US', { dateStyle: 'long' })}</p>
                   </div>
                 </div>
               </div>
             </div>
 
+            <OrderTimeline status={order.status} createdAt={order.createdAt} processedAt={order.processedAt} />
+
             {/* Client & Route Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2">
               <div className="p-8 md:p-12 border-b md:border-b-0 md:border-r border-white/5">
                 <div className="flex items-center gap-2 mb-6">
                   <User className="w-4 h-4 text-amber-500" />
-                  <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white/60 text-label">Entity Information</h3>
+                  <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white/60 text-label">Client Details</h3>
                 </div>
                 <div className="space-y-1">
                   <DetailRow label="Client Name" value={order.client?.name || 'Guest User'} icon={User} />
-                  <DetailRow label="Secure Email" value={order.client?.email} icon={Mail} />
-                  <DetailRow label="Contact Port" value={order.client?.phone} icon={Phone} />
+                  <DetailRow label="Email Address" value={order.client?.email} icon={Mail} />
+                  <DetailRow label="Phone Number" value={order.client?.phone} icon={Phone} />
                   {order.client?.address && (
-                    <DetailRow label="Base Location" value={order.client?.address} icon={Shield} />
+                    <DetailRow label="Address" value={order.client?.address} icon={Shield} />
                   )}
                   <DetailRow label="Account Type" value={order.type} icon={Shield} color={order.type === 'SELL' ? 'text-red-400' : 'text-emerald-400'} />
                 </div>
@@ -220,92 +308,126 @@ const DollarExchangeOrderDetails = () => {
               <div className="p-8 md:p-12">
                 <div className="flex items-center gap-2 mb-6">
                   <CreditCard className="w-4 h-4 text-amber-500" />
-                  <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white/60 text-label">Protocol Routing</h3>
+                  <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white/60 text-label">Exchange Details</h3>
                 </div>
                 <div className="space-y-1">
-                  <DetailRow label="Source Payload" value={`${order.sendAmount.toLocaleString()} ${order.sendCurrency}`} icon={Download} color="text-amber-400" />
-                  <DetailRow label="Liquidity Yield" value={`${order.receiveAmount.toLocaleString()} ${order.receiveCurrency}`} icon={Download} color="text-emerald-400" />
-                  <DetailRow label="Oracle Rate" value={`1 ${order.sendCurrency} = ${order.appliedRate} ${order.receiveCurrency}`} icon={Zap} />
-                  <DetailRow label="Network Node" value={`${siteName} Core`} icon={Shield} />
+                  <DetailRow label="You Sent" value={`${order.sendAmount.toLocaleString()} ${order.sendCurrency}`} icon={Download} color="text-amber-400" />
+                  <DetailRow label="You Will Receive" value={`${order.receiveAmount.toLocaleString()} ${order.receiveCurrency}`} icon={Download} color="text-emerald-400" />
+                  <DetailRow label="Exchange Rate" value={`1 ${order.sendCurrency} = ${order.appliedRate} ${order.receiveCurrency}`} icon={Zap} />
+                  <DetailRow label="Platform" value={siteName} icon={Shield} />
                 </div>
               </div>
             </div>
 
-            {/* Financial Details Table Area */}
-            <div className="p-8 md:p-12 bg-white/5 data-table">
-              <div className="rounded-2xl border border-white/5 overflow-hidden">
-                <table className="w-full">
-                  <thead className="bg-white/5">
-                    <tr>
-                      <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-white/40">Direction</th>
-                      <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-white/40">Endpoint Info</th>
-                      <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest text-white/40">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/5">
-                    <tr>
-                      <td className="px-6 py-4">
-                        <div className="text-xs text-white/40 font-bold uppercase mb-1">Inbound (To Admin)</div>
-                        <div className="font-bold text-amber-400">Receiving Fund</div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm font-mono text-white/90">{order.senderAccount || 'Standard Transfer'}</div>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-black">VERIFIED</span>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="px-6 py-4">
-                        <div className="text-xs text-white/40 font-bold uppercase mb-1">Outbound (To User)</div>
-                        <div className="font-bold text-emerald-400">Payout Target</div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm font-mono text-white/90">{order.receiverAccount}</div>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <span className={`text-[10px] px-2 py-0.5 rounded font-black ${order.status === 'COMPLETED' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-white/5 text-white/40 border-white/10'}`}>
-                          {order.status === 'COMPLETED' ? 'EXECUTED' : 'AWAITING'}
-                        </span>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Transaction ID Footnote */}
-              {order.transactionId && (
-                <div className="mt-8 p-4 rounded-xl bg-black/40 border border-amber-500/10 border-dashed">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500">
-                      <Shield className="w-4 h-4" />
+            {/* Animated Fund Flow Card */}
+            <div className="p-8 md:p-12 bg-white/5 border-t border-white/5 overflow-hidden">
+              <h3 className="text-xs font-black uppercase tracking-widest text-amber-500 mb-8 text-center">Transaction Flow</h3>
+              
+              <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative">
+                
+                {/* Sending Card */}
+                <div className="flex-1 w-full bg-black/40 border border-amber-500/20 rounded-2xl p-6 text-center z-10 relative overflow-hidden group">
+                  <div className="absolute inset-0 bg-amber-500/5 group-hover:bg-amber-500/10 transition-colors" />
+                  <p className="text-[10px] text-amber-500/80 font-black uppercase tracking-widest mb-2 relative z-10">Sent From</p>
+                  
+                  {order.senderAccount ? (
+                    <p className="text-lg font-mono text-white/90 font-bold relative z-10 break-all">{order.senderAccount}</p>
+                  ) : (
+                    <p className="text-sm font-mono text-white/50 italic relative z-10">Source Account Unspecified</p>
+                  )}
+                  
+                  {order.transactionId && (
+                    <div className="mt-3 text-xs bg-amber-500/10 border border-amber-500/20 text-amber-300 px-3 py-1.5 rounded-lg inline-block relative z-10">
+                      TxID: <span className="font-mono font-bold tracking-wider">{order.transactionId}</span>
                     </div>
-                    <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-white/30">Proof of Protocol (TXID)</p>
-                      <p className="font-mono text-sm text-amber-400/90 break-all">{order.transactionId}</p>
-                    </div>
+                  )}
+                  <div className="mt-5 font-black text-2xl text-amber-400 relative z-10 tracking-tight">
+                    {Number(order.sendAmount).toLocaleString()} <span className="text-sm opacity-70">{order.sendCurrency}</span>
                   </div>
                 </div>
-              )}
+
+                {/* SVG Connection line with flowing particle animation */}
+                <div className="hidden md:flex w-32 h-24 items-center justify-center relative z-0">
+                   <svg className="w-full h-full text-white/10 overflow-visible" viewBox="0 0 100 24" preserveAspectRatio="none">
+                     {/* Base Track */}
+                     <path d="M0,12 L100,12" stroke="currentColor" strokeWidth="2" strokeDasharray="3,3" fill="none" opacity="0.5" />
+                     
+                     {/* Glowing Flow Animation */}
+                     <defs>
+                       <linearGradient id="flowGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                         <stop offset="0%" stopColor="#f59e0b" stopOpacity="0" />
+                         <stop offset="50%" stopColor="#3b82f6" stopOpacity="1" />
+                         <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
+                       </linearGradient>
+                       <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                         <feGaussianBlur stdDeviation="2" result="blur" />
+                         <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                       </filter>
+                     </defs>
+                     <motion.path 
+                       d="M0,12 L100,12" 
+                       stroke="url(#flowGradient)" 
+                       strokeWidth="3" 
+                       fill="none"
+                       strokeDasharray="40 100"
+                       filter="url(#glow)"
+                       animate={{ strokeDashoffset: [140, -40] }}
+                       transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                     />
+                     
+                     {/* Moving Packets (Data representation) */}
+                     <motion.circle cx="0" cy="12" r="2.5" fill="#f59e0b"
+                       animate={{ cx: [0, 100], opacity: [0, 1, 0] }}
+                       transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                     />
+                     <motion.circle cx="0" cy="12" r="2.5" fill="#10b981"
+                       animate={{ cx: [0, 100], opacity: [0, 1, 0] }}
+                       transition={{ duration: 1.5, delay: 0.75, repeat: Infinity, ease: "easeInOut" }}
+                     />
+                   </svg>
+                   <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#050505] border border-white/10 p-2.5 rounded-full shadow-[0_0_15px_rgba(59,130,246,0.2)] z-10">
+                     <ArrowRight className="w-4 h-4 text-blue-400" />
+                   </div>
+                </div>
+                
+                {/* Mobile version simple arrow */}
+                <div className="md:hidden py-2 bg-[#050505] p-2 rounded-full border border-white/10 z-10">
+                  <ArrowRight className="w-4 h-4 text-white/50 rotate-90" />
+                </div>
+
+                {/* Receiving Card */}
+                <div className="flex-1 w-full bg-black/40 border border-emerald-500/20 rounded-2xl p-6 text-center z-10 relative overflow-hidden group">
+                  <div className="absolute inset-0 bg-emerald-500/5 group-hover:bg-emerald-500/10 transition-colors" />
+                  <p className="text-[10px] text-emerald-500/80 font-black uppercase tracking-widest mb-2 relative z-10">Received At</p>
+                  <p className="text-lg font-mono text-white/90 font-bold relative z-10 break-all tracking-wider">{order.receiverAccount}</p>
+                  
+                  <div className="mt-5 font-black text-2xl text-emerald-400 relative z-10 tracking-tight">
+                    {Number(order.receiveAmount).toLocaleString()} <span className="text-sm opacity-70">{order.receiveCurrency}</span>
+                  </div>
+                  <div className={`mt-3 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full inline-block relative z-10 ${order.status === 'COMPLETED' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-white/5 text-white/40 border-white/10'}`}>
+                    {order.status === 'COMPLETED' ? 'EXECUTED' : 'AWAITING'}
+                  </div>
+                </div>
 
               {/* Admin Note */}
               {order.adminNote && (
-                <div className="mt-4 p-4 rounded-xl bg-blue-500/5 border border-blue-500/10">
+                <div className="mt-8 p-4 rounded-xl bg-blue-500/5 border border-blue-500/10">
                   <div className="flex gap-3">
                     <AlertCircle className="w-4 h-4 text-blue-400 shrink-0" />
                     <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-white/30">Node Operator Response</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-white/30">Admin Note</p>
                       <p className="text-sm text-blue-200/80 mt-1">{order.adminNote}</p>
                     </div>
                   </div>
                 </div>
               )}
             </div>
+            </div>
 
             {/* Summary Banner */}
             <div className="p-8 md:p-12 bg-amber-500 flex flex-col md:flex-row justify-between items-center gap-6 banner-section">
               <div className="text-center md:text-left">
-                <p className="text-[10px] text-black font-black uppercase tracking-[0.3em] text-label-dark">Final Settlement</p>
+                <p className="text-[10px] text-black font-black uppercase tracking-[0.3em] text-label-dark">Final Amount</p>
                 <h3 className="text-4xl font-black text-black tracking-tighter">
                   {order.receiveAmount.toLocaleString()} <span className="text-xl opacity-60">{order.receiveCurrency}</span>
                 </h3>

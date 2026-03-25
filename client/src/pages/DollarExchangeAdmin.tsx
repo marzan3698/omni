@@ -43,7 +43,7 @@ const STATUS_COLORS: Record<string, string> = {
   CANCELLED: 'bg-slate-500/20 text-slate-400 border-slate-500/30',
 };
 
-const emptyRate = { sendCurrency: '', receiveCurrency: '', rate: '', minAmount: '1', maxAmount: '99999', reserves: '0', adminReceiveAccount: '', note: '', isActive: true };
+const emptyRate = { sendCurrency: '', receiveCurrency: '', rate: '', minAmount: '1', maxAmount: '99999', reserves: '0', adminReceiveAccount: '', adminReceiveQrCode: '', note: '', isActive: true };
 
 export default function DollarExchangeAdmin() {
   const { user } = useAuth();
@@ -104,6 +104,7 @@ export default function DollarExchangeAdmin() {
       maxAmount: String(rate.maxAmount),
       reserves: String(rate.reserves),
       adminReceiveAccount: rate.adminReceiveAccount || '',
+      adminReceiveQrCode: rate.adminReceiveQrCode || '',
       note: rate.note || '',
       isActive: rate.isActive,
     });
@@ -115,6 +116,17 @@ export default function DollarExchangeAdmin() {
     const payload = { ...rateForm, rate: Number(rateForm.rate), minAmount: Number(rateForm.minAmount), maxAmount: Number(rateForm.maxAmount), reserves: Number(rateForm.reserves) };
     if (editingRate) { updateRateMutation.mutate({ id: editingRate.id, data: payload }); }
     else { createRateMutation.mutate(payload); }
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setRateForm(f => ({ ...f, adminReceiveQrCode: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const rates = ratesData?.data || [];
@@ -228,7 +240,8 @@ export default function DollarExchangeAdmin() {
                           animate={{ opacity: 1, x: 0 }}
                           exit={{ opacity: 0, scale: 0.95 }}
                           key={order.id} 
-                          className="border-b border-amber-500/5 hover:bg-amber-500/5 transition-colors group"
+                          className="border-b border-amber-500/5 hover:bg-amber-500/10 transition-colors group cursor-pointer"
+                          onClick={() => navigate(`/dollar-exchange/order/${order.id}`)}
                         >
                           <td className={`${tdCls} font-mono text-xs text-amber-500/80 group-hover:text-amber-400 transition-colors`}>{order.orderNumber}</td>
                           <td className={tdCls}>
@@ -263,13 +276,13 @@ export default function DollarExchangeAdmin() {
                                 <>
                                   <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                                     <Button size="icon" className="h-8 w-8 bg-blue-500/20 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/30 shadow-lg shadow-blue-500/10"
-                                      onClick={() => updateOrderMutation.mutate({ id: order.id, status: 'PROCESSING' })}>
+                                      onClick={(e) => { e.stopPropagation(); updateOrderMutation.mutate({ id: order.id, status: 'PROCESSING' }); }}>
                                       <Clock className="w-4 h-4"/>
                                     </Button>
                                   </motion.div>
                                   <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                                     <Button size="icon" className="h-8 w-8 bg-red-500/10 hover:bg-red-600 text-red-500 hover:text-white border border-red-500/20"
-                                      onClick={() => updateOrderMutation.mutate({ id: order.id, status: 'REJECTED' })}>
+                                      onClick={(e) => { e.stopPropagation(); updateOrderMutation.mutate({ id: order.id, status: 'REJECTED' }); }}>
                                       <XCircle className="w-4 h-4"/>
                                     </Button>
                                   </motion.div>
@@ -279,13 +292,13 @@ export default function DollarExchangeAdmin() {
                                 <>
                                   <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                                     <Button size="icon" className="h-8 w-8 bg-emerald-500/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/30 shadow-lg shadow-emerald-500/10"
-                                      onClick={() => updateOrderMutation.mutate({ id: order.id, status: 'COMPLETED' })}>
+                                      onClick={(e) => { e.stopPropagation(); updateOrderMutation.mutate({ id: order.id, status: 'COMPLETED' }); }}>
                                       <CheckCircle className="w-4 h-4"/>
                                     </Button>
                                   </motion.div>
                                   <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                                     <Button size="icon" className="h-8 w-8 bg-red-500/10 hover:bg-red-600 text-red-500 hover:text-white border border-red-500/20"
-                                      onClick={() => updateOrderMutation.mutate({ id: order.id, status: 'REJECTED' })}>
+                                      onClick={(e) => { e.stopPropagation(); updateOrderMutation.mutate({ id: order.id, status: 'REJECTED' }); }}>
                                       <XCircle className="w-4 h-4"/>
                                     </Button>
                                   </motion.div>
@@ -293,7 +306,7 @@ export default function DollarExchangeAdmin() {
                               )}
                               <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                                 <Button size="icon" className="h-8 w-8 bg-amber-500/10 hover:bg-amber-500 text-amber-500 hover:text-black border border-amber-500/20 shadow-lg shadow-amber-500/5"
-                                  onClick={() => navigate(`/dollar-exchange/order/${order.id}`)}>
+                                  onClick={(e) => { e.stopPropagation(); navigate(`/dollar-exchange/order/${order.id}`); }}>
                                   <Eye className="w-4 h-4"/>
                                 </Button>
                               </motion.div>
@@ -352,6 +365,13 @@ export default function DollarExchangeAdmin() {
                   <Label className="text-amber-200/80 text-xs mb-1 block">Your Receiving Account (For Customers)</Label>
                   <Input placeholder="e.g. 017XXXXXXX (Personal)" value={rateForm.adminReceiveAccount} onChange={e => setRateForm(f => ({...f, adminReceiveAccount: e.target.value}))} className={inputCls}/>
                 </div>
+                <div>
+                  <Label className="text-amber-200/80 text-xs mb-1 block">Payment QR Code (Optional)</Label>
+                  <Input type="file" accept="image/*" onChange={handleImageChange} className={inputCls} />
+                  {rateForm.adminReceiveQrCode && (
+                    <img src={rateForm.adminReceiveQrCode.startsWith('/uploads') ? import.meta.env.VITE_API_URL + rateForm.adminReceiveQrCode : rateForm.adminReceiveQrCode} alt="QR Preview" className="mt-2 h-16 w-16 object-cover rounded-xl border border-amber-500/30" />
+                  )}
+                </div>
                 <div className="md:col-span-3 flex gap-4 items-end">
                   <div className="flex-1">
                     <Label className="text-amber-200/80 text-xs mb-1 block">Note (optional)</Label>
@@ -407,7 +427,10 @@ export default function DollarExchangeAdmin() {
                           <td className={`${tdCls} text-xs text-white/40 font-medium`}>{Number(rate.minAmount).toLocaleString()} – {Number(rate.maxAmount).toLocaleString()}</td>
                           <td className={`${tdCls} font-bold text-blue-400`}>{Number(rate.reserves).toLocaleString()}</td>
                           <td className={`${tdCls} text-xs font-mono text-white/50 group-hover:text-amber-200/80 transition-colors`} title={rate.adminReceiveAccount}>
-                            <div className="max-w-[120px] truncate">{rate.adminReceiveAccount || '—'}</div>
+                            <div className="flex items-center gap-2">
+                              {rate.adminReceiveQrCode && <img src={rate.adminReceiveQrCode.startsWith('/uploads') ? import.meta.env.VITE_API_URL + rate.adminReceiveQrCode : rate.adminReceiveQrCode} className="w-6 h-6 rounded-md object-cover" alt="QR" />}
+                              <div className="max-w-[120px] truncate">{rate.adminReceiveAccount || '—'}</div>
+                            </div>
                           </td>
                           <td className={tdCls}>
                             <span className={`px-2 py-0.5 rounded-md text-[10px] font-black border uppercase tracking-widest ${rate.isActive ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-slate-500/10 text-slate-400 border-slate-500/20'}`}>

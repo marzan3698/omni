@@ -86,8 +86,8 @@ export default function DollarExchangeClient() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError('');
-    if (!sendCurrency || !receiveCurrency || !sendAmount || !receiverAccount) {
-      setSubmitError('Please fill all required fields.'); return;
+    if (!sendCurrency || !receiveCurrency || !sendAmount || !receiverAccount || !transactionId) {
+      setSubmitError('Please fill all required fields including Transaction ID.'); return;
     }
     if (activeRate && Number(sendAmount) < Number(activeRate.minAmount)) {
       setSubmitError(`Minimum amount is ${activeRate.minAmount}`); return;
@@ -297,6 +297,18 @@ export default function DollarExchangeClient() {
                           {copied ? <Check className="w-5 h-5 text-emerald-400" /> : <Copy className="w-5 h-5" />}
                         </motion.button>
                       </div>
+
+                      {activeRate.adminReceiveQrCode && (
+                        <div className="mt-4 flex flex-col items-center p-3 bg-blue-900/40 rounded-xl border border-blue-500/20">
+                          <p className="text-[10px] text-blue-200 uppercase tracking-widest font-bold mb-2">Scan to Pay</p>
+                          <img 
+                            src={activeRate.adminReceiveQrCode.startsWith('/uploads') ? import.meta.env.VITE_API_URL + activeRate.adminReceiveQrCode : activeRate.adminReceiveQrCode} 
+                            alt="Payment QR Code" 
+                            className="w-32 h-32 object-cover rounded-lg border border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.5)]" 
+                          />
+                        </div>
+                      )}
+                      
                       
                       {/* Success Badge */}
                       <AnimatePresence>
@@ -322,10 +334,10 @@ export default function DollarExchangeClient() {
                 </div>
 
                 <div>
-                  <Label className="text-white/60 text-xs mb-2 block uppercase tracking-wider">Transaction ID / Payment Proof (optional)</Label>
+                  <Label className="text-white/60 text-xs mb-2 block uppercase tracking-wider font-semibold text-amber-300 drop-shadow-[0_0_5px_rgba(245,158,11,0.5)]">Transaction ID / Payment Proof (Required)</Label>
                   <Input value={transactionId} onChange={e => setTransactionId(e.target.value)}
                     placeholder="Paste your TxID or payment reference here"
-                    className={inputCls}/>
+                    className={`${inputCls} border-amber-500/30 focus:border-amber-400`} required/>
                 </div>
 
                 <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
@@ -348,7 +360,7 @@ export default function DollarExchangeClient() {
           <div className="rounded-2xl border border-white/10 bg-white/5 overflow-hidden">
             <div className="p-5 border-b border-white/10 flex items-center justify-between">
               <h2 className="text-white font-bold">My Exchange Orders</h2>
-              <Button variant="outline" size="sm" onClick={() => refetchOrders()}
+              <Button variant="ghost" size="sm" onClick={() => refetchOrders()}
                 className="border-white/20 text-white/60 hover:text-white hover:bg-white/10 h-8">
                 <RefreshCw className="w-3 h-3 mr-1"/>Refresh
               </Button>
@@ -367,7 +379,10 @@ export default function DollarExchangeClient() {
             ) : (
               <div className="divide-y divide-white/5">
                 {orders.map((order: any) => (
-                  <div key={order.id} className="p-5 hover:bg-white/5 transition-colors">
+                  <div key={order.id} 
+                       className="p-5 hover:bg-white/5 transition-colors cursor-pointer"
+                       onClick={() => navigate(`/client/exchange/order/${order.id}`)}
+                  >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap mb-2">
@@ -393,7 +408,7 @@ export default function DollarExchangeClient() {
                         )}
                       </div>
                       <div className="flex flex-col items-end gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => navigate(`/dollar-exchange/order/${order.id}`)}
+                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); navigate(`/client/exchange/order/${order.id}`); }}
                           className="text-white/40 hover:text-blue-400 hover:bg-blue-500/10 h-10 px-4 rounded-xl border border-transparent hover:border-blue-400/30">
                           <Eye className="w-4 h-4 mr-2" /> View Details
                         </Button>

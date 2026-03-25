@@ -22,6 +22,7 @@ import { useShop } from '@/contexts/ShopContext';
 import { serviceCategoryApi } from '@/lib/api';
 import { getServiceCategoryIcon } from '@/lib/serviceCategoryIcons';
 import { CartDrawer } from './CartDrawer';
+import { ClientGlobalSearch } from './ClientGlobalSearch';
 
 interface ClientLayoutProps {
   children: ReactNode;
@@ -306,16 +307,7 @@ export function ClientLayout({ children }: ClientLayoutProps) {
           </div>
 
           {/* Search Bar - Expanded in Header */}
-          <div className="flex-1 max-w-3xl relative">
-            <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-            <input
-                type="text"
-                placeholder="Search for services, products, and solutions..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-slate-900/80 border border-slate-700/50 rounded-2xl py-3.5 pl-14 pr-6 text-[15px] text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-amber-500/40 focus:ring-4 focus:ring-amber-500/5 transition-all shadow-inner"
-            />
-          </div>
+          <ClientGlobalSearch />
 
           <div className="flex items-center gap-8">
             <div className="hidden xl:flex items-center gap-2.5">
@@ -330,7 +322,11 @@ export function ClientLayout({ children }: ClientLayoutProps) {
                     <p className="text-[12px] font-bold text-amber-100/90 truncate max-w-[180px]">{user?.email}</p>
                     <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[2px]">Premium Partner</p>
                 </div>
-                <div className="w-10 h-10 rounded-2xl overflow-hidden border border-amber-500/20 bg-slate-800 flex items-center justify-center shadow-2xl group hover:border-amber-500/40 transition-all cursor-pointer ring-4 ring-transparent hover:ring-amber-500/5">
+                <div 
+                  onClick={() => navigate('/client/profile')}
+                  className="w-10 h-10 rounded-2xl overflow-hidden border border-amber-500/20 bg-slate-800 flex items-center justify-center shadow-2xl group hover:border-amber-500/40 transition-all cursor-pointer ring-4 ring-transparent hover:ring-amber-500/5"
+                  title="View Profile"
+                >
                     {user?.profileImage ? (
                         <img src={user.profileImage} alt="" className="w-full h-full object-cover" />
                     ) : (

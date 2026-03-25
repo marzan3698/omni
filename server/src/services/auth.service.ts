@@ -3,20 +3,20 @@ import jwt from 'jsonwebtoken';
 import { prisma } from '../lib/prisma.js';
 import { AppError } from '../middleware/errorHandler.js';
 
-interface RegisterData {
+export interface RegisterData {
   email: string;
   password: string;
   roleId?: number;
   companyId: number;
 }
 
-interface RegisterClientData {
+export interface RegisterClientData {
   email: string;
   password: string;
   phone: string;
 }
 
-interface LoginData {
+export interface LoginData {
   email: string;
   password: string;
 }
@@ -440,6 +440,47 @@ Login at: ${process.env.FRONTEND_URL || 'https://omnicrm.io'}/login`;
       permissions: (user.role.permissions as Record<string, boolean>) || {},
       profileImage: user.profileImage,
       employee: employee,
+      createdAt: user.createdAt,
+    };
+  },
+
+  /**
+   * Update current user profile
+   */
+  async updateProfile(userId: string, data: {
+    name?: string;
+    phone?: string;
+    companyName?: string;
+    address?: string;
+    profileImage?: string;
+    education?: string;
+  }) {
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        name: data.name,
+        phone: data.phone,
+        companyName: data.companyName,
+        address: data.address,
+        profileImage: data.profileImage,
+        education: data.education,
+      },
+      include: {
+        role: true,
+      },
+    });
+
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      phone: user.phone,
+      address: user.address,
+      companyName: user.companyName,
+      roleId: user.roleId,
+      companyId: user.companyId,
+      roleName: user.role.name,
+      profileImage: user.profileImage,
       createdAt: user.createdAt,
     };
   },

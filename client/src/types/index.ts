@@ -18,6 +18,7 @@ export interface User {
   roleName?: string;
   role?: { id: number; name: string };
   profileImage?: string;
+  education?: string | null;
   permissions?: Record<string, boolean>;
   companyId?: number;
   createdAt: string;

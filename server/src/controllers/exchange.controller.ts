@@ -51,8 +51,8 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
 
     const { sendCurrency, receiveCurrency, sendAmount, senderAccount, receiverAccount, transactionId } = req.body;
 
-    if (!sendCurrency || !receiveCurrency || !sendAmount || !receiverAccount) {
-      return res.status(400).json({ success: false, message: 'Missing required fields' });
+    if (!sendCurrency || !receiveCurrency || !sendAmount || !receiverAccount || !transactionId) {
+      return res.status(400).json({ success: false, message: 'Missing required fields including Transaction ID' });
     }
     if (sendAmount <= 0) return res.status(400).json({ success: false, message: 'Amount must be positive' });
 
@@ -137,7 +137,7 @@ export const createRate = async (req: AuthRequest, res: Response) => {
     const companyId = req.user?.companyId;
     if (!companyId) return res.status(401).json({ success: false, message: 'Unauthorized' });
 
-    const { sendCurrency, receiveCurrency, rate, minAmount, maxAmount, reserves, adminReceiveAccount, note, isActive } = req.body;
+    const { sendCurrency, receiveCurrency, rate, minAmount, maxAmount, reserves, adminReceiveAccount, adminReceiveQrCode, note, isActive } = req.body;
     if (!sendCurrency || !receiveCurrency || !rate) {
       return res.status(400).json({ success: false, message: 'Missing required fields: sendCurrency, receiveCurrency, rate' });
     }
@@ -148,6 +148,7 @@ export const createRate = async (req: AuthRequest, res: Response) => {
       maxAmount: maxAmount ? Number(maxAmount) : undefined,
       reserves: reserves ? Number(reserves) : undefined,
       adminReceiveAccount,
+      adminReceiveQrCode,
       note, isActive,
     });
 
@@ -163,7 +164,7 @@ export const updateRate = async (req: AuthRequest, res: Response) => {
     if (!companyId) return res.status(401).json({ success: false, message: 'Unauthorized' });
 
     const id = parseInt(req.params.id);
-    const { sendCurrency, receiveCurrency, rate, minAmount, maxAmount, reserves, adminReceiveAccount, note, isActive } = req.body;
+    const { sendCurrency, receiveCurrency, rate, minAmount, maxAmount, reserves, adminReceiveAccount, adminReceiveQrCode, note, isActive } = req.body;
 
     const updated = await exchangeService.updateRate(id, companyId, {
       sendCurrency, receiveCurrency,
@@ -172,6 +173,7 @@ export const updateRate = async (req: AuthRequest, res: Response) => {
       maxAmount: maxAmount !== undefined ? Number(maxAmount) : undefined,
       reserves: reserves !== undefined ? Number(reserves) : undefined,
       adminReceiveAccount,
+      adminReceiveQrCode,
       note, isActive,
     });
 

@@ -22,6 +22,7 @@ export class ExchangeService {
     maxAmount?: number;
     reserves?: number;
     adminReceiveAccount?: string;
+    adminReceiveQrCode?: string;
     note?: string;
     isActive?: boolean;
   }) {
@@ -35,6 +36,7 @@ export class ExchangeService {
         maxAmount: data.maxAmount ?? 99999,
         reserves: data.reserves ?? 0,
         adminReceiveAccount: data.adminReceiveAccount,
+        adminReceiveQrCode: data.adminReceiveQrCode,
         note: data.note,
         isActive: data.isActive ?? true,
       },
@@ -49,6 +51,7 @@ export class ExchangeService {
     maxAmount: number;
     reserves: number;
     adminReceiveAccount: string;
+    adminReceiveQrCode: string;
     note: string;
     isActive: boolean;
   }>) {
@@ -76,8 +79,11 @@ export class ExchangeService {
     sendAmount: number;
     senderAccount?: string;
     receiverAccount: string;
-    transactionId?: string;
+    transactionId: string;
   }) {
+    if (!data.transactionId || data.transactionId.trim() === '') {
+      throw new Error('Transaction ID is required to submit an exchange order');
+    }
     // Find the applicable rate
     const rate = await prisma.exchangeRate.findFirst({
       where: {

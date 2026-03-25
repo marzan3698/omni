@@ -84,6 +84,19 @@ export const authApi = {
   },
 
   /**
+   * Update current user profile
+   */
+  async updateProfile(data: any): Promise<any> {
+    const response = await apiClient.put<ApiResponse<any>>('/auth/me', data);
+    
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+    
+    throw new Error(response.data.message || 'Failed to update profile');
+  },
+
+  /**
    * Logout user
    */
   logout(): void {

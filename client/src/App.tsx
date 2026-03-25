@@ -94,7 +94,7 @@ import { CheckoutSuccess } from './pages/CheckoutSuccess';
 import DollarExchangeAdmin from './pages/DollarExchangeAdmin';
 import DollarExchangeClient from './pages/DollarExchangeClient';
 import DollarExchangeOrderDetails from './pages/DollarExchangeOrderDetails';
-
+import ClientProfile from './pages/ClientProfile';
 function App() {
   // Redirect /install to home immediately on mount
   useEffect(() => {
@@ -896,6 +896,8 @@ function App() {
                           <Route path="invoices/:id" element={<InvoiceView />} />
                           <Route path="journey" element={<ClientJourneyPage />} />
                           <Route path="exchange" element={<DollarExchangeClient />} />
+                          <Route path="exchange/order/:id" element={<DollarExchangeOrderDetails />} />
+                          <Route path="profile" element={<ClientProfile />} />
                         </Routes>
                       </ClientLayout>
                     </ShopProvider>

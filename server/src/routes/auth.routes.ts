@@ -5,13 +5,14 @@ import { authMiddleware, verifyRole } from '../middleware/authMiddleware.js';
 const router = Router();
 
 // Public routes
-router.post('/register', authController.register);
-router.post('/register-client', authController.registerClient);
-router.post('/login', authController.login);
+router.post('/register', authController.register as any);
+router.post('/register-client', authController.registerClient as any);
+router.post('/login', authController.login as any);
 
 // Protected routes
-router.get('/me', authMiddleware, authController.getProfile);
-router.post('/login-as/:userId', authMiddleware, verifyRole(['SuperAdmin']), authController.loginAs);
+router.get('/me', authMiddleware, authController.getProfile as any);
+router.put('/me', authMiddleware, authController.updateProfile as any);
+router.post('/login-as/:userId', authMiddleware, verifyRole(['SuperAdmin']), authController.loginAs as any);
 
 export default router;
 

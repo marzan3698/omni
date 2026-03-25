@@ -1,5 +1,5 @@
-import { Response } from 'express';
-import { authService } from '../services/auth.service.js';
+import { Request, Response } from 'express';
+import { authService, RegisterData, RegisterClientData, LoginData } from '../services/auth.service.js';
 import { sendSuccess, sendError } from '../utils/response.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { AuthRequest } from '../types/index.js';
@@ -32,7 +32,7 @@ export const authController = {
   register: async (req: Request, res: Response) => {
     try {
       // Validate request body
-      const validatedData = registerSchema.parse(req.body);
+      const validatedData = registerSchema.parse(req.body) as RegisterData;
 
       const result = await authService.register(validatedData);
 
@@ -57,7 +57,7 @@ export const authController = {
   login: async (req: Request, res: Response) => {
     try {
       // Validate request body
-      const validatedData = loginSchema.parse(req.body);
+      const validatedData = loginSchema.parse(req.body) as LoginData;
 
       const result = await authService.login(validatedData);
 
@@ -90,7 +90,7 @@ export const authController = {
   registerClient: async (req: Request, res: Response) => {
     try {
       // Validate request body
-      const validatedData = registerClientSchema.parse(req.body);
+      const validatedData = registerClientSchema.parse(req.body) as RegisterClientData;
 
       const result = await authService.registerClient({
         email: validatedData.email,
@@ -157,6 +157,44 @@ export const authController = {
       }
 
       return sendError(res, 'Login as user failed', 500);
+    }
+  },
+
+  /**
+   * Update current user profile
+   * PUT /api/auth/me
+   */
+  updateProfile: async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return sendError(res, 'User not authenticated', 401);
+      }
+
+      const profileUpdateSchema = z.object({
+        name: z.string().optional(),
+        phone: z.string().optional(),
+        companyName: z.string().optional(),
+        address: z.string().optional(),
+        profileImage: z.string().optional(),
+        education: z.string().optional(),
+      });
+
+      const validatedData = profileUpdateSchema.parse(req.body);
+      const result = await authService.updateProfile(userId, validatedData);
+
+      return sendSuccess(res, result, 'Profile updated successfully');
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return sendError(res, error.errors[0].message, 400);
+      }
+
+      if (error instanceof AppError) {
+        return sendError(res, error.message, error.statusCode);
+      }
+
+      console.error('Update profile error:', error);
+      return sendError(res, 'Failed to update profile', 500);
     }
   },
 };

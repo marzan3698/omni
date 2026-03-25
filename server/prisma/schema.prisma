@@ -1047,6 +1047,7 @@ model ExchangeRate {
   maxAmount      Decimal  @default(99999) @map("max_amount") @db.Decimal(18, 2)
   reserves       Decimal  @default(0) @db.Decimal(18, 2)          // Available reserves
   adminReceiveAccount String? @map("admin_receive_account") @db.VarChar(255)
+  adminReceiveQrCode  String? @map("admin_receive_qr") @db.VarChar(500)
   isActive       Boolean  @default(true) @map("is_active")
   note           String?  @db.Text
   createdAt      DateTime @default(now()) @map("created_at")
