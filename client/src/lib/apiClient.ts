@@ -13,6 +13,27 @@ apiClient.interceptors.request.use(
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      
+      // DIAGNOSTIC LOOP: Log token expiration every 5 minutes if it hasn't been logged recently
+      try {
+        const payloadBase64 = token.split('.')[1];
+        if (payloadBase64) {
+          const payload = JSON.parse(atob(payloadBase64));
+          if (payload && payload.exp) {
+            const expTime = new Date(payload.exp * 1000);
+            const now = new Date();
+            const minutesLeft = Math.round((expTime.getTime() - now.getTime()) / 60000);
+            
+            // Only log if it's nearing expiration or for initial diagnosis
+            if (minutesLeft < 60 || ! (window as any)._lastTokenLog) {
+              console.info(`[Auth Diagnostic] Token expires at: ${expTime.toLocaleString()} (${minutesLeft} minutes left)`);
+              (window as any)._lastTokenLog = Date.now();
+            }
+          }
+        }
+      } catch (e) {
+        // Silent fail on diagnostic log
+      }
     }
     // Don't set Content-Type for FormData (let browser set it with boundary)
     if (config.data instanceof FormData) {

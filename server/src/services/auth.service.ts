@@ -486,8 +486,6 @@ Login at: ${process.env.FRONTEND_URL || 'https://omnicrm.io'}/login`;
   },
 
   /**
-   * Generate JWT token
-   */
   generateToken(payload: TokenPayload): string {
     const secret = process.env.JWT_SECRET;
     const expiresIn = process.env.JWT_EXPIRES_IN || '7d';
@@ -496,7 +494,16 @@ Login at: ${process.env.FRONTEND_URL || 'https://omnicrm.io'}/login`;
       throw new AppError('JWT_SECRET is not configured', 500);
     }
 
-    return jwt.sign(payload, secret as string, { expiresIn: expiresIn as any });
+    const token = jwt.sign(payload, secret as string, { expiresIn: expiresIn as any });
+    
+    // Log for diagnostic purposes on live server
+    const decoded: any = jwt.decode(token);
+    if (decoded && decoded.exp) {
+      const expDate = new Date(decoded.exp * 1000);
+      console.info(`[Auth Service] Token generated for user ${payload.id}, expires at: ${expDate.toISOString()} (Env expiresIn: ${expiresIn})`);
+    }
+
+    return token;
   },
 
   /**
