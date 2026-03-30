@@ -486,6 +486,8 @@ Login at: ${process.env.FRONTEND_URL || 'https://omnicrm.io'}/login`;
   },
 
   /**
+   * Generate JWT token
+   */
   generateToken(payload: TokenPayload): string {
     const secret = process.env.JWT_SECRET;
     const expiresIn = process.env.JWT_EXPIRES_IN || '7d';
