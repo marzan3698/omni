@@ -55,9 +55,16 @@ export const authMiddleware = async (
       });
     }
 
-    return res.status(401).json({
+    // Log the actual error for debugging transient issues on live server (e.g. DB connection)
+    console.error('Auth Middleware Internal Error:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      path: req.path
+    });
+
+    return res.status(500).json({
       success: false,
-      message: 'Authentication failed',
+      message: 'Internal server error during authentication',
     });
   }
 };

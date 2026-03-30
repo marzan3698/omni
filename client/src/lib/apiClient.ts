@@ -39,6 +39,10 @@ apiClient.interceptors.response.use(
     });
 
     if (error.response?.status === 401) {
+      console.warn('Session expired or unauthorized. Logging out...', {
+        url: error.config?.url,
+        message: error.response?.data?.message || 'No message provided'
+      });
       localStorage.removeItem('token');
       if (window.location.pathname !== '/login') {
         window.location.href = '/login';

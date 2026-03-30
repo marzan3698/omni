@@ -512,7 +512,13 @@ Login at: ${process.env.FRONTEND_URL || 'https://omnicrm.io'}/login`;
     try {
       return jwt.verify(token, secret) as TokenPayload;
     } catch (error) {
-      throw new AppError('Invalid or expired token', 401);
+      if (error instanceof jwt.TokenExpiredError) {
+        throw new AppError('Session expired. Please login again.', 401);
+      }
+      if (error instanceof jwt.JsonWebTokenError) {
+        throw new AppError('Invalid session token. Please login again.', 401);
+      }
+      throw new AppError('Authentication failed. Please login again.', 401);
     }
   },
 };
