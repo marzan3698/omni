@@ -74,13 +74,21 @@ export const authApi = {
    * Get current user profile
    */
   async getProfile(): Promise<any> {
-    const response = await apiClient.get<ApiResponse<any>>('/auth/me');
-    
-    if (response.data.success && response.data.data) {
-      return response.data.data;
+    try {
+      const response = await apiClient.get<ApiResponse<any>>('/auth/me');
+      
+      if (response.data.success && response.data.data) {
+        return response.data.data;
+      }
+      throw new Error(response.data.message || 'Failed to get profile');
+    } catch (error: any) {
+      if (error.response) {
+        const err: any = new Error(error.response.data?.message || 'Failed to get profile');
+        err.status = error.response.status;
+        throw err;
+      }
+      throw error;
     }
-    
-    throw new Error(response.data.message || 'Failed to get profile');
   },
 
   /**

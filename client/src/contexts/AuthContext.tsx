@@ -29,9 +29,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           const profile = await authApi.getProfile();
           setUser(profile);
-        } catch (error) {
-          // Token is invalid, clear it
-          authApi.logout();
+        } catch (error: any) {
+          console.error('Initial checkAuth failed:', {
+            status: error.status,
+            message: error.message,
+            url: '/auth/me'
+          });
+
+          // Only logout if it's a 401 Unauthorized
+          if (error.status === 401) {
+            console.warn('Session expired or unauthorized (401). Clearing token...');
+            authApi.logout();
+          } else {
+            console.warn('Persistent login maintained despite error (non-401).');
+          }
         }
       }
       setLoading(false);
