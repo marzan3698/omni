@@ -3,7 +3,8 @@ import { useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Sidebar } from './Sidebar';
 import { MeetingAlert } from './MeetingAlert';
-import { Menu, Bell, Search, User, LogOut, Maximize2, Minimize2, Circle, Wallet, X, CheckCircle2, AlertCircle, Info, Clock } from 'lucide-react';
+import { GlobalSearch } from './GlobalSearch';
+import { Menu, Bell, User, LogOut, Maximize2, Minimize2, Circle, Wallet, X, CheckCircle2, AlertCircle, Info, Clock } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
 import { formatDistanceToNow } from 'date-fns';
@@ -195,16 +196,9 @@ export function Layout({ children }: LayoutProps) {
               <Menu className="w-5 h-5" />
             </button>
 
-            {/* Search bar - hidden on mobile, visible on md+ */}
+            {/* Search bar - dynamic global search */}
             <div className="hidden md:flex flex-1 max-w-md mx-4">
-              <div className="relative w-full">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-amber-500/60" />
-                <input
-                  type="text"
-                  placeholder="Search..."
-                  className="w-full pl-10 pr-4 py-2 bg-slate-800/60 border border-amber-500/20 rounded-lg text-sm text-amber-100 placeholder-amber-500/50 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500/40"
-                />
-              </div>
+              <GlobalSearch />
             </div>
 
             {/* Right: Actions */}
