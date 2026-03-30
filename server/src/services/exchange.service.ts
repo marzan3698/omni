@@ -80,6 +80,7 @@ export class ExchangeService {
     senderAccount?: string;
     receiverAccount: string;
     transactionId: string;
+    proofImage?: string;
   }) {
     if (!data.transactionId || data.transactionId.trim() === '') {
       throw new Error('Transaction ID is required to submit an exchange order');
@@ -116,6 +117,7 @@ export class ExchangeService {
         senderAccount: data.senderAccount,
         receiverAccount: data.receiverAccount,
         transactionId: data.transactionId,
+        proofImage: data.proofImage,
         status: 'PENDING',
       },
       include: { client: { select: { id: true, email: true } } },

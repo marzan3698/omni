@@ -24,11 +24,16 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import apiClient from '@/lib/apiClient';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getImageUrl } from '@/lib/imageUtils';
 
 const exchangeAdminApi = {
   getRates: async () => (await apiClient.get('/exchange/admin/rates')).data,
-  createRate: async (data: any) => (await apiClient.post('/exchange/admin/rates', data)).data,
-  updateRate: async (id: number, data: any) => (await apiClient.put(`/exchange/admin/rates/${id}`, data)).data,
+  createRate: async (data: FormData) => (await apiClient.post('/exchange/admin/rates', data, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })).data,
+  updateRate: async (id: number, data: FormData) => (await apiClient.put(`/exchange/admin/rates/${id}`, data, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })).data,
   deleteRate: async (id: number) => (await apiClient.delete(`/exchange/admin/rates/${id}`)).data,
   getOrders: async (status?: string) => (await apiClient.get(`/exchange/admin/orders${status ? `?status=${status}` : ''}`)).data,
   updateOrderStatus: async (id: number, status: string, adminNote?: string) => (await apiClient.patch(`/exchange/admin/orders/${id}/status`, { status, adminNote })).data,
@@ -43,7 +48,7 @@ const STATUS_COLORS: Record<string, string> = {
   CANCELLED: 'bg-slate-500/20 text-slate-400 border-slate-500/30',
 };
 
-const emptyRate = { sendCurrency: '', receiveCurrency: '', rate: '', minAmount: '1', maxAmount: '99999', reserves: '0', adminReceiveAccount: '', adminReceiveQrCode: '', note: '', isActive: true };
+const emptyRate = { sendCurrency: '', receiveCurrency: '', rate: '', minAmount: '1', maxAmount: '99999', reserves: '0', adminReceiveAccount: '', adminReceiveQrCode: '' as string | File, note: '', isActive: true };
 
 export default function DollarExchangeAdmin() {
   const { user } = useAuth();
@@ -75,12 +80,12 @@ export default function DollarExchangeAdmin() {
   });
 
   const createRateMutation = useMutation({
-    mutationFn: (data: any) => exchangeAdminApi.createRate(data),
+    mutationFn: (data: FormData) => exchangeAdminApi.createRate(data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['exchange-admin-rates'] }); setShowRateForm(false); setRateForm(emptyRate); },
   });
 
   const updateRateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: any }) => exchangeAdminApi.updateRate(id, data),
+    mutationFn: ({ id, data }: { id: number; data: FormData }) => exchangeAdminApi.updateRate(id, data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['exchange-admin-rates'] }); setEditingRate(null); setShowRateForm(false); setRateForm(emptyRate); },
   });
 
@@ -113,19 +118,35 @@ export default function DollarExchangeAdmin() {
 
   const handleRateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const payload = { ...rateForm, rate: Number(rateForm.rate), minAmount: Number(rateForm.minAmount), maxAmount: Number(rateForm.maxAmount), reserves: Number(rateForm.reserves) };
-    if (editingRate) { updateRateMutation.mutate({ id: editingRate.id, data: payload }); }
-    else { createRateMutation.mutate(payload); }
+    
+    const formData = new FormData();
+    formData.append('sendCurrency', rateForm.sendCurrency);
+    formData.append('receiveCurrency', rateForm.receiveCurrency);
+    formData.append('rate', rateForm.rate);
+    formData.append('minAmount', rateForm.minAmount);
+    formData.append('maxAmount', rateForm.maxAmount);
+    formData.append('reserves', rateForm.reserves);
+    formData.append('adminReceiveAccount', rateForm.adminReceiveAccount);
+    formData.append('note', rateForm.note);
+    formData.append('isActive', String(rateForm.isActive));
+
+    if (rateForm.adminReceiveQrCode instanceof File) {
+      formData.append('qrCode', rateForm.adminReceiveQrCode);
+    } else if (typeof rateForm.adminReceiveQrCode === 'string') {
+      formData.append('adminReceiveQrCode', rateForm.adminReceiveQrCode);
+    }
+
+    if (editingRate) { 
+      updateRateMutation.mutate({ id: editingRate.id, data: formData }); 
+    } else { 
+      createRateMutation.mutate(formData); 
+    }
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setRateForm(f => ({ ...f, adminReceiveQrCode: reader.result as string }));
-      };
-      reader.readAsDataURL(file);
+      setRateForm(f => ({ ...f, adminReceiveQrCode: file }));
     }
   };
 
@@ -369,7 +390,16 @@ export default function DollarExchangeAdmin() {
                   <Label className="text-amber-200/80 text-xs mb-1 block">Payment QR Code (Optional)</Label>
                   <Input type="file" accept="image/*" onChange={handleImageChange} className={inputCls} />
                   {rateForm.adminReceiveQrCode && (
-                    <img src={rateForm.adminReceiveQrCode.startsWith('/uploads') ? import.meta.env.VITE_API_URL + rateForm.adminReceiveQrCode : rateForm.adminReceiveQrCode} alt="QR Preview" className="mt-2 h-16 w-16 object-cover rounded-xl border border-amber-500/30" />
+                    <div className="mt-2">
+                       <img 
+                        src={rateForm.adminReceiveQrCode instanceof File 
+                          ? URL.createObjectURL(rateForm.adminReceiveQrCode) 
+                          : getImageUrl(rateForm.adminReceiveQrCode as string)} 
+                        alt="QR Preview" 
+                        onError={(e) => (e.currentTarget.style.display = 'none')}
+                        className="h-16 w-16 object-cover rounded-xl border border-amber-500/30" 
+                      />
+                    </div>
                   )}
                 </div>
                 <div className="md:col-span-3 flex gap-4 items-end">
@@ -428,40 +458,46 @@ export default function DollarExchangeAdmin() {
                           <td className={`${tdCls} font-bold text-blue-400`}>{Number(rate.reserves).toLocaleString()}</td>
                           <td className={`${tdCls} text-xs font-mono text-white/50 group-hover:text-amber-200/80 transition-colors`} title={rate.adminReceiveAccount}>
                             <div className="flex items-center gap-2">
-                              {rate.adminReceiveQrCode && <img src={rate.adminReceiveQrCode.startsWith('/uploads') ? import.meta.env.VITE_API_URL + rate.adminReceiveQrCode : rate.adminReceiveQrCode} className="w-6 h-6 rounded-md object-cover" alt="QR" />}
-                              <div className="max-w-[120px] truncate">{rate.adminReceiveAccount || '—'}</div>
-                            </div>
-                          </td>
-                          <td className={tdCls}>
-                            <span className={`px-2 py-0.5 rounded-md text-[10px] font-black border uppercase tracking-widest ${rate.isActive ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-slate-500/10 text-slate-400 border-slate-500/20'}`}>
-                              {rate.isActive ? 'ACTIVE' : 'OFFLINE'}
-                            </span>
-                          </td>
-                          <td className={tdCls}>
-                            <div className="flex gap-2">
-                              <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                                <Button size="icon" variant="outline" className="h-8 w-8 p-0 border-amber-500/20 bg-slate-900/40 text-amber-400 hover:bg-amber-500 hover:text-white" onClick={() => startEditRate(rate)}>
-                                  <Edit3 className="w-4 h-4"/>
-                                </Button>
-                              </motion.div>
-                              <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                                <Button size="icon" variant="outline" className="h-8 w-8 p-0 border-red-500/20 bg-red-500/5 text-red-400 hover:bg-red-500 hover:text-white"
-                                  onClick={() => { if(confirm('Purge this record?')) deleteRateMutation.mutate(rate.id); }}>
-                                  <Trash2 className="w-4 h-4"/>
-                                </Button>
-                              </motion.div>
-                            </div>
-                          </td>
-                        </motion.tr>
-                      ))}
-                    </AnimatePresence>
-                  </tbody>
-                </table>
-              </div>
-            )}
+                          {rate.adminReceiveQrCode && (
+                            <img 
+                              src={getImageUrl(rate.adminReceiveQrCode)} 
+                              className="w-6 h-6 rounded-md object-cover" 
+                              alt="QR" 
+                            />
+                          )}
+                          <div className="max-w-[120px] truncate">{rate.adminReceiveAccount || '—'}</div>
+                        </div>
+                      </td>
+                      <td className={tdCls}>
+                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-black border uppercase tracking-widest ${rate.isActive ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-slate-500/10 text-slate-400 border-slate-500/20'}`}>
+                          {rate.isActive ? 'ACTIVE' : 'OFFLINE'}
+                        </span>
+                      </td>
+                      <td className={tdCls}>
+                        <div className="flex gap-2">
+                          <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                            <Button size="icon" variant="outline" className="h-8 w-8 p-0 border-amber-500/20 bg-slate-900/40 text-amber-400 hover:bg-amber-500 hover:text-white" onClick={() => startEditRate(rate)}>
+                              <Edit3 className="w-4 h-4"/>
+                            </Button>
+                          </motion.div>
+                          <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                            <Button size="icon" variant="outline" className="h-8 w-8 p-0 border-red-500/20 bg-red-500/5 text-red-400 hover:bg-red-500 hover:text-white"
+                              onClick={() => { if(confirm('Purge this record?')) deleteRateMutation.mutate(rate.id); }}>
+                              <Trash2 className="w-4 h-4"/>
+                            </Button>
+                          </motion.div>
+                        </div>
+                      </td>
+                    </motion.tr>
+                  ))}
+                </AnimatePresence>
+              </tbody>
+            </table>
           </div>
-        </GamePanel>
-      )}
+        )}
+      </div>
+    </GamePanel>
+  )}
 
       {/* STATS TAB */}
       {activeTab === 'stats' && stats && (

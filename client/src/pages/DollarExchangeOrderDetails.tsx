@@ -19,11 +19,13 @@ import {
   Shield,
   CreditCard,
   Share2,
-  ArrowRight
+  ArrowRight, 
+  Eye
 } from 'lucide-react';
 import apiClient from '@/lib/apiClient';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
+import { getImageUrl } from '@/lib/imageUtils';
 
 const StatusBadge = ({ status }: { status: string }) => {
   const configs: any = {
@@ -254,7 +256,7 @@ const DollarExchangeOrderDetails = () => {
                   <div className="flex items-center gap-3 mb-6">
                     {siteLogo ? (
                       <img 
-                        src={siteLogo.startsWith('/uploads') ? import.meta.env.VITE_API_URL + siteLogo : siteLogo} 
+                        src={getImageUrl(siteLogo)} 
                         alt="Logo" 
                         className="w-12 h-12 object-contain rounded-xl"
                       />
@@ -337,8 +339,26 @@ const DollarExchangeOrderDetails = () => {
                   )}
                   
                   {order.transactionId && (
-                    <div className="mt-3 text-xs bg-amber-500/10 border border-amber-500/20 text-amber-300 px-3 py-1.5 rounded-lg inline-block relative z-10">
-                      TxID: <span className="font-mono font-bold tracking-wider">{order.transactionId}</span>
+                    <div className="mt-3 flex flex-col items-center gap-2">
+                       <div className="text-xs bg-amber-500/10 border border-amber-500/20 text-amber-300 px-3 py-1.5 rounded-lg inline-block relative z-10">
+                        TxID: <span className="font-mono font-bold tracking-wider">{order.transactionId}</span>
+                      </div>
+                      {order.proofImage && (
+                        <div className="mt-4 w-full flex flex-col items-center">
+                          <p className="text-[10px] text-amber-500/50 uppercase tracking-widest font-black mb-2">Payment Proof Image</p>
+                          <div className="relative group/proof">
+                            <img 
+                              src={getImageUrl(order.proofImage)} 
+                              alt="Payment Proof" 
+                              className="max-w-full h-auto max-h-48 rounded-xl border border-white/10 group-hover/proof:border-amber-500/50 transition-all shadow-2xl cursor-zoom-in"
+                              onClick={() => window.open(getImageUrl(order.proofImage), '_blank')}
+                            />
+                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/proof:opacity-100 transition-opacity flex items-center justify-center rounded-xl pointer-events-none">
+                               <Eye className="w-8 h-8 text-white/50" />
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                   <div className="mt-5 font-black text-2xl text-amber-400 relative z-10 tracking-tight">
@@ -386,7 +406,8 @@ const DollarExchangeOrderDetails = () => {
                      />
                    </svg>
                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#050505] border border-white/10 p-2.5 rounded-full shadow-[0_0_15px_rgba(59,130,246,0.2)] z-10">
-                     <ArrowRight className="w-4 h-4 text-blue-400" />
+                     <ArrowRight
+className="w-4 h-4 text-blue-400" />
                    </div>
                 </div>
                 

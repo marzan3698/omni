@@ -543,3 +543,41 @@ export const uploadServiceGallery = multer({
 
 export const singleServiceThumbnail = uploadServiceThumbnail.single('thumbnail');
 export const multipleServiceGallery = uploadServiceGallery.array('gallery', 10);
+
+// ============================================
+// Dollar Exchange Image Upload (QR Code & Proof)
+// ============================================
+
+const exchangeUploadsDir = path.join(rootUploadsDir, 'exchange');
+if (!fs.existsSync(exchangeUploadsDir)) {
+  fs.mkdirSync(exchangeUploadsDir, { recursive: true });
+}
+
+const exchangeStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, exchangeUploadsDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    const ext = path.extname(file.originalname);
+    const prefix = file.fieldname === 'qrCode' ? 'qr' : 'proof';
+    cb(null, `${prefix}-${uniqueSuffix}${ext}`);
+  },
+});
+
+const exchangeFileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+  if (allowedMimes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Invalid file type. Only JPEG, PNG, and WebP images are allowed.'));
+  }
+};
+
+export const uploadExchangeImage = multer({
+  storage: exchangeStorage,
+  fileFilter: exchangeFileFilter,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+});

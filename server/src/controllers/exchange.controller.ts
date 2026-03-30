@@ -50,6 +50,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
     if (!companyId || !userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
 
     const { sendCurrency, receiveCurrency, sendAmount, senderAccount, receiverAccount, transactionId } = req.body;
+    const proofImage = req.file ? `/uploads/exchange/${req.file.filename}` : undefined;
 
     if (!sendCurrency || !receiveCurrency || !sendAmount || !receiverAccount || !transactionId) {
       return res.status(400).json({ success: false, message: 'Missing required fields including Transaction ID' });
@@ -63,6 +64,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
       senderAccount,
       receiverAccount,
       transactionId,
+      proofImage,
     });
 
     return res.status(201).json({ success: true, data: order });
@@ -137,7 +139,9 @@ export const createRate = async (req: AuthRequest, res: Response) => {
     const companyId = req.user?.companyId;
     if (!companyId) return res.status(401).json({ success: false, message: 'Unauthorized' });
 
-    const { sendCurrency, receiveCurrency, rate, minAmount, maxAmount, reserves, adminReceiveAccount, adminReceiveQrCode, note, isActive } = req.body;
+    const { sendCurrency, receiveCurrency, rate, minAmount, maxAmount, reserves, adminReceiveAccount, note, isActive } = req.body;
+    const adminReceiveQrCode = req.file ? `/uploads/exchange/${req.file.filename}` : req.body.adminReceiveQrCode;
+
     if (!sendCurrency || !receiveCurrency || !rate) {
       return res.status(400).json({ success: false, message: 'Missing required fields: sendCurrency, receiveCurrency, rate' });
     }
@@ -149,7 +153,8 @@ export const createRate = async (req: AuthRequest, res: Response) => {
       reserves: reserves ? Number(reserves) : undefined,
       adminReceiveAccount,
       adminReceiveQrCode,
-      note, isActive,
+      note, 
+      isActive: isActive === 'true' || isActive === true,
     });
 
     return res.status(201).json({ success: true, data: newRate });
@@ -164,7 +169,8 @@ export const updateRate = async (req: AuthRequest, res: Response) => {
     if (!companyId) return res.status(401).json({ success: false, message: 'Unauthorized' });
 
     const id = parseInt(req.params.id);
-    const { sendCurrency, receiveCurrency, rate, minAmount, maxAmount, reserves, adminReceiveAccount, adminReceiveQrCode, note, isActive } = req.body;
+    const { sendCurrency, receiveCurrency, rate, minAmount, maxAmount, reserves, adminReceiveAccount, note, isActive } = req.body;
+    const adminReceiveQrCode = req.file ? `/uploads/exchange/${req.file.filename}` : req.body.adminReceiveQrCode;
 
     const updated = await exchangeService.updateRate(id, companyId, {
       sendCurrency, receiveCurrency,
@@ -174,7 +180,8 @@ export const updateRate = async (req: AuthRequest, res: Response) => {
       reserves: reserves !== undefined ? Number(reserves) : undefined,
       adminReceiveAccount,
       adminReceiveQrCode,
-      note, isActive,
+      note, 
+      isActive: isActive !== undefined ? (isActive === 'true' || isActive === true) : undefined,
     });
 
     return res.json({ success: true, data: updated });

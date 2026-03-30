@@ -8,10 +8,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import apiClient from '@/lib/apiClient';
+import { getImageUrl } from '@/lib/imageUtils';
 
 const exchangeClientApi = {
   getRates: async () => (await apiClient.get('/exchange/rates')).data,
-  createOrder: async (data: any) => (await apiClient.post('/exchange/orders', data)).data,
+  createOrder: async (data: FormData) => (await apiClient.post('/exchange/orders', data, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })).data,
   getMyOrders: async () => (await apiClient.get('/exchange/orders/my')).data,
 };
 
@@ -42,6 +45,7 @@ export default function DollarExchangeClient() {
   const [sendAmount, setSendAmount] = useState('');
   const [receiverAccount, setReceiverAccount] = useState('');
   const [transactionId, setTransactionId] = useState('');
+  const [proofImage, setProofImage] = useState<File | null>(null);
   const [submitError, setSubmitError] = useState('');
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -59,11 +63,11 @@ export default function DollarExchangeClient() {
   });
 
   const createOrderMutation = useMutation({
-    mutationFn: exchangeClientApi.createOrder,
+    mutationFn: (data: FormData) => exchangeClientApi.createOrder(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['exchange-my-orders'] });
       setSubmitSuccess(true);
-      setSendAmount(''); setReceiverAccount(''); setTransactionId('');
+      setSendAmount(''); setReceiverAccount(''); setTransactionId(''); setProofImage(null);
       setTimeout(() => { setSubmitSuccess(false); setActiveTab('orders'); }, 2500);
     },
     onError: (err: any) => setSubmitError(err?.response?.data?.message || 'Failed to submit order.'),
@@ -95,7 +99,18 @@ export default function DollarExchangeClient() {
     if (activeRate && Number(sendAmount) > Number(activeRate.maxAmount)) {
       setSubmitError(`Maximum amount is ${activeRate.maxAmount}`); return;
     }
-    createOrderMutation.mutate({ sendCurrency, receiveCurrency, sendAmount: Number(sendAmount), receiverAccount, transactionId });
+
+    const formData = new FormData();
+    formData.append('sendCurrency', sendCurrency);
+    formData.append('receiveCurrency', receiveCurrency);
+    formData.append('sendAmount', sendAmount);
+    formData.append('receiverAccount', receiverAccount);
+    formData.append('transactionId', transactionId);
+    if (proofImage) {
+      formData.append('proofImage', proofImage);
+    }
+
+    createOrderMutation.mutate(formData);
   };
 
   const handleCopy = (text: string) => {
@@ -302,8 +317,9 @@ export default function DollarExchangeClient() {
                         <div className="mt-4 flex flex-col items-center p-3 bg-blue-900/40 rounded-xl border border-blue-500/20">
                           <p className="text-[10px] text-blue-200 uppercase tracking-widest font-bold mb-2">Scan to Pay</p>
                           <img 
-                            src={activeRate.adminReceiveQrCode.startsWith('/uploads') ? import.meta.env.VITE_API_URL + activeRate.adminReceiveQrCode : activeRate.adminReceiveQrCode} 
+                            src={getImageUrl(activeRate.adminReceiveQrCode)} 
                             alt="Payment QR Code" 
+                            onError={(e) => (e.currentTarget.parentElement!.style.display = 'none')}
                             className="w-32 h-32 object-cover rounded-lg border border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.5)]" 
                           />
                         </div>
@@ -333,11 +349,26 @@ export default function DollarExchangeClient() {
                   </div>
                 </div>
 
-                <div>
-                  <Label className="text-white/60 text-xs mb-2 block uppercase tracking-wider font-semibold text-amber-300 drop-shadow-[0_0_5px_rgba(245,158,11,0.5)]">Transaction ID / Payment Proof (Required)</Label>
-                  <Input value={transactionId} onChange={e => setTransactionId(e.target.value)}
-                    placeholder="Paste your TxID or payment reference here"
-                    className={`${inputCls} border-amber-500/30 focus:border-amber-400`} required/>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-white/60 text-xs mb-2 block uppercase tracking-wider font-semibold text-amber-300 drop-shadow-[0_0_5px_rgba(245,158,11,0.5)]">Transaction ID / Payment Reference</Label>
+                    <Input value={transactionId} onChange={e => setTransactionId(e.target.value)}
+                      placeholder="Paste your TxID here"
+                      className={`${inputCls} border-amber-500/30 focus:border-amber-400`} required/>
+                  </div>
+                  <div>
+                    <Label className="text-white/60 text-xs mb-2 block uppercase tracking-wider font-semibold text-blue-400">Payment Proof (Image)</Label>
+                    <div className="relative group/file">
+                      <Input type="file" accept="image/*" onChange={e => setProofImage(e.target.files?.[0] || null)}
+                        className={`${inputCls} border-blue-500/20 hover:border-blue-500/40 cursor-pointer pt-2 group-hover/file:bg-white/10`} />
+                      {proofImage && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2 pointer-events-none">
+                          <CheckCircle className="w-4 h-4 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                          <span className="text-[10px] text-emerald-400 font-bold uppercase truncate max-w-[80px]">{proofImage.name}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
                 <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
