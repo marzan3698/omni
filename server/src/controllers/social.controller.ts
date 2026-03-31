@@ -376,7 +376,7 @@ export const socialController = {
       const conversationId = parseInt(req.params.id, 10);
       const agentId = (req as any).user?.id;
 
-      console.log('📨 Send reply request:', {
+      console.log(`[PID:${process.pid}] 📨 Send reply request:`, {
         conversationId,
         hasFile: !!req.file,
         fileName: req.file?.filename,

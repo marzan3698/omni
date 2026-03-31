@@ -338,9 +338,25 @@ export async function sendMessage(
   to: string,
   content: string
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  const client = getClient(companyId, slotId);
+  const key = getClientKey(companyId, slotId);
+  const state = clients.get(key);
+  const client = state?.isReady ? state.client : null;
+
+  console.log(`[PID:${process.pid}] 📤 WhatsApp sendMessage attempt:`, {
+    companyId,
+    slotId,
+    target: to,
+    inMap: !!state,
+    isReady: !!state?.isReady
+  });
+
   if (!client) {
-    return { success: false, error: 'WhatsApp not connected for this slot' };
+    const reason = !state ? 'Client not initialized' : 'Client initialized but not ready';
+    console.error(`[PID:${process.pid}] ❌ WhatsApp not connected for slot ${slotId}: ${reason}`);
+    return { 
+      success: false, 
+      error: `WhatsApp not connected for this slot (${reason}). Please check PM2 process ID and logs.` 
+    };
   }
   const trySend = async (jid: string) => {
     const sent = await client.sendMessage(jid, content);
@@ -383,7 +399,7 @@ export async function handleIncomingMessage(
   try {
     const from = msg.from.replace('@s.whatsapp.net', '').replace('@c.us', '');
     const contact = await msg.getContact();
-    console.log('WhatsApp: Incoming message from', from, 'companyId', companyId, 'slot', slotId);
+    console.log(`[PID:${process.pid}] 📨 WhatsApp Incoming message from:`, from, 'companyId:', companyId, 'slot:', slotId);
     const name = contact?.name || contact?.pushname || from;
     let body = '';
     let imageUrl: string | null = null;
