@@ -1324,8 +1324,9 @@ model SocialConversation {
   // Chatwoot integration fields
   chatwootConversationId Int?           @map("chatwoot_conversation_id") // Chatwoot conversation ID for reply forwarding
   chatwootInboxName      String?        @map("chatwoot_inbox_name") @db.VarChar(255) // Chatwoot inbox name (page/WA number)
-  createdAt         DateTime           @default(now()) @map("created_at")
-  updatedAt         DateTime           @updatedAt @map("updated_at")
+  internalNotes          String?        @map("internal_notes") @db.Text
+  createdAt              DateTime       @default(now()) @map("created_at")
+  updatedAt              DateTime       @updatedAt @map("updated_at")
 
   company          Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
   assignedEmployee Employee?             @relation("AssignedConversations", fields: [assignedTo], references: [id], onDelete: SetNull)

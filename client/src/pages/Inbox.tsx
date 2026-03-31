@@ -71,6 +71,10 @@ export function Inbox() {
   const [showLabelModal, setShowLabelModal] = useState(false);
   const [editingLabel, setEditingLabel] = useState<ConversationLabel | null>(null);
   const [labelFormData, setLabelFormData] = useState({ name: '', source: '' });
+  const [showNotesModal, setShowNotesModal] = useState(false);
+  const [notesContent, setNotesContent] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [quickReplyTab, setQuickReplyTab] = useState<'default' | 'campaign' | 'all'>('default');
   const [selectedCampaignId, setSelectedCampaignId] = useState<number | ''>('');
 
@@ -98,6 +102,15 @@ export function Inbox() {
   });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   const filterPanelRef = useRef<HTMLDivElement>(null);
   const lastSeenCustomerMessageIdRef = useRef<number | null>(null);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -109,10 +122,20 @@ export function Inbox() {
 
   // Fetch conversations with auto-refresh every 10 seconds
   const { data: conversations = [], isLoading: conversationsLoading } = useQuery({
-    queryKey: ['conversations', activeTab],
-    queryFn: () => socialApi.getConversations(activeTab),
+    queryKey: ['conversations', activeTab, debouncedSearch],
+    queryFn: () => socialApi.getConversations(activeTab, undefined, debouncedSearch),
     refetchInterval: 10000, // Refresh every 10 seconds
   });
+
+  // Sync notes content when conversation changes
+  useEffect(() => {
+    const activeConversation = conversations.find(c => c.id === selectedConversationId);
+    if (activeConversation) {
+      setNotesContent(activeConversation.internalNotes || '');
+    } else {
+      setNotesContent('');
+    }
+  }, [selectedConversationId, conversations]);
 
   // Assignment stats for Customer Care role (round-robin dashboard)
   const { data: stats } = useQuery({
@@ -777,6 +800,25 @@ export function Inbox() {
                   <span className="text-slate-400">Reps: <strong>{stats.totalCustomerCareReps}</strong></span>
                 </div>
               </div>
+              
+              {/* Search Bar */}
+              <div className="mt-3 relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-200/50" />
+                <Input
+                  placeholder="Search conversations..."
+                  className="pl-10 h-9 bg-slate-900/40 border-amber-500/20 text-white placeholder:text-amber-200/30 rounded-lg focus:border-amber-500/50 focus:ring-amber-500/20"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                {searchQuery && (
+                  <button 
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-amber-200/50 hover:text-white"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
             </div>
           )}
           <div className="p-4 border-b border-amber-500/20">
@@ -1167,19 +1209,28 @@ export function Inbox() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setShowLabelModal(true);
-                        setEditingLabel(null);
-                        setLabelFormData({ name: '', source: '' });
-                      }}
-                      className="text-xs"
-                    >
-                      <Tag className="w-3 h-3 mr-1" />
-                      {selectedConversation.labels && selectedConversation.labels.length > 0 ? 'Manage Labels' : 'Add Label'}
-                    </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowNotesModal(true)}
+                        className="text-xs h-8 bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/30 text-amber-200"
+                      >
+                        <Edit className="w-3.5 h-3.5 mr-1.5" />
+                        ইনবক্স নোট
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setShowLabelModal(true);
+                          setEditingLabel(null);
+                          setLabelFormData({ name: '', source: '' });
+                        }}
+                        className="text-xs h-8 bg-indigo-500/10 hover:bg-indigo-500/20 border-indigo-500/30 text-indigo-200"
+                      >
+                        <Tag className="w-3.5 h-3.5 mr-1.5" />
+                        লেবেল
+                      </Button>
                     {(hasPermission('can_manage_leads') || hasPermission('can_view_leads')) && (
                       <Button
                         variant="outline"
@@ -2262,6 +2313,65 @@ export function Inbox() {
           error={error}
           onClose={() => setError(null)}
         />
+      )}
+      {/* Inbox Notes Modal */}
+      {showNotesModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <Card className="w-full max-w-md bg-white shadow-2xl">
+            <CardHeader className="flex flex-row items-center justify-between border-b pb-4">
+              <CardTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <Edit className="w-5 h-5 text-indigo-600" />
+                ইনবক্স নোট
+              </CardTitle>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => setShowNotesModal(false)}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold text-slate-700">কাস্টম নোট</Label>
+                  <textarea
+                    value={notesContent}
+                    onChange={(e) => setNotesContent(e.target.value)}
+                    placeholder="গ্রাহক সম্পর্কে এখানে নোট লিখে রাখুন..."
+                    className="w-full h-40 p-4 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none resize-none"
+                  />
+                </div>
+                <div className="flex gap-3 pt-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1 rounded-xl h-11 border-slate-200 text-slate-600 hover:bg-slate-50"
+                    onClick={() => setShowNotesModal(false)}
+                  >
+                    বন্ধ করুন
+                  </Button>
+                  <Button
+                    className="flex-1 rounded-xl h-11 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold transition-colors"
+                    disabled={!selectedConversationId}
+                    onClick={async () => {
+                      if (!selectedConversationId) return;
+                      try {
+                        await socialApi.updateConversationNotes(selectedConversationId, notesContent);
+                        queryClient.invalidateQueries({ queryKey: ['conversations'] });
+                        setShowNotesModal(false);
+                      } catch (err: any) {
+                        alert(err.message || 'নোট সেভ করতে সমস্যা হয়েছে');
+                      }
+                    }}
+                  >
+                    সেভ করুন
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
     </div>
   );

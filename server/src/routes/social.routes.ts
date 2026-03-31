@@ -26,6 +26,7 @@ router.post('/conversations/:id/assign', authMiddleware, socialController.assign
 router.post('/conversations/:id/unassign', authMiddleware, socialController.unassignConversation);
 router.post('/conversations/:id/complete', authMiddleware, socialController.completeConversation);
 router.get('/conversations/stats', authMiddleware, socialController.getConversationStats);
+router.patch('/conversations/:id/notes', authMiddleware, socialController.updateNotes);
 router.get('/conversations/:id/releases', authMiddleware, socialController.getConversationReleaseHistory);
 // Label endpoints
 router.post('/conversations/:id/labels', authMiddleware, socialController.addLabel);

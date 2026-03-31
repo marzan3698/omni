@@ -201,6 +201,7 @@ export const socialController = {
       const tab = req.query.tab as 'inbox' | 'taken' | 'complete' | undefined;
       const companyId = (req as any).user?.companyId;
       const userId = (req as any).user?.id;
+      const search = req.query.search as string | undefined;
 
       // Get employee ID if tab is 'taken' or 'complete'
       let assignedToEmployeeId: number | undefined;
@@ -214,7 +215,7 @@ export const socialController = {
         }
       }
 
-      const conversations = await socialService.getConversations(status, companyId, tab, assignedToEmployeeId);
+      const conversations = await socialService.getConversations(status, companyId, tab, assignedToEmployeeId, search);
       sendSuccess(res, conversations, 'Conversations retrieved successfully');
     } catch (error) {
       next(error);
@@ -861,6 +862,34 @@ export const socialController = {
 
       const labels = await socialService.getConversationLabels(conversationId, companyId);
       sendSuccess(res, labels, 'Labels retrieved successfully');
+    } catch (error) {
+      if (error instanceof AppError) {
+        return sendError(res, error.message, error.statusCode);
+      }
+      next(error);
+    }
+  },
+
+  /**
+   * Update internal notes for a conversation
+   * PATCH /api/conversations/:id/notes
+   */
+  updateNotes: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const conversationId = parseInt(req.params.id, 10);
+      const companyId = (req as any).user?.companyId;
+      const { notes } = req.body;
+
+      if (isNaN(conversationId)) {
+        return sendError(res, 'Invalid conversation ID', 400);
+      }
+
+      if (!companyId) {
+        return sendError(res, 'Company context required', 400);
+      }
+
+      const updated = await socialService.updateConversationNotes(conversationId, companyId, notes);
+      sendSuccess(res, updated, 'Conversation notes updated successfully');
     } catch (error) {
       if (error instanceof AppError) {
         return sendError(res, error.message, error.statusCode);

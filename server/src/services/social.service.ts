@@ -458,7 +458,7 @@ export const socialService = {
   /**
    * Get all conversations
    */
-  async getConversations(status?: 'Open' | 'Closed', companyId?: number, tab?: 'inbox' | 'taken' | 'complete', assignedToEmployeeId?: number) {
+  async getConversations(status?: 'Open' | 'Closed', companyId?: number, tab?: 'inbox' | 'taken' | 'complete', assignedToEmployeeId?: number, search?: string) {
     const where: any = {};
     if (status) {
       where.status = status;
@@ -478,7 +478,14 @@ export const socialService = {
     } else if (tab === 'complete' && assignedToEmployeeId) {
       // Show only closed conversations assigned to this employee
       where.status = 'Closed';
-      where.assignedTo = assignedToEmployeeId;
+    }
+    
+    if (search) {
+      where.OR = [
+        { externalUserName: { contains: search } },
+        { externalUserId: { contains: search } },
+        { messages: { some: { content: { contains: search } } } }
+      ];
     }
 
     // Debug logging
@@ -487,6 +494,7 @@ export const socialService = {
       companyId,
       tab,
       assignedToEmployeeId,
+      search,
       where,
     });
 
@@ -1190,6 +1198,13 @@ export const socialService = {
   /**
    * Get conversation statistics (for dashboard)
    */
+  async updateConversationNotes(conversationId: number, companyId: number, notes: string) {
+    return prisma.socialConversation.update({
+      where: { id: conversationId, companyId },
+      data: { internalNotes: notes },
+    });
+  },
+
   async getConversationStats(companyId: number) {
     // Get total assigned conversations count
     const totalAssigned = await prisma.socialConversation.count({

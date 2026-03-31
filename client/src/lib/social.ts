@@ -26,6 +26,7 @@ export interface SocialConversation {
   // Chatwoot integration fields
   chatwootConversationId?: number | null;
   chatwootInboxName?: string | null;
+  internalNotes?: string | null;
   assignedEmployee?: {
     id: number;
     user: {
@@ -111,13 +112,16 @@ export const socialApi = {
   /**
    * Get all conversations
    */
-  async getConversations(tab?: 'inbox' | 'taken' | 'complete', status?: 'Open' | 'Closed'): Promise<SocialConversation[]> {
+  async getConversations(tab?: 'inbox' | 'taken' | 'complete', status?: 'Open' | 'Closed', search?: string): Promise<SocialConversation[]> {
     const params = new URLSearchParams();
     if (tab) {
       params.set('tab', tab);
     }
     if (status) {
       params.set('status', status);
+    }
+    if (search) {
+      params.set('search', search);
     }
     const queryString = params.toString();
     const url = queryString ? `/conversations?${queryString}` : '/conversations';
@@ -504,6 +508,22 @@ export const socialApi = {
     }
 
     throw new Error(response.data.message || 'Failed to fetch labels');
+  },
+
+  /**
+   * Update internal notes for a conversation
+   */
+  async updateConversationNotes(conversationId: number, notes: string): Promise<SocialConversation> {
+    const response = await apiClient.patch<ApiResponse<SocialConversation>>(
+      `/conversations/${conversationId}/notes`,
+      { notes }
+    );
+
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+
+    throw new Error(response.data.message || 'Failed to update conversation notes');
   },
 };
 
