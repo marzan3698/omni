@@ -327,8 +327,10 @@ export async function restoreActiveWhatsAppClients(): Promise<void> {
 }
 
 function toJid(phone: string, useCUs = false): string {
+  // If original phone already contains '@', trust it as a full JID (like @lid or @c.us)
+  if (phone && phone.includes('@')) return phone;
+  
   const digits = phone.replace(/\D/g, '');
-  if (digits.includes('@')) return phone;
   return useCUs ? `${digits}@c.us` : `${digits}@s.whatsapp.net`;
 }
 
@@ -355,10 +357,11 @@ export async function sendMessage(
     console.error(`[PID:${process.pid}] ❌ WhatsApp not connected for slot ${slotId}: ${reason}`);
     return { 
       success: false, 
-      error: `WhatsApp not connected for this slot (${reason}). Please check PM2 process ID and logs.` 
+      error: `WhatsApp slot ${slotId} needs reconnecting. Go to Integrations → Slot ${slotId} → Connect and scan QR again.` 
     };
   }
   const trySend = async (jid: string) => {
+    console.log(`[PID:${process.pid}] 📤 Calling client.sendMessage to JID ${jid}`);
     const sent = await client.sendMessage(jid, content);
     return (sent as any)?.id?.id || (sent as any)?.id;
   };
@@ -366,24 +369,28 @@ export async function sendMessage(
     const jid = toJid(to);
     const messageId = await trySend(jid);
     emitToCompanySlot(companyId, slotId, 'whatsapp:message_sent', { to, messageId });
+    console.log(`[PID:${process.pid}] ✅ WhatsApp message sent successfully to ${to}, ID: ${messageId}`);
     return { success: true, messageId };
   } catch (err: any) {
     const msg = err?.message || '';
-    if (msg.includes('No LID for user')) {
+    console.error(`[PID:${process.pid}] ❌ WhatsApp send error for ${to}:`, err);
+    
+    // Only attempt fallback if we don't have an @lid yet
+    if (msg.includes('No LID for user') && !to.includes('@')) {
       try {
         const jidCUs = toJid(to, true);
+        console.log(`[PID:${process.pid}] 🔄 Attempting fallback send to JID ${jidCUs}`);
         const messageId = await trySend(jidCUs);
         emitToCompanySlot(companyId, slotId, 'whatsapp:message_sent', { to, messageId });
         return { success: true, messageId };
       } catch (err2: any) {
-        console.error('WhatsApp send error (fallback @c.us failed):', err2);
+        console.error(`[PID:${process.pid}] ❌ WhatsApp fallback failed for ${to}:`, err2);
         return {
           success: false,
-          error: `WhatsApp slot ${slotId} needs reconnecting. Go to Integrations → Slot ${slotId} → Connect and scan QR again.`,
+          error: `WhatsApp send failed for this user. They might not be on WhatsApp or their ID format is experimental. Error: ${err2.message}`,
         };
       }
     }
-    console.error('WhatsApp send error:', err);
     return { success: false, error: msg || 'Send failed' };
   }
 }
