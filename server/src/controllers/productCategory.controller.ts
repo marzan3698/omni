@@ -76,7 +76,7 @@ export const productCategoryController = {
 
       const validatedData = createProductCategorySchema.parse(req.body);
       const category = await productCategoryService.createCategory({
-        ...validatedData,
+        ...(validatedData as any),
         companyId,
       });
 

@@ -19,7 +19,7 @@ export const leadInterestController = {
     try {
       const companyId = req.user!.companyId;
       const validatedData = createInterestSchema.parse(req.body);
-      const interest = await leadInterestService.createInterest(companyId, validatedData);
+      const interest = await leadInterestService.createInterest(companyId, validatedData as any);
       return sendSuccess(res, interest, 'Lead interest created successfully', 201);
     } catch (error: any) {
       return sendError(res, error.message || 'Failed to create lead interest', 400);

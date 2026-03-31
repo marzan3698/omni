@@ -15,7 +15,7 @@ export const facebookOAuthController = {
         return sendError(res, 'User not authenticated', 401);
       }
 
-      const { url, state } = facebookOAuthService.getAuthUrl(user.id, user.companyId);
+      const { url, state } = facebookOAuthService.getAuthUrl(user.id as any, user.companyId);
       return sendSuccess(res, { url, state }, 'OAuth URL generated successfully');
     } catch (error: any) {
       return sendError(res, error.message || 'Failed to generate OAuth URL', error.statusCode || 500);

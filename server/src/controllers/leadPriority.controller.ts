@@ -27,7 +27,7 @@ export const leadPriorityController = {
     try {
       const companyId = getCompanyId(req);
       const validatedData = createSchema.parse(req.body);
-      const priority = await leadPriorityService.create(companyId, validatedData);
+      const priority = await leadPriorityService.create(companyId, validatedData as any);
       return sendSuccess(res, priority, 'Lead priority created successfully', 201);
     } catch (error: any) {
       if (error?.name === 'ZodError' && error?.errors?.[0]) {

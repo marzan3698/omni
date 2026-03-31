@@ -29,7 +29,7 @@ export const leadStatusConfigController = {
     try {
       const companyId = getCompanyId(req);
       const validatedData = createSchema.parse(req.body);
-      const status = await leadStatusConfigService.create(companyId, validatedData);
+      const status = await leadStatusConfigService.create(companyId, validatedData as any);
       return sendSuccess(res, status, 'Lead status created successfully', 201);
     } catch (error: any) {
       return sendError(res, error.message || 'Failed to create lead status', 400);

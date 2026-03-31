@@ -39,7 +39,7 @@ export const environmentController = {
       const validatedData = facebookConfigSchema.parse(req.body);
       
       // Update configuration
-      const result = await environmentService.updateFacebookConfig(validatedData);
+      const result = await environmentService.updateFacebookConfig(validatedData as any);
       
       return sendSuccess(res, result, result.message);
     } catch (error: any) {

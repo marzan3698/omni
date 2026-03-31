@@ -780,7 +780,7 @@ export const taskController = {
         taskId: z.preprocess(
           (val) => {
             if (val === undefined || val === null || val === '') return undefined;
-            const num = typeof val === 'string' ? parseInt(val, 10) : val;
+            const num = typeof val === 'string' ? parseInt(val, 10) : (val as number);
             return isNaN(num) ? undefined : num;
           },
           z.number().int().positive().optional()
@@ -788,7 +788,7 @@ export const taskController = {
         subTaskId: z.preprocess(
           (val) => {
             if (val === undefined || val === null || val === '') return undefined;
-            const num = typeof val === 'string' ? parseInt(val, 10) : val;
+            const num = typeof val === 'string' ? parseInt(val, 10) : (val as number);
             return isNaN(num) ? undefined : num;
           },
           z.number().int().positive().optional()
@@ -796,7 +796,7 @@ export const taskController = {
         duration: z.preprocess(
           (val) => {
             if (val === undefined || val === null || val === '') return undefined;
-            const num = typeof val === 'string' ? parseFloat(val) : val;
+            const num = typeof val === 'string' ? parseFloat(val) : (val as number);
             return isNaN(num) ? undefined : num;
           },
           z.number().optional()
@@ -898,10 +898,10 @@ export const taskController = {
       // Get or create conversation
       let conversation = await taskConversationService.getConversationByTaskId(taskId, companyId);
       if (!conversation) {
-        conversation = await taskConversationService.createConversation({
+        conversation = (await taskConversationService.createConversation({
           taskId,
           companyId,
-        });
+        })) as any;
       }
 
       if (!conversation) {

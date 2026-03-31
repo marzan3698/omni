@@ -195,7 +195,7 @@ export async function generateInvoiceImage(invoice: InvoicePDFData): Promise<Buf
     await page.setViewport({ width: 595, height: 842, deviceScaleFactor: 2 });
     await page.setContent(html, { waitUntil: 'networkidle0' });
     const buffer = await page.screenshot({ type: 'png', fullPage: true });
-    return Buffer.from(buffer as ArrayBuffer);
+    return Buffer.from(buffer as unknown as ArrayBuffer);
   } finally {
     await browser.close();
   }

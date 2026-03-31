@@ -38,7 +38,7 @@ export const paymentController = {
 
       const validatedData = createPaymentSchema.parse(req.body);
       const payment = await paymentService.createPayment({
-        ...validatedData,
+        ...(validatedData as any),
         companyId,
       });
 

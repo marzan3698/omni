@@ -83,7 +83,7 @@ export const employeeGroupController = {
       }
 
       const group = await employeeGroupService.createGroup({
-        ...validatedData,
+        ...(validatedData as any),
         createdById: userId,
       });
 

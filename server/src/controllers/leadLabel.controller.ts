@@ -27,7 +27,7 @@ export const leadLabelController = {
     try {
       const companyId = getCompanyId(req);
       const validatedData = createSchema.parse(req.body);
-      const label = await leadLabelService.create(companyId, validatedData);
+      const label = await leadLabelService.create(companyId, validatedData as any);
       return sendSuccess(res, label, 'Lead label created successfully', 201);
     } catch (error: any) {
       return sendError(res, error.message || 'Failed to create lead label', 400);

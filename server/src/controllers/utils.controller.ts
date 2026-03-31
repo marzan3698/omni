@@ -21,7 +21,7 @@ export const utilsController = {
         }, 'ngrok not available');
       }
 
-      const ngrokData = await ngrokResponse.json();
+      const ngrokData = await ngrokResponse.json() as any;
       const tunnels = ngrokData.tunnels || [];
       
       if (tunnels.length > 0) {

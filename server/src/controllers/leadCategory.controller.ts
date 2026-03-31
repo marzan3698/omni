@@ -19,7 +19,7 @@ export const leadCategoryController = {
     try {
       const companyId = req.user!.companyId;
       const validatedData = createCategorySchema.parse(req.body);
-      const category = await leadCategoryService.createCategory(companyId, validatedData);
+      const category = await leadCategoryService.createCategory(companyId, validatedData as any);
       return sendSuccess(res, category, 'Lead category created successfully', 201);
     } catch (error: any) {
       return sendError(res, error.message || 'Failed to create lead category', 400);

@@ -135,7 +135,7 @@ export const productController = {
         companyId,
       };
       
-      const product = await productService.createProduct(cleanData);
+      const product = await productService.createProduct(cleanData as any);
 
       return sendSuccess(res, product, 'Product created successfully', 201);
     } catch (error) {

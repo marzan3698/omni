@@ -222,10 +222,10 @@ export function setupTaskConversationHandlers(
         companyId
       );
       if (!conversation) {
-        conversation = await taskConversationService.createConversation({
+        conversation = (await taskConversationService.createConversation({
           taskId,
           companyId,
-        });
+        })) as any;
       }
 
       if (!conversation) {
