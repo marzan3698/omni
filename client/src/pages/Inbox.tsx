@@ -48,6 +48,16 @@ const QUICK_REPLIES = [
   'Hello! How are you doing today?',
 ];
 
+const LEAD_QUICK_TEXTS = [
+  { label: 'L1', title: 'New Inquiry', text: 'L1: New Inquiry (যারা কেবল হাই/হ্যালো বা সার্ভিস জানতে চেয়েছে)' },
+  { label: 'L2', title: 'Info Pending', text: 'L2: Info Pending (যাদের ফর্ম দেওয়া হয়েছে কিন্তু পূরণ করেনি)' },
+  { label: 'L3', title: 'Qualified', text: 'L3: Qualified (Form Done) (যারা ফর্ম পূরণ করেছে এবং মিটিংয়ের জন্য উপযুক্ত)' },
+  { label: 'L4', title: 'Meeting Scheduled', text: 'L4: Meeting Scheduled (যাদের সাথে জুম বা ফিজিক্যাল মিটিং কনফার্ম হয়েছে)' },
+  { label: 'L5', title: 'Proposal Sent', text: 'L5: Proposal Sent (মিটিং শেষ, এখন বাজেট বা কোটেশন নিয়ে কথা চলছে)' },
+  { label: 'L6', title: 'Follow-up Needed', text: 'L6: Follow-up Needed (যারা সময় চেয়েছে বা পেমেন্ট পেন্ডিং)' },
+  { label: 'L7', title: 'Closed Won/Lost', text: 'L7: Closed Won/Lost (ক্লায়েন্ট অনবোর্ড হয়েছে অথবা না করে দিয়েছে)' },
+];
+
 export function Inbox() {
   const { user, hasPermission } = useAuth();
   const { setHideMainSidebar } = useInboxView();
@@ -1847,14 +1857,52 @@ export function Inbox() {
                         </select>
                       </div>
                       <div>
-                        <Label htmlFor="lead-description">বিবরণ</Label>
+                        <Label htmlFor="lead-description" className="flex items-center justify-between">
+                          <span>বিবরণ</span>
+                          <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded uppercase font-bold tracking-wider">Quick Select Stage</span>
+                        </Label>
+                        
+                        {/* Quick Text Buttons */}
+                        <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5 mb-3">
+                          {LEAD_QUICK_TEXTS.map((item) => (
+                            <button
+                              key={item.label}
+                              type="button"
+                              onClick={() => setLeadFormData({ ...leadFormData, description: item.text })}
+                              title={item.text}
+                              className={cn(
+                                "flex flex-col items-center justify-center p-2 rounded-lg border-2 transition-all duration-200 group ring-offset-2",
+                                leadFormData.description === item.text
+                                  ? "border-indigo-600 bg-indigo-50 ring-2 ring-indigo-200 shadow-sm"
+                                  : "border-gray-100 bg-white hover:border-indigo-300 hover:shadow-md"
+                              )}
+                            >
+                              <span className={cn(
+                                "text-sm font-black",
+                                leadFormData.description === item.text ? "text-indigo-700" : "text-gray-900 group-hover:text-indigo-600"
+                              )}>{item.label}</span>
+                            </button>
+                          ))}
+                        </div>
+
                         <textarea
                           id="lead-description"
                           value={leadFormData.description}
                           onChange={(e) => setLeadFormData({ ...leadFormData, description: e.target.value })}
                           placeholder="বিবরণ লিখুন"
-                          className="w-full min-h-[80px] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          className="w-full min-h-[100px] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm transition-all"
                         />
+                        {leadFormData.description && (
+                          <div className="mt-1 flex justify-end">
+                            <button 
+                              type="button" 
+                              onClick={() => setLeadFormData({ ...leadFormData, description: '' })}
+                              className="text-[10px] text-red-500 hover:text-red-700 font-bold uppercase tracking-widest px-2 py-1 rounded hover:bg-red-50 transition-colors"
+                            >
+                              Clear Text
+                            </button>
+                          </div>
+                        )}
                       </div>
                       {user?.companyId && (
                         <div>
