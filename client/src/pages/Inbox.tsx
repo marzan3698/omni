@@ -1857,52 +1857,14 @@ export function Inbox() {
                         </select>
                       </div>
                       <div>
-                        <Label htmlFor="lead-description" className="flex items-center justify-between">
-                          <span>বিবরণ</span>
-                          <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded uppercase font-bold tracking-wider">Quick Select Stage</span>
-                        </Label>
-                        
-                        {/* Quick Text Buttons */}
-                        <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5 mb-3">
-                          {LEAD_QUICK_TEXTS.map((item) => (
-                            <button
-                              key={item.label}
-                              type="button"
-                              onClick={() => setLeadFormData({ ...leadFormData, description: item.text })}
-                              title={item.text}
-                              className={cn(
-                                "flex flex-col items-center justify-center p-2 rounded-lg border-2 transition-all duration-200 group ring-offset-2",
-                                leadFormData.description === item.text
-                                  ? "border-indigo-600 bg-indigo-50 ring-2 ring-indigo-200 shadow-sm"
-                                  : "border-gray-100 bg-white hover:border-indigo-300 hover:shadow-md"
-                              )}
-                            >
-                              <span className={cn(
-                                "text-sm font-black",
-                                leadFormData.description === item.text ? "text-indigo-700" : "text-gray-900 group-hover:text-indigo-600"
-                              )}>{item.label}</span>
-                            </button>
-                          ))}
-                        </div>
-
+                        <Label htmlFor="lead-description">বিবরণ</Label>
                         <textarea
                           id="lead-description"
                           value={leadFormData.description}
                           onChange={(e) => setLeadFormData({ ...leadFormData, description: e.target.value })}
                           placeholder="বিবরণ লিখুন"
-                          className="w-full min-h-[100px] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm transition-all"
+                          className="w-full min-h-[80px] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         />
-                        {leadFormData.description && (
-                          <div className="mt-1 flex justify-end">
-                            <button 
-                              type="button" 
-                              onClick={() => setLeadFormData({ ...leadFormData, description: '' })}
-                              className="text-[10px] text-red-500 hover:text-red-700 font-bold uppercase tracking-widest px-2 py-1 rounded hover:bg-red-50 transition-colors"
-                            >
-                              Clear Text
-                            </button>
-                          </div>
-                        )}
                       </div>
                       {user?.companyId && (
                         <div>
@@ -2188,19 +2150,57 @@ export function Inbox() {
                   className="space-y-4"
                 >
                   <div>
-                    <Label htmlFor="label-name">Label Name *</Label>
+                    <Label htmlFor="label-name" className="flex items-center justify-between mb-2">
+                       <span>Label Name *</span>
+                       <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded uppercase font-bold tracking-wider">Quick Select Stage</span>
+                    </Label>
+
+                    {/* Quick Text Buttons */}
+                    <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5 mb-3">
+                      {LEAD_QUICK_TEXTS.map((item) => (
+                        <button
+                          key={item.label}
+                          type="button"
+                          onClick={() => setLabelFormData({ ...labelFormData, name: item.text })}
+                          title={item.text}
+                          className={cn(
+                            "flex flex-col items-center justify-center p-2 rounded-lg border-2 transition-all duration-200 group ring-offset-2",
+                            labelFormData.name === item.text
+                              ? "border-indigo-600 bg-indigo-50 ring-2 ring-indigo-200 shadow-sm"
+                              : "border-gray-100 bg-white hover:border-indigo-300 hover:shadow-md"
+                          )}
+                        >
+                          <span className={cn(
+                            "text-sm font-black text-center",
+                            labelFormData.name === item.text ? "text-indigo-700" : "text-gray-900 group-hover:text-indigo-600"
+                          )}>{item.label}</span>
+                        </button>
+                      ))}
+                    </div>
+
                     <Input
                       id="label-name"
                       value={labelFormData.name}
                       onChange={(e) => setLabelFormData({ ...labelFormData, name: e.target.value })}
                       placeholder="e.g., Important, Follow-up, Customer"
-                      maxLength={50}
+                      maxLength={100}
                       required
                       className="mt-1"
                     />
-                    <p className="text-xs text-slate-500 mt-1">
-                      {labelFormData.name.length}/50 characters
-                    </p>
+                    <div className="flex items-center justify-between mt-1">
+                      <p className="text-[10px] text-slate-500">
+                        {labelFormData.name.length}/100 characters
+                      </p>
+                      {labelFormData.name && (
+                        <button 
+                          type="button" 
+                          onClick={() => setLabelFormData({ ...labelFormData, name: '' })}
+                          className="text-[10px] text-red-500 hover:text-red-700 font-bold uppercase tracking-widest px-2 py-0.5 rounded hover:bg-red-50 transition-colors"
+                        >
+                          Clear Text
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <div>
                     <Label htmlFor="label-source">Label Source (Optional)</Label>
