@@ -88,7 +88,7 @@ export const employeeController = {
     try {
       const validatedData = createEmployeeSchema.parse(req.body);
       const employee = await employeeService.createEmployee({
-        ...validatedData,
+        ...(validatedData as any),
         joinDate: validatedData.joinDate ? (validatedData.joinDate instanceof Date ? validatedData.joinDate : new Date(validatedData.joinDate)) : undefined,
       });
       return sendSuccess(res, employee, 'Employee created successfully', 201);
