@@ -163,6 +163,9 @@ cd ~/omni-repo && git pull
 # নতুন migration থাকলে চালান
 cd server && node scripts/migrate-simple.cjs
 
+# ব্যাকএন্ড সার্ভার নতুন করে বিল্ড করুন (TypeScript to JS)
+cd ~/omni-repo/server && npm run build
+
 # Frontend পরিবর্তন হলে rebuild করুন
 cd ~/omni-repo/client && npm run build
 \cp -rf dist/* /usr/share/nginx/html/
