@@ -9,6 +9,7 @@ import { GameCard } from '@/components/GameCard';
 import { useAuth } from '@/contexts/AuthContext';
 import { PermissionGuard } from '@/components/PermissionGuard';
 import { Plus, Edit, Trash2, X, ListChecks, Tag, Sparkles, Flag, Bookmark, FlagTriangleRight } from 'lucide-react';
+import { ErrorAlert } from '@/components/ErrorAlert';
 import type { LeadPriority, LeadLabel, LeadStatusConfig } from '@/types';
 
 interface Category {
@@ -44,12 +45,13 @@ export default function LeadConfig() {
   const [priorityFormData, setPriorityFormData] = useState({ name: '', sortOrder: 0, isActive: true });
   const [labelFormData, setLabelFormData] = useState({ name: '', color: '', isActive: true });
   const [statusFormData, setStatusFormData] = useState({ name: '', code: '', sortOrder: 0, isActive: true });
+  const [errorDialog, setErrorDialog] = useState<any>(null);
 
   // Fetch categories
   const { data: categoriesResponse, isLoading: categoriesLoading } = useQuery({
     queryKey: ['lead-categories'],
     queryFn: async () => {
-      const response = await leadCategoryApi.getAll(user?.companyId || 0);
+      const response = await leadCategoryApi.getAll();
       return response.data.data as Category[];
     },
     enabled: !!user?.companyId,
@@ -59,7 +61,7 @@ export default function LeadConfig() {
   const { data: interestsResponse, isLoading: interestsLoading } = useQuery({
     queryKey: ['lead-interests'],
     queryFn: async () => {
-      const response = await leadInterestApi.getAll(user?.companyId || 0);
+      const response = await leadInterestApi.getAll();
       return response.data.data as Interest[];
     },
     enabled: !!user?.companyId,
@@ -106,6 +108,7 @@ export default function LeadConfig() {
       setIsCategoryModalOpen(false);
       setCategoryFormData({ name: '', isActive: true });
     },
+    onError: (err: any) => setErrorDialog(err),
   });
 
   const updateCategoryMutation = useMutation({
@@ -116,6 +119,7 @@ export default function LeadConfig() {
       setEditingCategory(null);
       setCategoryFormData({ name: '', isActive: true });
     },
+    onError: (err: any) => setErrorDialog(err),
   });
 
   const deleteCategoryMutation = useMutation({
@@ -123,6 +127,7 @@ export default function LeadConfig() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lead-categories'] });
     },
+    onError: (err: any) => setErrorDialog(err),
   });
 
   // Interest mutations
@@ -133,6 +138,7 @@ export default function LeadConfig() {
       setIsInterestModalOpen(false);
       setInterestFormData({ name: '', isActive: true });
     },
+    onError: (err: any) => setErrorDialog(err),
   });
 
   const updateInterestMutation = useMutation({
@@ -143,6 +149,7 @@ export default function LeadConfig() {
       setEditingInterest(null);
       setInterestFormData({ name: '', isActive: true });
     },
+    onError: (err: any) => setErrorDialog(err),
   });
 
   const deleteInterestMutation = useMutation({
@@ -150,6 +157,7 @@ export default function LeadConfig() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lead-interests'] });
     },
+    onError: (err: any) => setErrorDialog(err),
   });
 
   const createPriorityMutation = useMutation({
@@ -159,6 +167,7 @@ export default function LeadConfig() {
       setIsPriorityModalOpen(false);
       setPriorityFormData({ name: '', sortOrder: 0, isActive: true });
     },
+    onError: (err: any) => setErrorDialog(err),
   });
 
   const updatePriorityMutation = useMutation({
@@ -168,11 +177,13 @@ export default function LeadConfig() {
       setIsPriorityModalOpen(false);
       setEditingPriority(null);
     },
+    onError: (err: any) => setErrorDialog(err),
   });
 
   const deletePriorityMutation = useMutation({
     mutationFn: (id: number) => leadPriorityApi.delete(id, user?.companyId || 0),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['lead-priorities'] }),
+    onError: (err: any) => setErrorDialog(err),
   });
 
   const createLabelMutation = useMutation({
@@ -182,6 +193,7 @@ export default function LeadConfig() {
       setIsLabelModalOpen(false);
       setLabelFormData({ name: '', color: '', isActive: true });
     },
+    onError: (err: any) => setErrorDialog(err),
   });
 
   const updateLabelMutation = useMutation({
@@ -191,11 +203,13 @@ export default function LeadConfig() {
       setIsLabelModalOpen(false);
       setEditingLabel(null);
     },
+    onError: (err: any) => setErrorDialog(err),
   });
 
   const deleteLabelMutation = useMutation({
     mutationFn: (id: number) => leadLabelApi.delete(id, user?.companyId || 0),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['lead-labels'] }),
+    onError: (err: any) => setErrorDialog(err),
   });
 
   const createStatusMutation = useMutation({
@@ -205,6 +219,7 @@ export default function LeadConfig() {
       setIsStatusModalOpen(false);
       setStatusFormData({ name: '', code: '', sortOrder: 0, isActive: true });
     },
+    onError: (err: any) => setErrorDialog(err),
   });
 
   const updateStatusMutation = useMutation({
@@ -214,11 +229,13 @@ export default function LeadConfig() {
       setIsStatusModalOpen(false);
       setEditingStatus(null);
     },
+    onError: (err: any) => setErrorDialog(err),
   });
 
   const deleteStatusMutation = useMutation({
     mutationFn: (id: number) => leadStatusConfigApi.delete(id, user?.companyId || 0),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['lead-statuses'] }),
+    onError: (err: any) => setErrorDialog(err),
   });
 
   const handleCategorySubmit = (e: React.FormEvent) => {
@@ -271,6 +288,7 @@ export default function LeadConfig() {
 
   return (
     <div className="p-6 space-y-6">
+      {errorDialog && <ErrorAlert error={errorDialog} onClose={() => setErrorDialog(null)} />}
       {/* Header */}
       <div className="flex items-center justify-between p-4 rounded-xl border border-amber-500/20 bg-slate-800/40">
         <div>

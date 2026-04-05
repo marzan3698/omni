@@ -512,6 +512,36 @@ export const leadController = {
   },
 
   /**
+   * Bulk delete leads
+   * POST /api/leads/bulk-delete
+   */
+  bulkDeleteLeads: async (req: Request, res: Response) => {
+    try {
+      const authReq = req as AuthRequest;
+      const companyId = authReq.user?.companyId;
+      if (!companyId) return sendError(res, 'User not authenticated', 401);
+
+      const bulkSchema = z.object({
+        leadIds: z.array(z.number().int().positive()).min(1, 'At least one lead ID is required'),
+      });
+
+      const parsed = bulkSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return sendError(res, parsed.error.errors.map((e) => e.message).join('; ') || 'Invalid input', 400);
+      }
+
+      const { leadIds } = parsed.data;
+      await leadService.bulkDeleteLeads(leadIds, companyId);
+      return sendSuccess(res, null, 'Leads deleted successfully');
+    } catch (error) {
+      if (error instanceof AppError) {
+        return sendError(res, error.message, error.statusCode);
+      }
+      return sendError(res, 'Failed to bulk delete leads', 500);
+    }
+  },
+
+  /**
    * Convert lead to client (creates pending approval request; no login until Finance approves)
    * POST /api/leads/:id/convert
    */

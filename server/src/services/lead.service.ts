@@ -1352,6 +1352,35 @@ export const leadService = {
   },
 
   /**
+   * Bulk delete leads
+   */
+  async bulkDeleteLeads(leadIds: number[], companyId: number) {
+    if (leadIds.length === 0) {
+      throw new AppError('leadIds are required', 400);
+    }
+
+    // Verify all leads belong to the company
+    const leads = await prisma.lead.findMany({
+      where: {
+        id: { in: leadIds },
+        companyId,
+      },
+      select: { id: true },
+    });
+
+    if (leads.length !== leadIds.length) {
+      throw new AppError('One or more leads not found or access denied', 404);
+    }
+
+    return await prisma.lead.deleteMany({
+      where: {
+        id: { in: leadIds },
+        companyId,
+      },
+    });
+  },
+
+  /**
    * Convert lead to client (pending approval flow).
    * Only Won leads can be converted. Creates Client (status Processing), ClientApprovalRequest,
    * credits lead manager's reservePoints, and does NOT create User until approval.

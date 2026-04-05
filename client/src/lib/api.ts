@@ -204,6 +204,10 @@ export const leadApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
   },
+  delete: (id: number, companyId: number) =>
+    apiClientInstance.delete<ApiResponse>(`/leads/${id}`, { params: { companyId } }),
+  bulkDelete: (leadIds: number[], companyId: number) =>
+    apiClientInstance.post<ApiResponse>('/leads/bulk-delete', { leadIds }, { params: { companyId } }),
 };
 
 // Meeting API

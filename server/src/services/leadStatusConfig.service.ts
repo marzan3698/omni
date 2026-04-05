@@ -88,6 +88,15 @@ export const leadStatusConfigService = {
     if (existing.isSystem) {
       throw new AppError('System statuses (Won, Lost) cannot be deleted', 400);
     }
+
+    const leadCount = await prisma.lead.count({
+      where: { statusId: id },
+    });
+
+    if (leadCount > 0) {
+      throw new AppError(`Cannot delete status "${existing.name}" because it is currently assigned to ${leadCount} lead(s). Please reassign them first.`, 400);
+    }
+
     await prisma.leadStatusConfig.delete({ where: { id } });
     return { success: true };
   },

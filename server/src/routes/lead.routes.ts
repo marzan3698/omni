@@ -17,6 +17,7 @@ router.post('/excel/import', verifyPermission('can_manage_leads'), singleExcelFi
 
 // Bulk assign - must be before /:id
 router.post('/bulk-assign', verifyPermission('can_manage_leads'), leadController.bulkAssign);
+router.post('/bulk-delete', verifyPermission('can_manage_leads'), leadController.bulkDeleteLeads);
 
 // Lead routes - allow can_view_leads so assigned users can see their leads list
 router.get('/', verifyPermissionAny(['can_manage_leads', 'can_view_leads']), leadController.getAllLeads);

@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { leadApi, leadCategoryApi, leadInterestApi, leadPriorityApi, leadLabelApi, leadStatusConfigApi, campaignApi } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { Target, Search, Filter, X, Eye, Edit, ChevronDown, ChevronUp, Download, Upload, Users, Code2, Plus, CheckCircle2 } from 'lucide-react';
+import { Target, Search, Filter, X, Eye, Edit, ChevronDown, ChevronUp, Download, Upload, Users, Code2, Plus, CheckCircle2, Trash2 } from 'lucide-react';
 import { ErrorAlert } from '@/components/ErrorAlert';
 import { EmployeeSelector } from '@/components/EmployeeSelector';
 import { cn } from '@/lib/utils';
@@ -280,6 +280,40 @@ export function Leads() {
       leadIds: Array.from(selectedLeadIds),
       employeeIds: bulkAssignEmployeeIds,
     });
+  };
+
+  const deleteLeadMutation = useMutation({
+    mutationFn: (id: number) => leadApi.delete(id, user!.companyId!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+    },
+    onError: (err: any) => {
+      setErrorDialog(err);
+    },
+  });
+
+  const bulkDeleteMutation = useMutation({
+    mutationFn: (leadIds: number[]) => leadApi.bulkDelete(leadIds, user!.companyId!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      setSelectedLeadIds(new Set());
+    },
+    onError: (err: any) => {
+      setErrorDialog(err);
+    },
+  });
+
+  const handleDeleteLead = (id: number) => {
+    if (window.confirm('আপনি কি নিশ্চিত যে আপনি এই লিডটি মুছে ফেলতে চান? এটি আর ফিরিয়ে আনা সম্ভব হবে না।')) {
+      deleteLeadMutation.mutate(id);
+    }
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedLeadIds.size === 0) return;
+    if (window.confirm(`আপনি কি নিশ্চিত যে আপনি ${selectedLeadIds.size} টি লিড মুছে ফেলতে চান? এটি আর ফিরিয়ে আনা সম্ভব হবে না।`)) {
+      bulkDeleteMutation.mutate(Array.from(selectedLeadIds));
+    }
   };
 
   const hasActiveFilters = Object.values(filters).some(v => v !== '');
@@ -757,6 +791,16 @@ export function Leads() {
               <Users className="w-4 h-4" />
               বাল্ক অ্যাসাইন করুন
             </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={handleBulkDelete}
+              disabled={bulkDeleteMutation.isPending}
+              className="bg-red-600 hover:bg-red-500 text-white flex gap-2"
+            >
+              <Trash2 className="w-4 h-4" />
+              {bulkDeleteMutation.isPending ? 'মুছে ফেলা হচ্ছে...' : 'মুছে ফেলুন'}
+            </Button>
           </div>
         </div>
       )}
@@ -910,6 +954,18 @@ export function Leads() {
                         <Button variant="ghost" size="sm" title="Edit lead" className="text-amber-200 hover:bg-amber-500/20 hover:text-white hover:bg-amber-500/20 p-1.5">
                           <Edit className="w-4 h-4" />
                         </Button>
+                        {canBulkAssign && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            title="Delete lead"
+                            onClick={() => handleDeleteLead(lead.id)}
+                            disabled={deleteLeadMutation.isPending}
+                            className="text-red-400 hover:bg-red-500/20 hover:text-red-300 p-1.5"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
                       </div>
                     </td>
                   </tr>
