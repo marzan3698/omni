@@ -114,8 +114,18 @@ export default function InboxLabeling() {
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id: number) => {
-    if (window.confirm('Are you sure you want to delete this label?')) {
+  const handleDelete = async (id: number) => {
+    const result = await Swal.fire({
+      title: 'লেবেল ডিলিট করবেন?',
+      text: 'এই লেবেলটি পার্মানেন্টলি ডিলিট হয়ে যাবে।',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'হ্যাঁ, ডিলিট করুন',
+      cancelButtonText: 'বাতিল',
+    });
+    if (result.isConfirmed) {
       deleteMutation.mutate(id);
     }
   };
