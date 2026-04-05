@@ -122,6 +122,7 @@ import activityRoutes from './routes/activity.routes.js';
 import smsRoutes from './routes/sms.routes.js';
 import notificationRoutes from './routes/notification.routes.js';
 import exchangeRoutes from './routes/exchange.routes.js';
+import inboxLabelPresetRoutes from './routes/inboxLabelPreset.routes.js';
 
 app.use('/api/auth', authRoutes);
 app.use('/api/work-session', workSessionRoutes);
@@ -171,6 +172,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/exchange', exchangeRoutes);
 app.use('/api/admin/environment', environmentRoutes);
 app.use('/api/admin/inbox-report', inboxReportRoutes);
+app.use('/api/inbox-label-presets', inboxLabelPresetRoutes);
 // app.use('/api/users', userRoutes);
 
 // Global error handling middleware (CORS headers so browser gets proper response)

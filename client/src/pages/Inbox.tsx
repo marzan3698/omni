@@ -36,7 +36,6 @@ const WhatsAppIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-// Predefined quick reply greeting messages
 const QUICK_REPLIES = [
   'Hello! How can I help you today?',
   'Hi! Thanks for reaching out.',
@@ -46,16 +45,6 @@ const QUICK_REPLIES = [
   'Hi there! I\'m here to help.',
   'Thank you for contacting us!',
   'Hello! How are you doing today?',
-];
-
-const LEAD_QUICK_TEXTS = [
-  { label: 'L1', title: 'New Inquiry', text: 'L1: New Inquiry (যারা কেবল হাই/হ্যালো বা সার্ভিস জানতে চেয়েছে)' },
-  { label: 'L2', title: 'Info Pending', text: 'L2: Info Pending (যাদের ফর্ম দেওয়া হয়েছে কিন্তু পূরণ করেনি)' },
-  { label: 'L3', title: 'Qualified', text: 'L3: Qualified (Form Done) (যারা ফর্ম পূরণ করেছে এবং মিটিংয়ের জন্য উপযুক্ত)' },
-  { label: 'L4', title: 'Meeting Scheduled', text: 'L4: Meeting Scheduled (যাদের সাথে জুম বা ফিজিক্যাল মিটিং কনফার্ম হয়েছে)' },
-  { label: 'L5', title: 'Proposal Sent', text: 'L5: Proposal Sent (মিটিং শেষ, এখন বাজেট বা কোটেশন নিয়ে কথা চলছে)' },
-  { label: 'L6', title: 'Follow-up Needed', text: 'L6: Follow-up Needed (যারা সময় চেয়েছে বা পেমেন্ট পেন্ডিং)' },
-  { label: 'L7', title: 'Closed Won/Lost', text: 'L7: Closed Won/Lost (ক্লায়েন্ট অনবোর্ড হয়েছে অথবা না করে দিয়েছে)' },
 ];
 
 export function Inbox() {
@@ -252,6 +241,12 @@ export function Inbox() {
       return response.data.data || [];
     },
     enabled: !!user?.companyId,
+  });
+
+  // Fetch inbox label presets
+  const { data: labelPresets = [] } = useQuery({
+    queryKey: ['inboxLabelPresets'],
+    queryFn: () => socialApi.getInboxLabelPresets(),
   });
 
   // Fetch campaign products when campaign is selected
@@ -1228,9 +1223,34 @@ export function Inbox() {
                         }}
                         className="text-xs h-8 bg-indigo-500/10 hover:bg-indigo-500/20 border-indigo-500/30 text-indigo-200"
                       >
-                        <Tag className="w-3.5 h-3.5 mr-1.5" />
-                        লেবেল
+                         লেবেল
                       </Button>
+
+                      {/* Quick Labeling Buttons */}
+                      <div className="hidden md:flex items-center gap-1.5 ml-2 border-l border-slate-700/50 pl-4 overflow-x-auto max-w-md no-scrollbar">
+                        {labelPresets.filter(p => p.isActive).slice(0, 7).map((preset) => (
+                          <Button
+                            key={preset.id}
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              addLabelMutation.mutate({
+                                conversationId: selectedConversation.id,
+                                labelData: { name: preset.name, source: 'Quick Action' }
+                              });
+                            }}
+                            disabled={addLabelMutation.isPending}
+                            className="text-[10px] h-7 px-2 bg-slate-800/50 border-slate-700 text-slate-300 hover:border-amber-500/50 hover:text-amber-400 group relative"
+                            title={preset.description || preset.name}
+                          >
+                            <span 
+                              className="w-1.5 h-1.5 rounded-full mr-1.5" 
+                              style={{ backgroundColor: preset.color || '#3b82f6' }}
+                            />
+                            {preset.name.split(':')[0] || preset.name}
+                          </Button>
+                        ))}
+                      </div>
                     {(hasPermission('can_manage_leads') || hasPermission('can_view_leads')) && (
                       <Button
                         variant="outline"
@@ -2207,24 +2227,28 @@ export function Inbox() {
                     </Label>
 
                     {/* Quick Text Buttons */}
-                    <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5 mb-3">
-                      {LEAD_QUICK_TEXTS.map((item) => (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-3">
+                      {labelPresets.filter(p => p.isActive).map((item) => (
                         <button
-                          key={item.label}
+                          key={item.id}
                           type="button"
-                          onClick={() => setLabelFormData({ ...labelFormData, name: item.text })}
-                          title={item.text}
+                          onClick={() => setLabelFormData({ ...labelFormData, name: item.name })}
+                          title={item.description || item.name}
                           className={cn(
-                            "flex flex-col items-center justify-center p-2 rounded-lg border-2 transition-all duration-200 group ring-offset-2",
-                            labelFormData.name === item.text
+                            "flex items-center gap-2 p-2 rounded-lg border-2 transition-all duration-200 group ring-offset-2",
+                            labelFormData.name === item.name
                               ? "border-indigo-600 bg-indigo-50 ring-2 ring-indigo-200 shadow-sm"
                               : "border-gray-100 bg-white hover:border-indigo-300 hover:shadow-md"
                           )}
                         >
+                          <div 
+                            className="w-2.5 h-2.5 rounded-full flex-shrink-0" 
+                            style={{ backgroundColor: item.color || '#3b82f6' }} 
+                          />
                           <span className={cn(
-                            "text-sm font-black text-center",
-                            labelFormData.name === item.text ? "text-indigo-700" : "text-gray-900 group-hover:text-indigo-600"
-                          )}>{item.label}</span>
+                            "text-xs font-bold truncate",
+                            labelFormData.name === item.name ? "text-indigo-700" : "text-gray-900 group-hover:text-indigo-600"
+                          )}>{item.name}</span>
                         </button>
                       ))}
                     </div>

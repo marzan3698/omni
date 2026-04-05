@@ -11,6 +11,18 @@ export interface ConversationLabel {
   updatedAt: string;
 }
 
+export interface InboxLabelPreset {
+  id: number;
+  companyId: number;
+  name: string;
+  color?: string | null;
+  description?: string | null;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface SocialConversation {
   id: number;
   platform: 'facebook' | 'whatsapp';
@@ -524,6 +536,66 @@ export const socialApi = {
     }
 
     throw new Error(response.data.message || 'Failed to update conversation notes');
+  },
+
+  /**
+   * Get all inbox labeling presets
+   */
+  async getInboxLabelPresets(): Promise<InboxLabelPreset[]> {
+    const response = await apiClient.get<ApiResponse<InboxLabelPreset[]>>(
+      '/inbox-label-presets'
+    );
+
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+
+    throw new Error(response.data.message || 'Failed to fetch inbox label presets');
+  },
+
+  /**
+   * Create a new inbox labeling preset
+   */
+  async createInboxLabelPreset(data: Partial<InboxLabelPreset>): Promise<InboxLabelPreset> {
+    const response = await apiClient.post<ApiResponse<InboxLabelPreset>>(
+      '/inbox-label-presets',
+      data
+    );
+
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+
+    throw new Error(response.data.message || 'Failed to create inbox label preset');
+  },
+
+  /**
+   * Update an existing inbox labeling preset
+   */
+  async updateInboxLabelPreset(id: number, data: Partial<InboxLabelPreset>): Promise<InboxLabelPreset> {
+    const response = await apiClient.put<ApiResponse<InboxLabelPreset>>(
+      `/inbox-label-presets/${id}`,
+      data
+    );
+
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+
+    throw new Error(response.data.message || 'Failed to update inbox label preset');
+  },
+
+  /**
+   * Delete an inbox labeling preset
+   */
+  async deleteInboxLabelPreset(id: number): Promise<void> {
+    const response = await apiClient.delete<ApiResponse<any>>(
+      `/inbox-label-presets/${id}`
+    );
+
+    if (!response.data.success) {
+      throw new Error(response.data.message || 'Failed to delete inbox label preset');
+    }
   },
 };
 

@@ -20,6 +20,7 @@ import { ClientLeads } from './pages/ClientLeads';
 import { ProjectSign } from './pages/ProjectSign';
 import { Inbox } from './pages/Inbox';
 import InboxReport from './pages/InboxReport';
+import InboxLabeling from './pages/InboxLabeling';
 import CpanelAutoDeploymentGuide from './pages/CpanelAutoDeploymentGuide';
 import OmniServerSetupGuide from './pages/OmniServerSetupGuide';
 import AdvancedWhatsappSetup from './pages/AdvancedWhatsappSetup';
@@ -137,6 +138,18 @@ function App() {
                     <Layout>
                       <PermissionGuard permission="can_manage_root_items">
                         <InboxReport />
+                      </PermissionGuard>
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/inbox-labeling"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <PermissionGuard permission="can_manage_root_items">
+                        <InboxLabeling />
                       </PermissionGuard>
                     </Layout>
                   </ProtectedRoute>

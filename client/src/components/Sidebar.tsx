@@ -84,6 +84,7 @@ const menuSections: MenuSection[] = [
         submenu: [
           { label: 'All Messages', path: '/inbox', icon: MessageSquare },
           { label: 'Inbox Report', path: '/inbox-report', icon: BarChart3 },
+          { label: 'ইনবক্স লেবেলিং', path: '/inbox-labeling', icon: ListChecks, permission: 'can_manage_root_items' },
         ]
       },
     ]

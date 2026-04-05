@@ -15,5 +15,6 @@
   "add_lead_converted_to_client_id.sql",
   "add_invoice_item_product_id.sql",
   "add_lead_priority_labels_status_complete.sql",
-  "add_lead_priority_status_fk.sql"
+  "add_lead_priority_status_fk.sql",
+  "add_inbox_label_presets.sql"
 ]
